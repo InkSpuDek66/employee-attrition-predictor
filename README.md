@@ -10,7 +10,7 @@
 ## บริบทโปรเจกต์ (Project Context)
 
 - **ประเภทโปรเจกต์:** งานนักศึกษาชั้นปีที่ 4 เทอม 1 สาขาวิทยาการคอมพิวเตอร์ (Proposal Defense) — School of Information Technology (SIT), Sripatum University (SPU)
-- **ระยะเวลาพัฒนา:** 9 สัปดาห์ (22 ก.ย. – 23 พ.ย. 2026) ดูรายละเอียดที่ [8. Project Timeline](#8-project-timeline-แผนดำเนินงาน)
+- **ระยะเวลาพัฒนา:** ทีมทำงานหลัก 9 สัปดาห์ (22 ก.ย. – 23 พ.ย. 2026) + buffer ก่อน Final Exam จริงของรายวิชา (course week 15–16, ~24 พ.ย.–7 ธ.ค. 2026) ดูรายละเอียดที่ [10. Project Timeline](#10-project-timeline-แผนดำเนินงาน)
 - **สถานะปัจจุบัน:** wk1 — Foundation & EDA ยังไม่มีโค้ด backend/frontend จริง
 - **ขอบเขต:** ระบบต้นแบบ (Prototype) บน IBM HR Analytics Employee Attrition & Performance dataset (Kaggle) ซึ่งเป็น **ข้อมูลจำลอง (synthetic)** ไม่ใช่ข้อมูลองค์กรจริง — ผลลัพธ์และสมมติฐานทางธุรกิจในเอกสารนี้ตั้งอยู่บนข้อจำกัดนี้
 
@@ -300,17 +300,49 @@ sequenceDiagram
 
 ## 10. Project Timeline (แผนดำเนินงาน)
 
-Scope เต็มตามที่เสนอ (รวม Survival Analysis, Fairness, Superset embedding) บีบจากแผนเดิม 12 สัปดาห์เหลือ 9 สัปดาห์ โดยคง core phase (Modeling, SHAP+Progress Check, Backend&Analysis, BI&Frontend) ไว้เท่าเดิม และบีบ/รวม phase หัว-ท้าย (Foundation&EDA, Closing&Delivery) ให้กระชับขึ้น
+### 10.1 Course Milestones (กำหนดการนำเสนอตามรายวิชา)
 
-| สัปดาห์ | ช่วงวันที่ (2026) | Phase | รายละเอียด |
+รายวิชา Machine Learning & Deep Learning for AIoT กำหนด Milestone การนำเสนอไว้ 4 จุดตลอดเทอม — ทีมวางแผนงานภายในให้ deliverable พร้อมก่อนหรือทันแต่ละจุดเหล่านี้:
+
+| Course Week | Milestone | Gate | สิ่งที่ต้องนำเสนอ |
 | :--- | :--- | :--- | :--- |
-| wk1 | 22–28 ก.ย. | Foundation & EDA | Requirement, EDA เชิงลึก, ตั้งสมมติฐานธุรกิจ |
-| wk2–3 | 29 ก.ย.–12 ต.ค. | Modeling | Feature engineering, เทรนโมเดล + MLflow |
-| wk4–5 | 13–26 ต.ค. | SHAP + Progress Check ★ | SHAP integration, นำเสนอความคืบหน้า (Milestone) |
-| wk6–7 | 27 ต.ค.–9 พ.ย. | Backend & Analysis | FastAPI, Survival Analysis, Fairness check |
-| wk8–9 | 10–23 พ.ย. | BI & Frontend + Closing & Delivery | Superset dashboard, What-if Simulator, Financial impact, testing, deploy, รายงานจบ (ทำคู่ขนานกัน) |
+| Week 5 | Proposal Presentation | Proposal Gate | ปัญหาที่ต้องการแก้, ผู้ใช้เป้าหมาย/Impact/SDG, Data source, AI Task และโมเดลเบื้องต้น, แนวคิด Web App — **เสร็จแล้ว** (คือที่มาของสไลด์ตั้งต้นของโปรเจกต์นี้) |
+| Week 9 | Data Progress Presentation | Data Gate | Data Collection, EDA, Data Cleaning/Preparation, Split Strategy, ประเด็น Data Leakage หรือข้อจำกัด |
+| Week 13 | Model Progress Presentation | Model Gate | Baseline & Candidate Models, Evaluation Metrics, Experiment Results, Error Analysis, เหตุผลการเลือกโมเดล |
+| Week 15–16 | Final Project Examination | Product Gate | Final Presentation, Live Demo ของ Web App, Technical Defense, สรุป Impact/Innovation/SDG, ส่งไฟล์และเอกสารประกอบ |
 
-★ Milestone: Progress Presentation (wk4–5)
+**สิ่งที่ต้องเตรียมทุกครั้งที่นำเสนอ:** สไลด์นำเสนอ, Demo หรือผลการทดสอบ, หลักฐานข้อมูล/โค้ด/กราฟ/ตารางผลลัพธ์, ไฟล์งานใน GitHub Repository, การแบ่งบทบาทสมาชิกในทีม
+
+**หมายเหตุจากรายวิชา:** สัปดาห์ที่มีการนำเสนอไม่มีการสอนเนื้อหาใหม่ / ทุกทีมควรอัปเดตความก้าวหน้าอย่างต่อเนื่อง / ผลงานต้องทำงานได้จริงในรูปแบบ AI-powered Web App / เน้น Innovation, Impact และความเป็นไปได้ในการนำไปใช้จริง
+
+### 10.2 แผนงานทีม (Team Sprint) เทียบกับ Course Week
+
+> **สมมติฐานวันที่:** คำนวณจากที่ทีมยืนยันว่า Week 9 (Data Gate) ตรงกับสัปดาห์ที่ 4 ของแผนทีม (wk4–5) → **Course Week = Team Week + 5** — ถ้าวันที่จริงของปฏิทินรายวิชาไม่ตรงกับที่คำนวณไว้ ช่วยแจ้งเพื่อปรับตารางด้านล่าง
+
+Scope เต็มตามที่เสนอ (รวม Survival Analysis, Fairness, Superset embedding) บีบจากแผนเดิม 12 สัปดาห์เหลือ 9 สัปดาห์ทำงานหลัก โดยคง core phase (Modeling, SHAP+Progress Check, Backend&Analysis, BI&Frontend) ไว้เท่าเดิม และเผื่อ buffer ก่อนสอบจริง
+
+| Team Week | ช่วงวันที่ (2026) | Phase | Course Week | Deliverable checkpoint |
+| :--- | :--- | :--- | :--- | :--- |
+| wk1 | 22–28 ก.ย. | Foundation & EDA | Week 6 | — |
+| wk2–3 | 29 ก.ย.–12 ต.ค. | Modeling | Week 7–8 | โมเดลเทรนเสร็จ (baseline + candidate) พร้อม MLflow tracking |
+| wk4–5 | 13–26 ต.ค. | SHAP + Progress Check | **Week 9–10 — Data Gate ★** | ต้องมีโมเดลที่เทรนเสร็จแล้ว (จาก wk2–3) + SHAP เบื้องต้น พร้อม slide นำเสนอ Data Gate |
+| wk6–7 | 27 ต.ค.–9 พ.ย. | Backend & Analysis | Week 11–12 | — |
+| wk8–9 | 10–23 พ.ย. | BI & Frontend + Closing & Delivery | **Week 13–14 — Model Gate ★** | นำเสนอผล Model/Experiment ที่ Model Gate + ปิดงาน Dashboard/Frontend |
+| buffer | 24 พ.ย.–7 ธ.ค. | Final polish + สอบจริง | **Week 15–16 — Product Gate ★** | Final Presentation, Live Demo, Technical Defense |
+
+★ = Course Milestone Gate ตาม [10.1](#101-course-milestones-กำหนดการนำเสนอตามรายวิชา)
+
+### 10.3 การแบ่งงานรายบุคคลในแต่ละ Phase
+
+ทั้งทีมทำงาน phase เดียวกันพร้อมกัน (ไม่มี owner ประจำโมดูล) แต่แบ่งเป็น 2 กลุ่มย่อยต่อ phase สลับคู่กันไปเรื่อยๆ เพื่อให้ทุกคนได้จับงานหลากหลายประเภท:
+
+| Phase | กลุ่ม A | กลุ่ม B |
+| :--- | :--- | :--- |
+| wk1 Foundation & EDA | Yanisa + Nanthamon — Requirement, ตั้งสมมติฐานธุรกิจ | Saphondanai + Puripat — Data cleaning, EDA (สถิติ/กราฟ) |
+| wk2–3 Modeling | Yanisa + Puripat — Feature engineering | Saphondanai + Nanthamon — Train model (XGBoost) + MLflow setup |
+| wk4–5 SHAP + Progress Check | Yanisa + Puripat — SHAP integration + ตีความผล | Saphondanai + Nanthamon — เตรียม slide + นำเสนอ Data Gate |
+| wk6–7 Backend & Analysis | Saphondanai + Puripat — FastAPI (/predict /shap /whatif) | Yanisa + Nanthamon — Survival Analysis + Fairness check |
+| wk8–9 BI & Frontend + Closing | Puripat + Nanthamon — Superset dashboard + Financial Impact | Yanisa + Saphondanai — React frontend + testing/deploy + นำเสนอ Model Gate |
 
 ---
 
