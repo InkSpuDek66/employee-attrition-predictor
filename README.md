@@ -20,14 +20,16 @@
 
 > ยังไม่มีโค้ดจริงในโปรเจกต์ ขั้นตอนด้านล่างเป็นแผนที่จะใช้เมื่อเริ่มพัฒนา (wk2 เป็นต้นไป) จะปรับปรุงให้ตรงกับของจริงเมื่อแต่ละส่วน implement เสร็จ
 
-### สิ่งที่ต้องติดตั้งก่อน (Prerequisites)
+### โปรแกรมที่ใช้ (Prerequisites)
 
-| โปรแกรม | เวอร์ชันขั้นต่ำ | ใช้สำหรับ |
+| โปรแกรม | เวอร์ชัน | ใช้สำหรับ |
 | :--- | :--- | :--- |
-| [Python](https://www.python.org/) | 3.11+ | ML/Data pipeline + FastAPI backend |
-| [PostgreSQL](https://www.postgresql.org/) | 14+ | Database (Source of truth) |
-| [Node.js](https://nodejs.org/) | 18 LTS+ | React frontend |
-| [Docker](https://www.docker.com/) + Docker Compose | ล่าสุด | Containerize และรันทุก service พร้อมกัน |
+| [Python](https://www.python.org/) | 3.13.11 | ML/Data pipeline (data cleaning, feature engineering, training) + FastAPI backend |
+| [Node.js](https://nodejs.org/) | v24.21.0 (LTS) | React frontend |
+| [PostgreSQL](https://www.postgresql.org/) | 14+ (ขั้นต่ำ — ยังไม่ได้ตั้งค่าจริง จะยืนยันเวอร์ชันตอนเริ่ม Backend phase wk6–7) | Database (Source of truth) |
+| [Docker](https://www.docker.com/) + Docker Compose | ล่าสุด (ขั้นต่ำ — ยังไม่ได้ใช้งานจริง) | Containerize และรันทุก service พร้อมกัน |
+
+> Python/Node เป็นเวอร์ชันที่ทีมยืนยันแล้วว่าใช้จริง ส่วน PostgreSQL/Docker ยังเป็นแผน — จะอัปเดตเป็นเวอร์ชันจริงเมื่อเริ่มตั้งค่าใน wk6–7
 
 ### โครงสร้างโปรเจกต์ที่วางแผนไว้ (Planned Repo Structure)
 
