@@ -328,9 +328,9 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-    participant HR as HR (React App)
+    participant HR as "HR (React App)"
     participant API as FastAPI
-    participant ML as MLflow Model
+    participant ML as "MLflow Model"
     participant DB as PostgreSQL
 
     HR->>API: GET /predict?employee_id=123
@@ -347,7 +347,7 @@ sequenceDiagram
     API->>DB: INSERT shap_explanations
     API-->>HR: top contributing features
 
-    HR->>API: POST /interventions {employee_id, type}
+    HR->>API: "POST /interventions (employee_id, type)"
     API->>DB: INSERT interventions
     API-->>HR: confirmation
 ```
@@ -390,13 +390,18 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 
 ### 10.3 การแบ่งงานรายบุคคลในแต่ละ Phase (ละเอียด)
 
-**หลักการ:** งานยิ่งยาก ยิ่งใช้คนเยอะ และ **งาน 🔴 ยาก ทุกจุดเน้นให้ Puripat + Saphondanai เป็นตัวหลัก** (คู่นี้รับงานเทคนิคหนักสุดของแต่ละ phase ต่อเนื่องกันตลอดโปรเจกต์ — เป็นเจ้าของ pipeline ข้อมูล→โมเดลแบบไม่ขาดสาย: Data Cleaning → Feature Engineering → Train/tune Model → FastAPI endpoints หลัก → React ส่วนซับซ้อน — เพื่อให้ context ของงานต่อเนื่องกัน ไม่ต้องส่งต่อข้อมูลข้ามคน) ส่วน Yanisa + Nanthamon รับงาน 🟡/🟢 ที่เหลือเป็นหลัก (EDA → baseline model → endpoint รอง → Survival/Fairness → React ส่วนที่เบากว่า) แต่ยังช่วยกันข้ามกลุ่มได้เสมอเมื่อใครติดขัดหรือมีเวลาว่าง งานที่ง่ายแต่กินเวลาให้กระจายทำเป็นชิ้นเล็กๆ ทั้งทีมแทนที่จะดึงคนไปทำเต็มเวลาคนเดียว ส่วนงานที่ตามธรรมชาติต้อง "รวมเป็นหนึ่งเดียว" (โมเดล, database, schema) จะแก้ด้วยเครื่องมือที่ออกแบบมาให้ทำงานคนละเครื่องแล้ว sync กันได้ ไม่ใช่การนั่งเครื่องเดียวกันจริงๆ (สรุปวิธีไว้ท้ายหัวข้อ)
+**หลักการแบ่งงาน:**
+
+- งานยิ่งยาก ยิ่งใช้คนเยอะ — ดูระดับความยากได้จากสัญลักษณ์: 🔴 ยาก (3–4 คน) / 🟡 ปานกลาง (2 คน) / 🟢 ง่ายแต่ใช้เวลานาน (กระจายทำทั้งทีม)
+- **งาน 🔴 ยาก ทุกจุดเน้นให้ Puripat + Saphondanai เป็นตัวหลัก** — คู่นี้เป็นเจ้าของ pipeline ข้อมูล→โมเดลแบบไม่ขาดสายตลอดโปรเจกต์ (Data Cleaning → Feature Engineering → Train/tune Model → FastAPI endpoints หลัก → React ส่วนซับซ้อน) เพื่อให้ context ของงานต่อเนื่องกัน ไม่ต้องส่งต่อข้อมูลข้ามคน
+- **Yanisa + Nanthamon** รับงาน 🟡/🟢 ที่เหลือเป็นหลัก (EDA → baseline model → endpoint รอง → Survival/Fairness → React ส่วนที่เบากว่า) แต่ยังช่วยข้ามกลุ่มได้เสมอเมื่อใครติดขัดหรือมีเวลาว่าง
+- งานที่ง่ายแต่กินเวลาให้กระจายทำเป็นชิ้นเล็ก ๆ ทั้งทีม แทนที่จะดึงคนไปทำเต็มเวลาคนเดียว
+- งานที่ตามธรรมชาติต้อง "รวมเป็นหนึ่งเดียว" (โมเดล, database, schema) แก้ด้วยเครื่องมือที่ออกแบบมาให้ทำงานคนละเครื่องแล้ว sync กันได้ ไม่ใช่การนั่งเครื่องเดียวกันจริง ๆ — สรุปวิธีไว้ท้ายหัวข้อนี้
 
 > **หมายเหตุภาระงาน:** ด้วยโครงสร้างนี้ Puripat + Saphondanai จะแบกงานเทคนิคหนักต่อเนื่องเกือบตลอดทั้งโปรเจกต์ เป็นการตัดสินใจที่ยืนยันแล้วว่าต้องการให้เป็นแบบนี้ (เน้นความต่อเนื่องของ context มากกว่าการถ่วงดุลภาระงาน)
 
-ระดับความยาก: 🔴 ยาก (3–4 คน) / 🟡 ปานกลาง (2 คน) / 🟢 ง่ายแต่ใช้เวลานาน (กระจายทำทั้งทีม)
-
-**wk1 — Foundation & EDA**
+<details open>
+<summary><strong>wk1 — Foundation & EDA</strong></summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
@@ -406,7 +411,10 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 
 > **ของที่ต้อง "รวมเป็นหนึ่ง":** ไฟล์ dataset ดิบ (CSV) — โหลดจาก Kaggle ครั้งเดียว push เข้า `data/raw/` ใน git แล้วทุกคน pull ไปใช้ในเครื่องตัวเอง ไม่มีใครแก้ไฟล์ raw โดยตรง (read-only) ผลลัพธ์การ clean ไปรวมที่ `data/processed/` แทน
 
-**wk2–3 — Modeling**
+</details>
+
+<details>
+<summary><strong>wk2–3 — Modeling</strong></summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
@@ -415,7 +423,10 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 | Train model เปรียบเทียบ (baseline: Logistic Regression, Random Forest) | 🟡 | Yanisa + Nanthamon | ลองโมเดลง่ายกว่าเพื่อเป็น baseline เทียบผล log เข้า MLflow เดียวกัน ช่วยยืนยันว่าโมเดลหลักที่ Puripat/Saphondanai เลือกดีกว่าจริง |
 | ตั้งค่า MLflow tracking server (ครั้งแรก, บล็อกงานอื่น) | 🟢 (งาน setup ครั้งเดียว) | Saphondanai คนเดียว | ทำก่อนคนอื่นเริ่ม train แจก connection URI ให้ทีมผ่าน `.env.example` |
 
-**wk4–5 — SHAP + Progress Check + Company-wide Summary**
+</details>
+
+<details>
+<summary><strong>wk4–5 — SHAP + Progress Check + Company-wide Summary</strong> (Data Gate ★)</summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
@@ -423,7 +434,10 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 | Company-wide Aggregate Summary ([6.6](#66-company-wide-aggregate-summary)) | 🟡 | Saphondanai + Nanthamon | รวมค่า SHAP เฉลี่ยตามแผนก/บริษัท + เขียน rule-based recommendation — **รอ SHAP รายบุคคลเสร็จก่อน** (dependency ไม่ parallel 100% แม้คนละคู่ ให้เริ่มงาน SHAP รายบุคคลก่อน 2–3 วัน) |
 | เตรียม slide + นำเสนอ Data Gate | 🟢 | ทั้ง 4 คนคนละ 2–3 แผ่น แล้วซ้อมพูดพร้อมกัน 1 รอบ | ใช้ Google Slides ร่วม แก้พร้อมกันได้ ไม่ชนกันเหมือนไฟล์ local |
 
-**wk6–7 — Backend & Analysis**
+</details>
+
+<details>
+<summary><strong>wk6–7 — Backend & Analysis</strong></summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
@@ -432,15 +446,20 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 | Survival Analysis | 🔴 ยาก (เทคนิคใหม่ที่ทีมยังไม่เคยทำ) | Yanisa + Nanthamon (เริ่มก่อนตั้งแต่ต้นสัปดาห์เพราะเบากว่างาน endpoint หลัก, ขอความช่วยเหลือจาก Puripat/Saphondanai ได้เมื่อทำ endpoint หลักเสร็จ) | เริ่มจาก tutorial ของ `lifelines` library ก่อน แล้วค่อย apply กับ dataset จริง |
 | Fairness check (Fairlearn) | 🟡 | Yanisa + Nanthamon | ทำต่อจาก Survival Analysis ได้เลย เพราะอ่านผลจากโมเดลเดียวกัน ไม่ต้องแก้โมเดล — ถ้าเวลาไม่พอให้ Puripat/Saphondanai ช่วย review หลังทำ endpoint หลักเสร็จ |
 
-**wk8–9 — BI & Frontend + Closing**
+</details>
+
+<details>
+<summary><strong>wk8–9 — BI & Frontend + Closing</strong> (Model Gate ★, Product Gate buffer)</summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
 | React frontend — What-if Simulator + SHAP viewer (ส่วนที่ซับซ้อนสุด) | 🔴 ยากสุด — **เน้น Puripat + Saphondanai** | Puripat + Saphondanai (lead) | What-if ต้องเรียก `/whatif` แบบ real-time + จัดการ state ของค่าที่ผู้ใช้ปรับ, SHAP viewer ต้อง render ข้อมูลซ้อน (nested) เป็นกราฟ — ยากสุดในฝั่ง frontend |
 | React frontend — Intervention Tracker + Company Summary panel | 🟡 | Yanisa + Nanthamon | ส่วนใหญ่เป็น list/form CRUD ธรรมดา และแสดงผลข้อมูลสรุปแบบ static เชื่อม backend ผ่าน API contract เดียวกัน (หัวข้อ 7) — endpoint ไหนยังไม่เสร็จให้ mock response ตาม schema ไปก่อน ไม่ต้องรอ |
 | Superset dashboard + Financial Impact + Company Summary panel | 🟡 | Nanthamon (นำ) — Puripat ช่วย review หลังทำ React ส่วนหลักเสร็จ | ต่อ Superset เข้า dev database เดียวกับ backend โดยตรง ส่วนใหญ่เป็นการตั้งค่า/ลากชาร์ตผ่าน UI ไม่ใช่โค้ดหนักเหมือน React จึงให้ Nanthamon ทำนำคนเดียวได้ก่อน ทำคู่ขนานกับ React ได้เพราะคนละ service — *แก้จากเดิมที่ให้ Puripat ทำคู่ เพราะ Puripat ติดงาน React ส่วนหลักพร้อมกันในสัปดาห์เดียวกันอยู่แล้ว* |
-| Integration testing (รวมทุก service มาทดสอบพร้อมกันจริง) | 🟡 แต่ **ต้องทำพร้อมกันทั้งทีมในเวลาเดียวกัน** | ทั้ง 4 คน | งานนี้แยกกันทำไม่ได้จริงๆ เพราะต้องเห็นทุก service ทำงานร่วมกัน — นัดเวลา call พร้อมกัน รัน `docker-compose up` พร้อมกันแล้ว screen-share ตรวจดูร่วมกัน (ไม่ต้องอยู่เครื่องเดียวกัน แค่เวลาต้องตรงกัน) |
+| Integration testing (รวมทุก service มาทดสอบพร้อมกันจริง) | 🟡 แต่ **ต้องทำพร้อมกันทั้งทีมในเวลาเดียวกัน** | ทั้ง 4 คน | งานนี้แยกกันทำไม่ได้จริง ๆ เพราะต้องเห็นทุก service ทำงานร่วมกัน — นัดเวลา call พร้อมกัน รัน `docker-compose up` พร้อมกันแล้ว screen-share ตรวจดูร่วมกัน (ไม่ต้องอยู่เครื่องเดียวกัน แค่เวลาต้องตรงกัน) |
 | รายงานจบ + slide นำเสนอ Model Gate / Final | 🟢 | ทั้ง 4 คนคนละหัวข้อ | แบ่งหัวข้อรายงานคนละส่วนเขียนใน Google Docs พร้อมกัน |
+
+</details>
 
 ### วิธีแก้ปัญหา "งานที่ต้องทำในเครื่องเดียว" (สรุปรวม)
 

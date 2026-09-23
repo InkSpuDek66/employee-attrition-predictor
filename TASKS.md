@@ -11,7 +11,7 @@
 ## Yanisa Intharawicha (66080853)
 
 ### wk1 (22–28 ก.ย.) — Foundation & EDA
-- [ ] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม (~2–3 ชม.)
+- [x] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม (~2–3 ชม.)
   - **วิธีทำ:** ทบทวนสไลด์ proposal เดิม สรุปขอบเขต/สมมติฐานธุรกิจลง Google Docs ร่วม
   - **ผลลัพธ์ที่ต้องส่ง:** เอกสาร requirement + สมมติฐานธุรกิจ (ทั้งทีมเห็นตรงกัน)
 - [ ] ทำ EDA ฝั่ง **ฟีเจอร์ตัวเลข** (Age, MonthlyIncome, DistanceFromHome, YearsAtCompany, TotalWorkingYears ฯลฯ) ร่วมกับ Nanthamon
@@ -55,7 +55,7 @@
 ## Saphondanai Chuechan (66076195)
 
 ### wk1 (22–28 ก.ย.) — Foundation & EDA
-- [ ] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม
+- [x] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม
 - [ ] Data cleaning ร่วมกับ Puripat
   - **วิธีทำ:** จัดการ missing value, encode categorical (OneHot/Ordinal ตามความเหมาะสม), ตรวจ timeline ของแต่ละฟีเจอร์ตาม [6.2 Data Leakage Guard](README.md#62-data-leakage-guard) ทำใน notebook ของตัวเอง (`01_cleaning_S.ipynb`) แล้วเทียบกับของ Puripat
   - **ผลลัพธ์ที่ต้องส่ง:** notebook cleaning ของตัวเอง + ร่วมสรุปเป็น `clean_pipeline.py` ไฟล์เดียวกับ Puripat ตอนจบสัปดาห์
@@ -95,7 +95,7 @@
 ## Puripat Wongtangton (66079943)
 
 ### wk1 (22–28 ก.ย.) — Foundation & EDA
-- [ ] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม
+- [x] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม
 - [ ] Data cleaning ร่วมกับ Saphondanai
   - **วิธีทำ:** ทำใน notebook ของตัวเอง (`01_cleaning_P.ipynb`) เทียบผลกับ Saphondanai ก่อนรวมเป็นไฟล์เดียว
   - **ผลลัพธ์ที่ต้องส่ง:** notebook cleaning ของตัวเอง + ร่วมสรุปเป็น `clean_pipeline.py`
@@ -132,7 +132,7 @@
 ## Nanthamon Supo (66083478)
 
 ### wk1 (22–28 ก.ย.) — Foundation & EDA
-- [ ] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม
+- [x] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม
 - [ ] ทำ EDA ฝั่ง **ฟีเจอร์หมวดหมู่** (Department, JobRole, MaritalStatus, OverTime, BusinessTravel ฯลฯ) ร่วมกับ Yanisa
   - **วิธีทำ:** เทียบสัดส่วนการลาออกในแต่ละกลุ่ม (bar chart, crosstab) ต่อฟีเจอร์หมวดหมู่
   - **ผลลัพธ์ที่ต้องส่ง:** notebook EDA ฝั่งหมวดหมู่ + สรุป 3–5 bullet ว่าฟีเจอร์ไหนน่าสนใจสุด
