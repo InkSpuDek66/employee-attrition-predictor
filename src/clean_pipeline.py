@@ -6,7 +6,16 @@
 จากไฟล์นี้ไปใช้ต่อ ไม่ควรเขียน logic การ clean ซ้ำใหม่
 """
 
+# %% [markdown]
+# ## 1. Imports และค่าคงที่
+
+# %%
+import os
+import shutil
+
 import pandas as pd
+
+RAW_FILENAME = "WA_Fn-UseC_-HR-Employee-Attrition.csv"
 
 # คอลัมน์ที่ค่าคงที่ทุกแถว (zero variance) หรือเป็นแค่ตัวระบุแถว (identifier)
 # ไม่ใช่ปัญหา data leakage แต่เป็น "noise" ที่ไม่มีประโยชน์ต่อการเทรนโมเดล
@@ -35,7 +44,18 @@ BINARY_COLUMNS = {
 NOMINAL_COLUMNS = ["Department", "EducationField", "JobRole", "MaritalStatus"]
 
 
+# %% [markdown]
+# ## 2. ฟังก์ชันโหลด + ตรวจข้อมูล
+
+# %%
 def load_raw_data(path: str) -> pd.DataFrame:
+    """โหลด CSV ดิบ ถ้าไม่มีไฟล์ให้ดาวน์โหลดจาก Kaggle มาเก็บไว้ที่ path ก่อน (ต้องมี kagglehub)"""
+    if not os.path.exists(path):
+        import kagglehub
+
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        dataset_dir = kagglehub.dataset_download("pavansubhasht/ibm-hr-analytics-attrition-dataset")
+        shutil.copy(os.path.join(dataset_dir, RAW_FILENAME), path)
     return pd.read_csv(path)
 
 
@@ -44,6 +64,21 @@ def check_missing(df: pd.DataFrame) -> pd.Series:
     return df.isna().sum().sort_values(ascending=False)
 
 
+def check_duplicates(df: pd.DataFrame) -> int:
+    """คืนจำนวนแถวซ้ำ (ควรเป็น 0)"""
+    return int(df.duplicated().sum())
+
+
+def find_noise_columns(df: pd.DataFrame) -> list:
+    """ตรวจหาคอลัมน์ค่าคงที่ + คอลัมน์ตัวระบุแถว (unique ทุกแถว) จากข้อมูลจริง
+    ใช้ยืนยันว่า NOISE_COLUMNS ครบ ไม่ได้ตัดอัตโนมัติ เพราะคอลัมน์ตัวเลขที่ unique หมดอาจเป็นฟีเจอร์จริง"""
+    return [c for c in df.columns if df[c].nunique() == 1 or (c.endswith("Number") and df[c].is_unique)]
+
+
+# %% [markdown]
+# ## 3. ฟังก์ชัน clean + encode
+
+# %%
 def drop_noise_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.drop(columns=[c for c in NOISE_COLUMNS if c in df.columns])
 
@@ -87,3 +122,19 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def save_processed(df: pd.DataFrame, path: str) -> None:
     df.to_csv(path, index=False)
+
+
+# %% [markdown]
+# ## 4. รันทั้ง pipeline (ทำงานเฉพาะตอนรัน cell/ไฟล์นี้โดยตรง)
+
+# %%
+if __name__ == "__main__":
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..") if "__file__" in globals() else ".."
+    df_raw = load_raw_data(os.path.join(root, "data", "raw", RAW_FILENAME))
+    print("shape:", df_raw.shape, "| missing:", check_missing(df_raw).sum(), "| duplicates:", check_duplicates(df_raw))
+    print("noise columns:", find_noise_columns(df_raw))
+    df_clean = clean_data(df_raw)
+    print("cleaned shape:", df_clean.shape)
+    out = os.path.join(root, "data", "processed", "attrition_cleaned.csv")
+    save_processed(df_clean, out)
+    print("saved:", os.path.normpath(out))
