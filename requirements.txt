@@ -5,3 +5,12 @@ kagglehub
 jupyter
 matplotlib
 seaborn
+xgboost
+mlflow
+optuna
+shap
+streamlit
+fastapi
+uvicorn
+httpx
+pytest
