@@ -56,7 +56,7 @@
 
 ### wk1 (22–28 ก.ย.) — Foundation & EDA
 - [x] เข้าประชุม Requirement + ตั้งสมมติฐานธุรกิจ ร่วมกับทั้งทีม
-- [ ] Data cleaning ร่วมกับ Puripat
+- [x] Data cleaning ร่วมกับ Puripat
   - **วิธีทำ:** จัดการ missing value, encode categorical (OneHot/Ordinal ตามความเหมาะสม), ตรวจ timeline ของแต่ละฟีเจอร์ตาม [6.2 Data Leakage Guard](README.md#62-data-leakage-guard) ทำใน notebook ของตัวเอง (`01_cleaning_S.ipynb`) แล้วเทียบกับของ Puripat
   - **ผลลัพธ์ที่ต้องส่ง:** notebook cleaning ของตัวเอง + ร่วมสรุปเป็น `clean_pipeline.py` ไฟล์เดียวกับ Puripat ตอนจบสัปดาห์
 
