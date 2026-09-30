@@ -72,7 +72,7 @@
 - [ ] ตั้งค่า MLflow tracking server (ทำคนเดียว, บล็อกงานทีม — ต้องเสร็จก่อนคนอื่นเริ่ม train)
   - **วิธีทำ:** รัน MLflow server (local Docker หรือ free-tier บน DagsHub) ตั้งค่า `.env.example` แจก connection URI ให้ทีม
   - **ผลลัพธ์ที่ต้องส่ง:** MLflow URI ที่ทุกคน log ได้จริง (ทดสอบกับทีมก่อนเริ่ม wk2)
-  - **สถานะ:** เลือก DagsHub, โค้ด + `.env.example` + คู่มือ `docs/mlflow_setup.md` พร้อมแล้ว — เหลือสมัคร DagsHub, เชื่อม repo, แจก URI และทดสอบกับทีม
+  - **สถานะ:** self-host MLflow + PostgreSQL ด้วย `docker-compose.yml` เสร็จและทดสอบแล้ว (ใช้เป็นสภาพแวดล้อมของตัวผลิตภัณฑ์และใน CI), เพิ่ม `src/train.py` เทรน + register โมเดลแบบทำซ้ำได้ และ CI ที่ `.github/workflows/ci.yml`, DagsHub เชื่อม repo แล้ว (URI: `https://dagshub.com/InkSpuDek66/employee-attrition-predictor.mlflow`) ทดสอบ log + register `attrition-xgboost-P` v1 ผ่าน (test AUC 0.814, backend test ผ่าน) — เหลือเพิ่มเพื่อนเป็น collaborator (Write) และให้แต่ละคนทดสอบ log ดู `docs/mlflow_setup.md`
 
 ### wk4–5 (13–26 ต.ค.) — SHAP + Progress Check (Data Gate ★ wk4)
 - [x] Company-wide Aggregate Summary ร่วมกับ Nanthamon

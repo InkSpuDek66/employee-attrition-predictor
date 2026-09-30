@@ -1,0 +1,7 @@
+# ruff: lint Python ใน CI (.github/workflows/ci.yml) รันในเครื่องด้วย `ruff check .`
+line-length = 120
+extend-exclude = ["notebooks"]
+
+[lint]
+# เริ่มจากกฎที่จับบั๊กจริง (pyflakes + syntax/import error) ก่อน ค่อยเพิ่มกฎ style ทีหลังเมื่อทีมตกลงกัน
+select = ["E4", "E7", "E9", "F"]
