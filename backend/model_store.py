@@ -1,9 +1,11 @@
 """โหลดโมเดล + ข้อมูลพนักงาน + SHAP explainer ครั้งเดียว ใช้ร่วมทุก router
 
 ponytail: ข้อมูลพนักงานอ่านจาก CSV ดิบไปก่อน สลับเป็น dev database กลาง (Supabase/Neon) เมื่อทีมตั้งเสร็จ
-โมเดลตั้งค่าด้วย env MLFLOW_TRACKING_URI / MODEL_URI (ค่าเริ่มต้น = โมเดลตัวทดลองใน mlflow.db ในเครื่อง)
+โมเดลตั้งค่าด้วย env MLFLOW_TRACKING_URI / MODEL_URI (อ่านจาก .env ผ่าน src/mlflow_setup.py
+ค่าเริ่มต้น = โมเดลตัวทดลองใน mlflow.db ในเครื่อง)
 """
 
+import json
 import os
 import sys
 from functools import lru_cache
@@ -16,14 +18,14 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(ROOT, "src"))
 from clean_pipeline import NOISE_COLUMNS, RAW_FILENAME, TARGET_COLUMN, clean_data, load_raw_data  # noqa: E402
 from feature_pipeline import SELECTED_FEATURES, add_features  # noqa: E402
+import mlflow_setup  # noqa: E402  (โหลด .env)
 
 MODEL_URI = os.getenv("MODEL_URI", "models:/attrition-xgboost-P/1")
-TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{os.path.join(ROOT, 'mlflow.db')}")
 
 
 @lru_cache
 def model():
-    mlflow.set_tracking_uri(TRACKING_URI)
+    mlflow_setup.setup()
     return mlflow.xgboost.load_model(MODEL_URI)
 
 
@@ -35,6 +37,14 @@ def raw_employees() -> pd.DataFrame:
 def input_columns() -> set:
     """คอลัมน์ที่ข้อมูลพนักงานต้องมี (ไม่รวม noise และ Attrition)"""
     return set(raw_employees().columns) - set(NOISE_COLUMNS) - {TARGET_COLUMN}
+
+
+def employee_record(employee_id: int):
+    """ข้อมูลดิบของพนักงาน 1 คน (เฉพาะ input_columns) เป็น dict หรือ None ถ้าไม่พบ"""
+    raw = raw_employees()
+    match = raw.loc[raw["EmployeeNumber"] == employee_id, sorted(input_columns())]
+    # ผ่าน JSON เพื่อแปลงชนิด numpy เป็น int/str ของ Python
+    return None if match.empty else json.loads(match.head(1).to_json(orient="records"))[0]
 
 
 def to_features(raw: pd.DataFrame) -> pd.DataFrame:
