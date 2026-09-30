@@ -53,6 +53,20 @@ git clone https://github.com/InkSpuDek66/employee-attrition-predictor.git
 cd employee-attrition-predictor
 ```
 
+### สร้าง virtual environment (ทำครั้งเดียว)
+
+ติดตั้งแพ็กเกจลง `.venv` ของโปรเจกต์ ไม่ลง Python หลักของเครื่อง เพื่อให้ทุกคนใช้ชุดเดียวกันและไม่ชนกับโปรเจกต์อื่น (`.venv` อยู่ใน `.gitignore` แล้ว)
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate            # Windows (macOS/Linux: source .venv/bin/activate)
+pip install -r requirements.txt
+```
+
+- เปิด terminal ใหม่ทุกครั้งต้อง `activate` ก่อนรันคำสั่ง Python ของโปรเจกต์ (ขึ้น `(.venv)` หน้าบรรทัด)
+- VS Code: `Ctrl+Shift+P` → **Python: Select Interpreter** → เลือก `.venv` และเลือก kernel ของ notebook เป็น `.venv` ด้วย
+- เพิ่มแพ็กเกจใหม่ให้ใส่ชื่อใน `requirements.txt` แล้ว commit เพื่อนจะได้ติดตั้งตาม
+
 ### รัน PostgreSQL + MLflow (self-host)
 
 ```bash
