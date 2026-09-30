@@ -18,3 +18,4 @@ python-dotenv
 ruff
 lightgbm
 catboost
+imbalanced-learn

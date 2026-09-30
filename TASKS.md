@@ -65,10 +65,10 @@
   - **สถานะ:** ยืนยันชุด `SELECTED_FEATURES` ของ Puripat แล้ว (ทดลองชุดตัดฟีเจอร์ตาม Localization ใน `notebooks/04_tuning_S.ipynb` ผลแย่ลงเกินเกณฑ์)
   - **วิธีทำ:** สร้างฟีเจอร์ใหม่จาก domain knowledge (เช่น tenure ratio, income-per-level) encode ฟีเจอร์หมวดหมู่ที่เหลือ
   - **ผลลัพธ์ที่ต้องส่ง:** `feature_pipeline.py` (ทำงานร่วมกับ Puripat)
-- [ ] Train + tune model หลัก (XGBoost) — **เป็นตัวหลัก** ร่วมกับ Puripat
+- [x] Train + tune model หลัก (XGBoost) — **เป็นตัวหลัก** ร่วมกับ Puripat
   - **วิธีทำ:** เทรน XGBoost หลายชุด hyperparameter (GridSearch/Optuna) evaluate ด้วย AUC/F1/Precision-Recall (คำนึงถึง class imbalance 16%) log ทุก run เข้า MLflow
   - **ผลลัพธ์ที่ต้องส่ง:** ตัดสินใจร่วมกับ Puripat เลือก run ที่ดีที่สุด promote เป็น model version ใน MLflow registry
-  - **สถานะ:** tune + เทียบเสร็จแล้วใน `notebooks/04_tuning_S.ipynb` เสนอใช้โมเดลของ Puripat — เหลือยืนยันร่วมกันแล้ว register บน MLflow กลาง
+  - **สถานะ:** tune + เทียบเสร็จแล้วใน `notebooks/04_tuning_S.ipynb` ทีมเลือก XGBoost ของ Puripat (`attrition-xgboost-P` v1 บน DagsHub) เป็นโมเดลสุดท้าย ไม่ใช้ Ensemble เพราะต้องใช้ SHAP `TreeExplainer`
 - [x] ตั้งค่า MLflow tracking server (ทำคนเดียว, บล็อกงานทีม — ต้องเสร็จก่อนคนอื่นเริ่ม train)
   - **วิธีทำ:** รัน MLflow server (local Docker หรือ free-tier บน DagsHub) ตั้งค่า `.env.example` แจก connection URI ให้ทีม
   - **ผลลัพธ์ที่ต้องส่ง:** MLflow URI ที่ทุกคน log ได้จริง (ทดสอบกับทีมก่อนเริ่ม wk2)
@@ -92,7 +92,7 @@
   - **ผลลัพธ์ที่ต้องส่ง:** component ใช้งานได้จริง เชื่อม backend แล้ว
 - [ ] Integration testing ร่วมกับทั้งทีม
 - [ ] เขียนรายงานส่วน **Business Logic / Financial Impact / Model Localization** สำหรับรายงานจบ
-  - **สถานะ:** ร่างแล้วที่ `docs/report_business_logic_draft_S.md` ต้องอัปเดตตัวเลขตามโมเดลสุดท้ายก่อนส่ง
+  - **สถานะ:** ร่างแล้วที่ `docs/report_business_logic_draft_S.md` อัปเดตตัวเลขเป็นโมเดลสุดท้าย (`attrition-xgboost-P` v1) แล้ว
 - [ ] ซ้อม demo ส่วน What-if Simulator + เตรียมตอบ Technical Defense เรื่องการเลือกโมเดล/recalibration
 
 ---

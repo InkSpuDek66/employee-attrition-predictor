@@ -1,7 +1,7 @@
 # ร่างรายงาน: Business Logic / Financial Impact / Model Localization — Saphondanai
 
 > **สถานะ: ร่าง** เขียนจากโค้ดใน repo ณ วันที่ 30 ก.ย. 2026 (branch `dev001-Ink`)
-> ตัวเลขผลโมเดลมาจาก `notebooks/04_tuning_S.ipynb` และ Model Lab (`notebooks/05`–`06`, หัวข้อ 2.1) ก่อนใส่รายงานจริงต้องอัปเดตให้ตรงกับโมเดลสุดท้ายที่ทีมเลือก
+> ตัวเลขผลโมเดลมาจาก `notebooks/04_tuning_S.ipynb` และ Model Lab (`notebooks/05`–`06`, หัวข้อ 2.1) ตัวอย่าง API และผลทั้งบริษัทคำนวณจากโมเดลสุดท้าย `attrition-xgboost-P` v1 บน MLflow กลาง (DagsHub)
 
 ## 1. ภาพรวมส่วนที่รับผิดชอบ
 
@@ -10,6 +10,7 @@
 | MLflow กลางของทีม | `src/mlflow_setup.py`, `.env.example`, `docs/mlflow_setup.md` | 8 |
 | Train + tune XGBoost (คู่ขนานกับ Puripat) | `notebooks/04_tuning_S.ipynb` | 10.3 wk2–3 |
 | Model Lab: เทียบโมเดลอื่น + จูน F1 (ทดลอง) | `notebooks/05_model_comparison_S.ipynb`, `notebooks/06_param_sweep_S.ipynb`, `docs/model_lab_S/` | — |
+| ทดลองวิธีแก้ข้อมูลไม่สมดุล + ตัวชี้วัดหลักพร้อม CI | `notebooks/07_imbalance_S.ipynb` | — |
 | Risk Banding + Financial Impact | `src/business_rules.py`, `config/financial_impact.json` | 6.1, 6.3 |
 | Company-wide Aggregate Summary | `src/company_summary.py` | 6.6 |
 | API | `POST /predict`, `POST /whatif`, `GET /financial-impact/{id}`, `GET /company-summary/departments` | 7 |
@@ -37,7 +38,7 @@
 | S (tune ด้วย PR-AUC) | 0.824 | 0.631 | 0.807 | 0.592 | 0.496 | 0.574 |
 
 - tune สองทางได้ hyperparameter ใกล้กันมาก (max_depth 2, min_child_weight 10, colsample ~0.53)
-- ต่างกันไม่เกิน 0.017 อยู่ในระดับ noise (test มีคนลาออกแค่ 47 คน) **เสนอใช้โมเดล P เป็นโมเดลสุดท้าย** รอยืนยันกับ Puripat
+- ต่างกันไม่เกิน 0.017 อยู่ในระดับ noise (test มีคนลาออกแค่ 47 คน) **ทีมเลือกโมเดล P (XGBoost) เป็นโมเดลสุดท้าย** register เป็น `attrition-xgboost-P` v1
 - ถ้า HR ดูแลได้ 20% ของพนักงานที่คะแนนสูงสุด โมเดลจะครอบคลุมคนที่ลาออกจริงประมาณ 60%
 
 ### 2.1 Model Lab: เทียบโมเดลอื่นและจูนเพื่อ F1 (การทดลอง ยังไม่เปลี่ยนโมเดลใน backend)
@@ -72,8 +73,61 @@
 - ผลต่างระดับ 0.03 ระหว่างโมเดลยังอยู่ในความแกว่งปกติ (SD ระหว่าง fold ~0.07) เพราะ test มีคนลาออกแค่ 47 คน
 
 **ข้อเสนอต่อทีม:**
-1. **ทำก่อน:** ใช้โมเดลเดิม แต่เปลี่ยน threshold ตัดสินจาก 0.5 เป็นค่าที่ได้จาก OOF (0.66) ได้ F1 +0.031 โดย backend, SHAP (`TreeExplainer`) และ recalibration ไม่ต้องเปลี่ยน ต้องตกลงกับทีมว่าจะผูกค่านี้กับ Risk Banding (หัวข้อ 3) อย่างไร
-2. **ทางเลือกถัดไป:** Ensemble ได้ F1 สูงสุด แต่ `/shap` ต้องเปลี่ยนจาก `TreeExplainer` เป็นวิธีที่ใช้กับทุกโมเดลได้ ต้องตัดสินใจร่วมกับ Puripat
+1. **คง threshold 0.5 (ทีมตัดสินใจแล้ว):** ค่า 0.66 จาก OOF ได้ F1 +0.031 แต่เป็นการแลก recall กับ precision ไม่ได้ทำให้โมเดลแม่นขึ้น (AUC 0.814 เท่าเดิม คะแนนและ SHAP ไม่เปลี่ยน) และระบบไม่ได้ใช้ threshold ตัดสินลาออก/ไม่ลาออก แต่แสดงเป็น Risk Band (หัวข้อ 3) ให้ HR จัดลำดับเอง ผลบน test (294 คน ลาออกจริง 47):
+
+   | threshold | เตือน | ถูก | เตือนผิด | หลุด | Precision | Recall | F1 |
+   | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+   | 0.5 (ใช้) | 76 | 30 | 46 | 17 | 0.395 | 0.638 | 0.488 |
+   | 0.66 | 34 | 21 | 13 | 26 | 0.618 | 0.447 | 0.519 |
+2. **ไม่เลือก Ensemble:** แม้ได้ F1 สูงสุด (+0.031 จากโมเดลเดิมที่จูน threshold แล้ว ซึ่งยังอยู่ในความแกว่งปกติ) แต่มี SVM อยู่ข้างใน ใช้ `TreeExplainer` ไม่ได้ ต้องเปลี่ยนไปใช้ KernelExplainer ซึ่งช้าและเป็นค่าประมาณ ทีมจึงเลือก XGBoost เพราะ SHAP รายบุคคลที่แม่นและเร็วเป็นหัวใจของระบบ (อธิบายเหตุผลให้ HR ได้ทุกคน)
+
+### 2.2 การจัดการข้อมูลไม่สมดุล (Class Imbalance)
+
+คนลาออกมี 16% ถือว่าไม่สมดุลระดับปานกลาง ทดลองเทียบ 7 วิธีใน `notebooks/07_imbalance_S.ipynb` โดยใช้โมเดลและ hyperparameter เดียวกับโมเดลสุดท้าย เปลี่ยนแค่วิธีจัดการ imbalance, resample เฉพาะ fold ที่ใช้เทรนใน CV (5 fold × 3 รอบ) เพื่อกัน data leakage, test ไม่ resample และใช้ครั้งเดียว, threshold 0.5
+
+| วิธี (CV บน train) | AUC | PR-AUC | Precision | Recall | Brier | คะแนนเฉลี่ย (จริง 0.162) |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ไม่ถ่วง | 0.835 | 0.646 | 0.804 | 0.372 | 0.091 | 0.158 |
+| **scale_pos_weight (ใช้อยู่)** | 0.827 | 0.636 | 0.474 | 0.660 | 0.128 | 0.315 |
+| sqrt(scale_pos_weight) | 0.831 | 0.638 | 0.641 | 0.525 | 0.100 | 0.228 |
+| RandomOverSampler | 0.821 | 0.621 | 0.474 | 0.646 | 0.130 | 0.317 |
+| SMOTE | 0.828 | 0.643 | 0.746 | 0.393 | 0.094 | 0.184 |
+| SMOTETomek | 0.827 | 0.637 | 0.725 | 0.404 | 0.095 | 0.187 |
+| RandomUnderSampler | 0.794 | 0.549 | 0.351 | 0.725 | 0.178 | 0.399 |
+| scale_pos_weight + `/recalibrate` (platt) | 0.827 | 0.636 | 0.812 | 0.386 | 0.095 | 0.166 |
+
+![AUC ของแต่ละวิธี](model_lab_S/imbalance_01_auc.png)
+![คะแนนเฉลี่ยเทียบอัตราลาออกจริง](model_lab_S/imbalance_02_mean_score.png)
+
+**ผล:**
+- **AUC ทุกวิธีต่างกันน้อยกว่า SD ระหว่าง fold (~0.03)** ไม่มีวิธีไหนทำให้โมเดลแยกคนลาออกได้เก่งขึ้นจริง ยกเว้น undersampling ที่แย่ลงเพราะทิ้งข้อมูลเกือบ 70%
+- สิ่งที่แต่ละวิธีเปลี่ยนคือจุดสมดุล precision ↔ recall ที่ threshold 0.5 (ผลแบบเดียวกับการขยับ threshold) และแลกมาด้วยคะแนนที่สูงเกินจริง (calibration แย่ลง)
+- **SMOTE ไม่ได้ช่วย** AUC ไม่ขึ้น recall ต่ำ และสร้างพนักงานที่ไม่มีอยู่จริง (เช่น `JobLevel` 2.4) สอดคล้องกับงานวิจัย van den Goorbergh et al. (2022, *JAMIA*) และ Elor & Averbuch-Elor (2022)
+- `/recalibrate` แก้ปัญหาคะแนนสูงเกินจริงได้ (คะแนนเฉลี่ย 0.315 → 0.166, Brier 0.128 → 0.095) โดยไม่เปลี่ยนโมเดลและ SHAP `platt` คงลำดับคะแนนเดิม ส่วน `isotonic` ทำให้ PR-AUC ลดเหลือ 0.596 เพราะคะแนนเป็นขั้นบันได
+
+**ข้อสรุปของทีม:** คง `scale_pos_weight` + threshold 0.5 เพราะ recall สูงเหมาะกับงาน HR (พลาดคนจะลาออกแพงกว่าเตือนเกิน) และใช้ `/recalibrate` ปรับคะแนนเมื่อบริษัทมีข้อมูลจริง ข้อควรระวัง: หลังปรับเทียบคะแนนจะลดลงมาตรงความจริง คนที่เป็น High (≥ 0.7) จะน้อยลงมาก ต้องทบทวนเกณฑ์ Risk Band ร่วมกับทีม
+
+### 2.3 ตัวชี้วัดหลักและขอบเขตการใช้ในไทย
+
+**ตัวเลขที่ใช้นำเสนอ** (โมเดลสุดท้าย `attrition-xgboost-P` v1 บน test 294 คน ลาออกจริง 47 คน ช่วงความเชื่อมั่น 95% จาก bootstrap 1,000 รอบ ใน `notebooks/07_imbalance_S.ipynb` หัวข้อ 5):
+
+| ชั้น | ตัวชี้วัด | test | 95% CI | อ่านว่า |
+| :--- | :--- | ---: | :---: | :--- |
+| ความแม่นของโมเดล | **ROC AUC** | 0.814 | 0.73–0.89 | สุ่มคนลาออก 1 คนกับคนไม่ลาออก 1 คน โมเดลให้คะแนนคนลาออกสูงกว่า 81% ของครั้ง |
+| | **PR-AUC** | 0.609 | 0.47–0.74 | เดาสุ่มได้ 0.16 (อัตราลาออก) โมเดลดีกว่าประมาณ 3.8 เท่า |
+| ประโยชน์ที่ HR ได้ | **Recall@top20%** | 0.596 | 0.45–0.71 | ดูแล 20% ที่คะแนนสูงสุด ครอบคลุมคนที่จะลาออกจริงประมาณ 60% (สุ่มได้ 20%) |
+| | Recall / Precision ที่ 0.5 | 0.638 / 0.395 | 0.50–0.79 / 0.29–0.51 | เตือน 76 คน ถูก 30 คน จาก 47 คนที่ลาออกจริง |
+| ความน่าเชื่อของคะแนน | Brier (ก่อน recalibrate) | 0.135 | 0.11–0.16 | คะแนนเฉลี่ย 0.32 สูงกว่าอัตราจริง 0.16 แก้ได้ด้วย `/recalibrate` (หัวข้อ 2.2) |
+
+- **ไม่ใช้ Accuracy เป็นตัวหลัก** เพราะทายว่า "ไม่มีใครลาออก" ก็ได้ 84% แล้ว
+- **ไม่ใช้ F1 เป็นตัวหลัก** เพราะขึ้นกับ threshold และระบบไม่ได้ตัดสินว่าใครลาออก แต่แสดงเป็น Risk Band ให้ HR จัดลำดับเอง
+- ช่วงความเชื่อมั่นกว้าง (AUC ห่างกันได้ ±0.08) เพราะ test มีคนลาออกน้อย ผลต่างระหว่างโมเดลที่น้อยกว่านี้ (เช่น P vs S ต่างกัน 0.007) จึงสรุปไม่ได้ว่าตัวไหนดีกว่า
+
+**ขอบเขตการใช้ในไทย:** ตัวเลขทั้งหมดวัดบนชุดข้อมูล IBM HR ซึ่งเป็นข้อมูลสมมติของบริษัทอเมริกัน จึงบอกได้ว่าวิธีการใช้ได้ แต่ **ยังไม่ใช่หลักฐานว่าโมเดลแม่นกับบริษัทไทย** สิ่งที่ปรับให้เข้ากับไทยแล้วคือส่วนของระบบ (ค่าชดเชยมาตรา 118, คำแนะนำแบบไทย, `/recalibrate`) ขั้นตอนพิสูจน์ที่เสนอ:
+
+1. **Backtest:** ใช้ข้อมูลพนักงานย้อนหลังของบริษัทไทย 1 ปี ให้โมเดลทำนาย แล้วเทียบกับคนที่ลาออกจริง วัดด้วยตัวชี้วัดชุดเดียวกับตารางข้างบน รวมถึงคะแนนเฉลี่ยเทียบอัตราลาออกจริง
+2. **เกณฑ์ผ่าน (ร่าง ต้องตกลงกับทีม):** AUC ≥ 0.70 และ Recall@top20% ≥ 0.40 (ดีกว่าสุ่มอย่างน้อย 2 เท่า) ถ้าไม่ผ่าน ต้องเทรนใหม่ด้วยข้อมูลของบริษัท
+3. **Pilot:** ใช้จริง 1–2 แผนก 6 เดือน แล้วเทียบอัตราลาออกกับแผนกที่ไม่ได้ใช้
 
 ## 3. Risk Banding (README 6.1)
 
@@ -132,13 +186,13 @@ expected_loss     = risk_score x replacement_cost
 - `StockOptionLevel` แนะนำ "สวัสดิการระยะยาว เช่น สมทบกองทุนสำรองเลี้ยงชีพ" แทนสิทธิ์ซื้อหุ้น ซึ่งพบน้อยในบริษัทไทย
 - `GET /company-summary/departments` สรุปทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม ให้ HR เห็นว่าควรเริ่มจากแผนกไหน
 
-**ผลทั้งบริษัท (โมเดล `attrition-xgboost-S` v1):** ปัจจัยเด่น 5 อันดับ ได้แก่ `StockOptionLevel`, `JobRole`, `AvgSatisfaction`, `OverTime`, `OverTimeXDistance` (สัดส่วน 6–7% ต่อตัว) ถ้าไม่รวม one-hot กลับ `JobRole` จะไม่ติด 5 อันดับแรกเลย
+**ผลทั้งบริษัท (โมเดล `attrition-xgboost-P` v1):** ปัจจัยเด่น 5 อันดับ ได้แก่ `StockOptionLevel`, `JobRole`, `AvgSatisfaction`, `OverTimeXDistance`, `OverTime` (สัดส่วน 6–7% ต่อตัว) ถ้าไม่รวม one-hot กลับ `JobRole` จะไม่ติด 5 อันดับแรกเลย
 
 | แผนก | คน | คะแนนเฉลี่ย | High / Medium / Low | ปัจจัยเด่น 3 อันดับ |
 | :--- | ---: | ---: | :--- | :--- |
-| Research & Development | 961 | 0.302 | 89 / 178 / 694 | JobRole, StockOptionLevel, AvgSatisfaction |
-| Sales | 446 | 0.415 | 73 / 121 / 252 | StockOptionLevel, AvgSatisfaction, OverTime |
-| Human Resources | 63 | 0.361 | 8 / 14 / 41 | StockOptionLevel, OverTime, MonthlyIncome |
+| Research & Development | 961 | 0.287 | 97 / 156 / 708 | JobRole, StockOptionLevel, AvgSatisfaction |
+| Sales | 446 | 0.405 | 79 / 106 / 261 | StockOptionLevel, AvgSatisfaction, Department |
+| Human Resources | 63 | 0.359 | 9 / 12 / 42 | MonthlyIncome, StockOptionLevel, NumCompaniesWorked |
 
 Sales มีคะแนนเฉลี่ยสูงสุด แต่ R&D มีมูลค่าความเสี่ยงรวมสูงสุดเพราะคนมากกว่า 2 เท่า
 
@@ -161,7 +215,7 @@ POST /predict  {"employee_id": 1}
 ```
 
 ```json
-{"risk_score": 0.710, "calibrated_risk_score": null, "risk_band": "High", "risk_band_th": "สูง",
+{"risk_score": 0.691, "calibrated_risk_score": null, "risk_band": "Medium", "risk_band_th": "ปานกลาง",
  "employee_id": 1, "warning": "ยังไม่ได้ปรับเทียบกับข้อมูลจริงของบริษัท — ..."}
 ```
 
@@ -174,9 +228,9 @@ POST /whatif  {"employee_id": 1, "changes": {"OverTime": "No", "WorkLifeBalance"
 ```
 
 ```json
-{"before": {"risk_score": 0.710, "risk_band": "High"},
- "after":  {"risk_score": 0.383, "risk_band": "Low"},
- "delta": -0.327, "changes_applied": {"OverTime": "No", "WorkLifeBalance": 4},
+{"before": {"risk_score": 0.691, "risk_band": "Medium"},
+ "after":  {"risk_score": 0.341, "risk_band": "Low"},
+ "delta": -0.350, "changes_applied": {"OverTime": "No", "WorkLifeBalance": 4},
  "note": "ผลจำลองจากโมเดล ไม่ได้บันทึกลงระบบ และไม่รับประกันว่าทำจริงแล้วความเสี่ยงจะลดตามนี้"}
 ```
 
