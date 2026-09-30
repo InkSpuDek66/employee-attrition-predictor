@@ -1,9 +1,9 @@
 # Employee Attrition Predictor & HR Analytics Platform: Design Blueprint
 
-**เวอร์ชัน:** v0.1 (Pre-development / Design Blueprint)
-**อัปเดตล่าสุด:** 23 ก.ย. 2026
+**เวอร์ชัน:** v0.2 (Prototype in development — wk2–3 Modeling)
+**อัปเดตล่าสุด:** 1 ต.ค. 2026
 
-> เอกสารนี้เป็น **Living Document** — เขียนขึ้นก่อนเริ่มพัฒนาเพื่อเป็นแนวทางร่วมกันของทีม (API, Data Model, Workflow ที่อธิบายในนี้ยังเป็น "แผน" ไม่ใช่ของที่ implement แล้ว) และจะถูกอัปเดตให้ตรงกับของจริงเมื่อแต่ละ phase พัฒนาเสร็จ
+> เอกสารนี้เป็น **Living Document** — เขียนขึ้นก่อนเริ่มพัฒนาเพื่อเป็นแนวทางร่วมกันของทีม และจะถูกอัปเดตให้ตรงกับของจริงเมื่อแต่ละ phase พัฒนาเสร็จ บางส่วน implement แล้ว (ดู "สถานะปัจจุบัน" ด้านล่าง) ส่วนที่เหลือ เช่น Data Model/database กลาง, Superset dashboard และ authentication ยังเป็น "แผน"
 
 ---
 
@@ -11,7 +11,7 @@
 
 - **ประเภทโปรเจกต์:** งานนักศึกษาชั้นปีที่ 4 เทอม 1 สาขาวิทยาการคอมพิวเตอร์ (Proposal Defense) — School of Information Technology (SIT), Sripatum University (SPU)
 - **ระยะเวลาพัฒนา:** ทีมทำงานหลัก 9 สัปดาห์ (22 ก.ย. – 23 พ.ย. 2026) + buffer ก่อน Final Exam จริงของรายวิชา (course week 15–16, ~24 พ.ย.–7 ธ.ค. 2026) ดูรายละเอียดที่ [10. Project Timeline](#10-project-timeline-แผนดำเนินงาน)
-- **สถานะปัจจุบัน:** wk1 — Foundation & EDA ยังไม่มีโค้ด backend/frontend จริง
+- **สถานะปัจจุบัน:** wk2–3 — Modeling มี clean/feature pipeline, โมเดลสุดท้าย `attrition-xgboost-P` v1 บน MLflow (DagsHub), FastAPI (`/predict`, `/whatif`, `/shap`, `/financial-impact`, `/recalibrate`, `/company-summary`), React What-if Simulator + SHAP Viewer และ CI แล้ว ยังไม่มี database กลาง, Superset และ authentication
 - **ขอบเขต:** ระบบต้นแบบ (Prototype) บน IBM HR Analytics Employee Attrition & Performance dataset (Kaggle) ซึ่งเป็น **ข้อมูลจำลอง (synthetic)** ไม่ใช่ข้อมูลองค์กรจริง — ผลลัพธ์และสมมติฐานทางธุรกิจในเอกสารนี้ตั้งอยู่บนข้อจำกัดนี้
 
 ---
@@ -168,7 +168,7 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
 | จำนวนแถว | 1,470 (พนักงาน 1,470 คน) |
 | จำนวนคอลัมน์ | 35 ฟีเจอร์ (ตัวเลข + หมวดหมู่) |
 | Target column | `Attrition` (Yes/No) |
-| อัตราลาออกในชุดข้อมูล | 16.1% (238 คน) — ชุดข้อมูลไม่สมดุล ต้องพิจารณา class imbalance ตอนเทรน |
+| อัตราลาออกในชุดข้อมูล | 16.1% (237 คน) — ชุดข้อมูลไม่สมดุล ต้องพิจารณา class imbalance ตอนเทรน |
 
 **ผลจาก EDA เบื้องต้น** (ใช้กำหนดทิศทาง feature engineering ใน Modeling phase):
 

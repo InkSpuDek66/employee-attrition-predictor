@@ -1,6 +1,6 @@
 # ตั้งค่า MLflow
 
-โค้ดทุกส่วน (notebook, `src/train.py`, backend) ชี้ MLflow ผ่าน `src/mlflow_setup.py` ซึ่งอ่าน `MLFLOW_TRACKING_URI` จาก `.env` จึงสลับปลายทางได้โดยไม่แก้โค้ด มี 3 แบบ:
+โค้ดเกือบทุกส่วน (notebook, `src/train.py`, backend) ชี้ MLflow ผ่าน `src/mlflow_setup.py` ซึ่งอ่าน `MLFLOW_TRACKING_URI` จาก `.env` จึงสลับปลายทางได้โดยไม่แก้โค้ด (ยกเว้น `src/shap_explain.py` และ `notebooks/05_shap_P.ipynb` ที่ยังชี้ sqlite ในเครื่องแบบ hardcode) มี 3 แบบ:
 
 | แบบ | ใช้เมื่อ | `MLFLOW_TRACKING_URI` |
 | :--- | :--- | :--- |
@@ -15,6 +15,8 @@
 - **ติดตั้งแบบ on-premise ได้ด้วยคำสั่งเดียว** metadata เก็บใน PostgreSQL ตัวเดียวกับแอป (แยก database) artifact เก็บใน docker volume
 
 DagsHub ยังใช้ได้ช่วงพัฒนา เพราะ dataset ของโปรเจกต์เป็นข้อมูลสมมติ (ดู [dataset.md](dataset.md)) แต่ห้ามใช้กับข้อมูลพนักงานจริง
+
+> ⚠ **MLflow บน DagsHub ของทีมเป็นสาธารณะ** เพราะ repo บน DagsHub เป็น mirror ของ GitHub repo ที่เป็น public ทุก run, metric, โมเดล และ artifact ที่ log ขึ้นไป **คนนอกดูและดาวน์โหลดได้โดยไม่ต้อง login** ห้าม log ข้อมูลพนักงานจริงหรือสิ่งที่ได้จากข้อมูลจริงขึ้น DagsHub ถ้าจะใช้ข้อมูลจริงให้ใช้แบบ self-host หรือ DagsHub repo แบบ private เท่านั้น
 
 ## Self-host ด้วย docker compose
 
@@ -82,6 +84,10 @@ mlflow_setup.setup("ชื่อ-experiment")   # แทน mlflow.set_tracking_
 
 Backend (`backend/model_store.py`) อ่าน `.env` ผ่าน `mlflow_setup` เช่นกัน เปลี่ยนโมเดลที่ใช้ด้วย `MODEL_URI` ใน `.env` ได้โดยไม่แก้โค้ด
 
+> ⚠ **ตอน deploy (เช่น Render) ห้ามใส่ DagsHub token ส่วนตัวของสมาชิกใน environment ของ backend** token ส่วนตัวมีสิทธิ์ Write ถ้า server ถูกเจาะ ผู้โจมตีจะแก้ Model Registry ได้ backend ต้องการแค่อ่านโมเดล ให้ใช้ token ของบัญชีแยกที่อ่านได้อย่างเดียว หรือ bake ไฟล์โมเดลเข้า Docker image ตอน build
+
 ## ย้าย run เดิมในเครื่องขึ้น server
 
-run ที่อยู่ใน `mlflow.db` ของแต่ละคนจะไม่ย้ายขึ้นไปเอง วิธีที่ง่ายสุดคือตั้ง `.env` แล้วรัน notebook เดิมหรือ `python src/train.py` ใหม่อีกรอบ (ผลเหมือนเดิมเพราะใช้ seed คงที่)
+run ที่อยู่ใน `mlflow.db` ของแต่ละคนจะไม่ย้ายขึ้นไปเอง วิธีที่ง่ายสุดคือตั้ง `.env` แล้วรัน notebook เดิมหรือ `python src/train.py` ใหม่อีกรอบ
+
+> **เทรนใหม่ไม่ได้โมเดลตัวเดิมเสมอไป** แม้ใช้ seed เดียวกัน (`random_state=42`) XGBoost ยังให้ผลต่างกันตามจำนวน thread และระบบปฏิบัติการ (วัดได้ test AUC 0.805–0.815) รันซ้ำบนเครื่องเดิมด้วยการตั้งค่าเดิมจึงจะได้ผลเดิม ดังนั้นตัวเลขในรายงานและสไลด์ให้คำนวณจากการ**โหลดโมเดลที่ register แล้ว** (`models:/attrition-xgboost-P/1`) ไม่ใช่เทรนใหม่ run ที่สร้างจาก `src/train.py` มี tag `platform`, `n_jobs`, `cpu_count`, `data_sha256` และ `mlflow.source.git.commit` ไว้ตรวจย้อนหลังว่าโมเดลมาจากเครื่อง ข้อมูล และโค้ดชุดไหน
