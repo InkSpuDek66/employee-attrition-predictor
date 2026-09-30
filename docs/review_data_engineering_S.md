@@ -567,17 +567,21 @@ bootstrap 95% CI ของ test AUC = **0.73 – 0.88**
 ### Saphondanai
 - [ ] DE-01 (หลัก) หน่วยเงินเดือนใน config + แปลงที่ API + range guard + React + test
 - [ ] DE-02 review schema `LabeledEmployee`
-- [ ] DE-03 (หลัก) feature spec / alias `@champion` / tag commit + data hash
+- [x] DE-03 ส่วน tag commit + data hash (`31f4690`)
+- [ ] DE-03 (หลัก) feature spec / alias `@champion`
 - [ ] DE-04 schema + `batch_score.py` (ร่วมกับ Puripat)
-- [ ] DE-05 pin requirements + แยก dev
-- [ ] DE-06 จัดการ `attrition_cleaned_S.csv` + `log_input` ใน `train.py`
+- [x] DE-05 pin requirements + แยก dev (`65f4d13`)
+- [x] DE-06 `log_input` ใน `train.py` (`31f4690`)
+- [ ] DE-06 จัดการ `attrition_cleaned_S.csv`
 - [x] DE-07 ข้อ 3: CI ของ AUC ในรายงานร่าง (`fc4a969`)
-- [ ] DE-07 CV metric ใน `train.py` และตัวเลขในสไลด์ Data Gate
-- [ ] DE-08 notebook 07 โหลด v1 แทนการเทรนใหม่ + tag สภาพแวดล้อมใน `train.py` + แก้ข้อความใน `mlflow_setup.md:87` และ docstring ของ `train.py`
-- [ ] DE-09 แก้ `report_business_logic_draft_S.md` บรรทัด 141 (185/274/1011) และ 177 (ข้อจำกัดหน่วยเงิน) + `mlflow_setup.md:3`
-- [ ] DS-03 เปลี่ยน `input_example`
+- [x] DE-07 ข้อ 2: CV metric + bootstrap CI ใน `train.py` (`31f4690`)
+- [ ] DE-07 ตัวเลขในสไลด์ Data Gate
+- [x] DE-08 notebook 07 โหลด v1 แทนการเทรนใหม่ + tag สภาพแวดล้อมใน `train.py` + แก้ข้อความใน `mlflow_setup.md:87` และ docstring ของ `train.py` (`31f4690`, `577fab1`, `67cde44`)
+- [x] DE-09 แก้ `report_business_logic_draft_S.md` บรรทัด 141 (185/274/1011) และ 177 (ข้อจำกัดหน่วยเงิน) + `mlflow_setup.md:3` (`67cde44`)
+- [x] DS-03 เปลี่ยน `input_example` เป็น signature อย่างเดียว (`31f4690`) มีผลตอน register version ถัดไป
 - [ ] DS-04 ทดลองโมเดลที่ตัด `Gender`/`MaritalStatus` (ร่วมกับ Puripat) เมื่อทีม Fairness พร้อม
-- [ ] H-01, H-03 (CI gate แบบมีช่วง), H-04, H-05, H-07 (05, 07)
+- [x] H-03 CI gate: `train.py` exit ≠ 0 ถ้า test AUC < 0.75 (`31f4690`) · H-05 (`67cde44`) · H-07 (05, 07) (`577fab1`)
+- [ ] H-01, H-04
 
 ### Puripat
 - [ ] DE-02 (หลัก) validate records ใน `/recalibrate` + test
@@ -611,7 +615,10 @@ bootstrap 95% CI ของ test AUC = **0.73 – 0.88**
 
 เขียนต่อท้ายได้เลย รูปแบบ: `- [ID] ชื่อ (วันที่): ความเห็น`
 
--
+- [DE-03] Saphondanai (1 ต.ค. 2026): ไม่ได้เพิ่ม tag `git_commit` เอง เพราะ MLflow ติด `mlflow.source.git.commit` ให้อัตโนมัติอยู่แล้ว ส่วน `data_sha256` ใช้ hash จากค่าในตาราง ไม่ใช่ byte ของไฟล์ เพราะ git เก็บ CSV เป็น LF แต่บน Windows checkout ออกมาเป็น CRLF ถ้า hash จากไฟล์ เครื่องทีมกับ CI จะได้ค่าไม่ตรงกันทั้งที่เป็นข้อมูลเดียวกัน
+- [DE-05] Saphondanai (1 ต.ค. 2026): `kagglehub` อยู่ใน `requirements-dev.txt` เพราะ raw CSV อยู่ใน git แล้ว และ `load_raw_data` import เฉพาะตอนไม่มีไฟล์ (จะแยกให้ชัดใน H-04) **ทุกคนต้องรัน `pip install -r requirements-dev.txt` หลังดึงโค้ดนี้**
+- [DS-03] Saphondanai (1 ต.ค. 2026): เลือกใช้ signature อย่างเดียวแทนแถวสังเคราะห์ เพราะแถวสังเคราะห์ต้องสร้าง one-hot ครบ 50 คอลัมน์ ซึ่งเป็นปัญหาเดียวกับ DE-03 ส่วน v1 บน DagsHub ยังมี `input_example` เดิม จะหายเมื่อ register version ถัดไป (ตั้งใจทำพร้อม DE-01/DE-03 ครั้งเดียว)
+- [H-03] Saphondanai (1 ต.ค. 2026): ใช้เกณฑ์ 0.75 ไม่ใช่ 0.78 เพราะค่าที่วัดได้จริงคือ 0.805–0.815 ตามสภาพแวดล้อม ถ้าตั้ง 0.78 ระยะเผื่อจะเหลือแค่ ~0.025 และ gate ทำงานก่อน register จึงไม่มีโมเดลที่ไม่ผ่านเกณฑ์เข้า registry
 
 ---
 

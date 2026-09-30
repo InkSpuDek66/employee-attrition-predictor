@@ -530,14 +530,17 @@
 ### Saphondanai
 - [ ] SEC-01 ตัดฟิลด์ส่วนตัวออกจาก response ของ `/whatif` + auth ของ `/predict` `/whatif` `/financial-impact`
 - [ ] SEC-02 ลบช่องรหัสบริษัทใน `WhatIfSimulator.jsx` + `tenant_id` ใน `schemas.py`
-- [ ] SEC-04 token อ่านอย่างเดียวสำหรับ backend + เอกสาร
+- [x] SEC-04 ข้อ 3: เอกสารห้ามใช้ token ส่วนตัวใน environment ของ Render (`67cde44`)
+- [ ] SEC-04 token อ่านอย่างเดียวสำหรับ backend
 - [ ] SEC-05 เลือก format โมเดล (ผูกกับ DE-03) + checksum
-- [ ] SEC-06 เปิด Dependabot alerts/security updates + `pip-audit`, `npm audit`, `permissions:` ใน CI
+- [x] SEC-06 `pip-audit`, `npm audit`, `permissions:` ใน CI + `.github/dependabot.yml` (`65f4d13`)
+- [ ] SEC-06 เปิด Dependabot alerts/security updates ในหน้า Settings ของ GitHub
 - [ ] SEC-08 ข้อความ error ใน `whatif.py` + ปิด `/docs` ตอน prod
 - [ ] SEC-09 audit log (ร่วมกับ Puripat) + หัวข้อ PDPA ในรายงาน
 - [ ] SEC-11 ruleset ของ `main` (block force push/deletion, require PR + CI) + ขั้นตอน PR ใน CONTRIBUTING.md
-- [ ] SEC-12 `input_example` สังเคราะห์ + เขียนเตือนเรื่อง DagsHub สาธารณะใน `mlflow_setup.md` / `.env.example`
-- [ ] SEC-13 ล้าง path ใน output ของ notebook 04, 07 + `MLFLOW_DISABLE_AGENT_HINT` ใน `.env.example`
+- [x] SEC-12 เลิกใช้ `input_example` (ใช้ signature อย่างเดียว) + เขียนเตือนเรื่อง DagsHub สาธารณะใน `mlflow_setup.md` / `.env.example` (`31f4690`, `67cde44`)
+- [x] SEC-13 ล้าง path ใน output ของ notebook 07 (`577fab1`)
+- [ ] SEC-13 ล้าง path ใน output ของ notebook 04
 
 ### Puripat
 - [ ] SEC-01 ตัดค่า protected attribute ออกจาก `/shap` + auth ของ `/shap` `/recalibrate` `/company-summary` + แก้หน้า Streamlit ให้ไม่พึ่ง `result.employee`
@@ -562,7 +565,8 @@
 
 เขียนต่อท้ายได้เลย รูปแบบ: `- [ID] ชื่อ (วันที่): ความเห็น`
 
--
+- [SEC-13] Saphondanai (1 ต.ค. 2026): ไม่ได้ใส่ `MLFLOW_DISABLE_AGENT_HINT` ใน `.env.example` เพราะใส่ไปก็ไม่มีผล ข้อความ hint พิมพ์ตอน `import mlflow` ซึ่งเกิดก่อนที่ `mlflow_setup` จะโหลด `.env` และจะขึ้นก็ต่อเมื่อมี coding agent (เช่น Claude Code) เป็นคนรัน notebook เท่านั้น ถ้าคนรันเองจะไม่ขึ้นอยู่แล้ว วิธีที่ใช้ได้คือตั้ง env var ในคำสั่งตอนให้ agent รัน (CI ตั้งไว้แล้วใน `ci.yml`) ส่วน notebook 04 ยังไม่ได้รันใหม่ เพราะจะทำให้ Optuna log run ขึ้น DagsHub ซ้ำ
+- [SEC-12] Saphondanai (1 ต.ค. 2026): `train.py` บันทึก `mlflow.source.name` เป็น `src/train.py` แทน path เต็มในเครื่อง ซึ่งเป็นค่าที่ MLflow ใส่ให้ตามปกติ และจะขึ้นไปอยู่บน DagsHub ที่เป็นสาธารณะ
 
 ---
 
