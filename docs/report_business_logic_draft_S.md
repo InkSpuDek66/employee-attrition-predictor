@@ -1,7 +1,7 @@
 # ร่างรายงาน: Business Logic / Financial Impact / Model Localization — Saphondanai
 
 > **สถานะ: ร่าง** เขียนจากโค้ดใน repo ณ วันที่ 30 ก.ย. 2026 (branch `dev001-Ink`)
-> ตัวเลขผลโมเดลมาจาก `notebooks/04_tuning_S.ipynb` ก่อนใส่รายงานจริงต้องอัปเดตให้ตรงกับโมเดลสุดท้ายที่ทีมเลือก
+> ตัวเลขผลโมเดลมาจาก `notebooks/04_tuning_S.ipynb` และ Model Lab (`notebooks/05`–`06`, หัวข้อ 2.1) ก่อนใส่รายงานจริงต้องอัปเดตให้ตรงกับโมเดลสุดท้ายที่ทีมเลือก
 
 ## 1. ภาพรวมส่วนที่รับผิดชอบ
 
@@ -9,6 +9,7 @@
 | :--- | :--- | :--- |
 | MLflow กลางของทีม | `src/mlflow_setup.py`, `.env.example`, `docs/mlflow_setup.md` | 8 |
 | Train + tune XGBoost (คู่ขนานกับ Puripat) | `notebooks/04_tuning_S.ipynb` | 10.3 wk2–3 |
+| Model Lab: เทียบโมเดลอื่น + จูน F1 (ทดลอง) | `notebooks/05_model_comparison_S.ipynb`, `notebooks/06_param_sweep_S.ipynb`, `docs/model_lab_S/` | — |
 | Risk Banding + Financial Impact | `src/business_rules.py`, `config/financial_impact.json` | 6.1, 6.3 |
 | Company-wide Aggregate Summary | `src/company_summary.py` | 6.6 |
 | API | `POST /predict`, `POST /whatif`, `GET /financial-impact/{id}`, `GET /company-summary/departments` | 7 |
@@ -38,6 +39,41 @@
 - tune สองทางได้ hyperparameter ใกล้กันมาก (max_depth 2, min_child_weight 10, colsample ~0.53)
 - ต่างกันไม่เกิน 0.017 อยู่ในระดับ noise (test มีคนลาออกแค่ 47 คน) **เสนอใช้โมเดล P เป็นโมเดลสุดท้าย** รอยืนยันกับ Puripat
 - ถ้า HR ดูแลได้ 20% ของพนักงานที่คะแนนสูงสุด โมเดลจะครอบคลุมคนที่ลาออกจริงประมาณ 60%
+
+### 2.1 Model Lab: เทียบโมเดลอื่นและจูนเพื่อ F1 (การทดลอง ยังไม่เปลี่ยนโมเดลใน backend)
+
+**ดูผลแบบ interactive:** เปิดไฟล์ [model_lab_S/index.html](model_lab_S/index.html) ในเบราว์เซอร์ (ดับเบิลคลิกได้เลย ไม่ต้องรัน server) ในหน้ามีกราฟเทียบโมเดล, กราฟปรับค่าทีละพารามิเตอร์ และแถบเลื่อน threshold พร้อม confusion matrix
+รายละเอียดวิธีทดลองอยู่ใน `notebooks/05_model_comparison_S.ipynb` และ `notebooks/06_param_sweep_S.ipynb` ส่วน run ของแต่ละโมเดลอยู่บน DagsHub ใน experiment `attrition-model-lab-S`
+ถ้ารัน notebook ใหม่ (05 เขียน `results.json`, 06 เขียน `sweeps.json`) ให้สร้างหน้าเว็บใหม่ด้วย `python docs/model_lab_S/build_page.py`
+
+**วิธีทดลอง:**
+- เทียบ 8 โมเดล (LogReg, Random Forest, SVM, KNN, MLP, XGBoost, LightGBM, CatBoost) + Ensemble บน split เดียวกับข้างบน
+- จัดการข้อมูลไม่สมดุลด้วย class weight + จูน threshold จาก out-of-fold ของ train (ไม่ใช้ SMOTE)
+- ทุกโมเดลจูนด้วย Optuna 30 trials เท่ากัน โดยให้ Optuna หาค่าที่ได้ F1 สูงสุด (ที่ threshold ดีที่สุด)
+- test ใช้ครั้งเดียวตอนจบ
+
+**ผล (test F1):**
+
+| | test F1 | เพิ่มจากเดิม |
+| :--- | ---: | ---: |
+| โมเดลเดิม (XGB), threshold 0.5 ที่ใช้อยู่ | 0.488 | |
+| โมเดลเดิม, จูน threshold เป็น 0.66 | 0.519 | +0.031 |
+| Ensemble (SVM + LogReg + LightGBM), threshold 0.56 | 0.550 | +0.062 |
+
+![F1 ของแต่ละโมเดล](model_lab_S/01_model_f1.png)
+
+**สิ่งที่ได้เรียนรู้:**
+- **threshold สำคัญกว่า class weight:** เมื่อจูน threshold แล้ว `scale_pos_weight` แทบไม่มีผล (F1 0.57–0.60 ทุกค่า) ต่างจากตอนตรึง threshold 0.5 ที่ F1 แกว่ง 0.46–0.58
+
+  ![scale_pos_weight sweep](model_lab_S/sweep_XGBoost_scale_pos_weight.png)
+- **ต้นไม้ตื้นพอ:** boosting ทุกตัวได้ผลดีสุดที่ความลึก 1–2 ชั้น และโมเดลเส้นตรง (LogReg, SVM) ทำคะแนนใกล้เคียง แสดงว่าความสัมพันธ์ในข้อมูลไม่ซับซ้อน
+- **เลือกค่าด้วยกฎ 1-SE** (Hastie et al., *Elements of Statistical Learning* §7.10): ในบรรดาค่าที่ F1 ห่างจากสูงสุดไม่เกิน 1 standard error เลือกค่าที่ง่ายที่สุด เช่น RF `max_depth` 20 → 5 เพื่อลดความเสี่ยง overfit กับข้อมูล 1,176 แถว
+- **CV ที่เลือก threshold บนข้อมูลชุดเดียวกับที่วัดผลสูงเกินจริงประมาณ 0.02** ตรวจด้วย nested threshold (เลือก threshold จาก fold อื่นแล้ววัดบน fold ที่เหลือ)
+- ผลต่างระดับ 0.03 ระหว่างโมเดลยังอยู่ในความแกว่งปกติ (SD ระหว่าง fold ~0.07) เพราะ test มีคนลาออกแค่ 47 คน
+
+**ข้อเสนอต่อทีม:**
+1. **ทำก่อน:** ใช้โมเดลเดิม แต่เปลี่ยน threshold ตัดสินจาก 0.5 เป็นค่าที่ได้จาก OOF (0.66) ได้ F1 +0.031 โดย backend, SHAP (`TreeExplainer`) และ recalibration ไม่ต้องเปลี่ยน ต้องตกลงกับทีมว่าจะผูกค่านี้กับ Risk Banding (หัวข้อ 3) อย่างไร
+2. **ทางเลือกถัดไป:** Ensemble ได้ F1 สูงสุด แต่ `/shap` ต้องเปลี่ยนจาก `TreeExplainer` เป็นวิธีที่ใช้กับทุกโมเดลได้ ต้องตัดสินใจร่วมกับ Puripat
 
 ## 3. Risk Banding (README 6.1)
 
