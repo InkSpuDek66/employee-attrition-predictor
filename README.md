@@ -147,6 +147,12 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
 - กลุ่มฟีเจอร์ที่คาดว่าทำนายได้ดี: `MonthlyIncome`, `Age`, `OverTime`, `TotalWorkingYears`, `YearsAtCompany`, `DistanceFromHome`, `StockOptionLevel`
 - ความเสี่ยง Data Leakage: ต้องตรวจสอบ timeline ของแต่ละฟีเจอร์ก่อนใช้เทรน (ดู [11. Risks](#11-risks--mitigation))
 
+### ที่มาและสัญญาอนุญาต (License)
+
+- **แหล่งข้อมูล:** [Kaggle: pavansubhasht/ibm-hr-analytics-attrition-dataset](https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset) อัปเดตล่าสุด 31 มี.ค. 2017 คำอธิบายบน Kaggle ระบุว่าเป็น *"a fictional data set created by IBM data scientists"*
+- **License:** [ODbL v1.0](https://opendatacommons.org/licenses/odbl/1-0/) สำหรับตัวฐานข้อมูล และ [DbCL v1.0](https://opendatacommons.org/licenses/dbcl/1-0/) สำหรับเนื้อหา ใช้เชิงพาณิชย์ได้ แต่ต้อง**ให้เครดิตที่มา**ทุกที่ที่เผยแพร่ผลงาน (รายงาน สไลด์ เว็บ) และถ้าเผยแพร่ข้อมูลที่ดัดแปลงแล้ว (`data/processed/`) ต้องใช้ ODbL เหมือนกัน (share-alike)
+- ผลต่อแต่ละส่วนของโปรเจกต์ ข้อความเครดิตสำเร็จรูป และความหมายของคอลัมน์ที่เป็นรหัส ดูที่ [docs/dataset.md](docs/dataset.md)
+
 ### การปรับให้เหมาะกับบริบทไทย (Localization Notes)
 
 ค้นแล้วไม่พบ dataset การลาออกของพนักงานไทยที่เปิดเผยต่อสาธารณะ (ทางเลือกที่พิจารณาแล้วไม่เลือก: dataset สำรวจพนักงานซาอุดีอาระเบียจาก Data in Brief 2025 — ประเทศไม่ตรง, หรือเก็บ survey พนักงานไทยเอง — ใช้เวลามากเกินกรอบ 9 สัปดาห์) จึงยังใช้ IBM dataset เป็นชุดข้อมูลหลักในการเทรน แต่ลดความเสี่ยงเรื่อง cross-cultural transferability ด้วย:
