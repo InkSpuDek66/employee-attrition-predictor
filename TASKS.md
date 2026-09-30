@@ -61,33 +61,38 @@
   - **ผลลัพธ์ที่ต้องส่ง:** notebook cleaning ของตัวเอง + ร่วมสรุปเป็น `clean_pipeline.py` ไฟล์เดียวกับ Puripat ตอนจบสัปดาห์
 
 ### wk2–3 (29 ก.ย.–12 ต.ค.) — Modeling
-- [ ] Feature engineering ร่วมกับ Puripat (ต่อเนื่องจาก Data cleaning)
+- [x] Feature engineering ร่วมกับ Puripat (ต่อเนื่องจาก Data cleaning)
+  - **สถานะ:** ยืนยันชุด `SELECTED_FEATURES` ของ Puripat แล้ว (ทดลองชุดตัดฟีเจอร์ตาม Localization ใน `notebooks/04_tuning_S.ipynb` ผลแย่ลงเกินเกณฑ์)
   - **วิธีทำ:** สร้างฟีเจอร์ใหม่จาก domain knowledge (เช่น tenure ratio, income-per-level) encode ฟีเจอร์หมวดหมู่ที่เหลือ
   - **ผลลัพธ์ที่ต้องส่ง:** `feature_pipeline.py` (ทำงานร่วมกับ Puripat)
 - [ ] Train + tune model หลัก (XGBoost) — **เป็นตัวหลัก** ร่วมกับ Puripat
   - **วิธีทำ:** เทรน XGBoost หลายชุด hyperparameter (GridSearch/Optuna) evaluate ด้วย AUC/F1/Precision-Recall (คำนึงถึง class imbalance 16%) log ทุก run เข้า MLflow
   - **ผลลัพธ์ที่ต้องส่ง:** ตัดสินใจร่วมกับ Puripat เลือก run ที่ดีที่สุด promote เป็น model version ใน MLflow registry
+  - **สถานะ:** tune + เทียบเสร็จแล้วใน `notebooks/04_tuning_S.ipynb` เสนอใช้โมเดลของ Puripat — เหลือยืนยันร่วมกันแล้ว register บน MLflow กลาง
 - [ ] ตั้งค่า MLflow tracking server (ทำคนเดียว, บล็อกงานทีม — ต้องเสร็จก่อนคนอื่นเริ่ม train)
   - **วิธีทำ:** รัน MLflow server (local Docker หรือ free-tier บน DagsHub) ตั้งค่า `.env.example` แจก connection URI ให้ทีม
   - **ผลลัพธ์ที่ต้องส่ง:** MLflow URI ที่ทุกคน log ได้จริง (ทดสอบกับทีมก่อนเริ่ม wk2)
+  - **สถานะ:** เลือก DagsHub, โค้ด + `.env.example` + คู่มือ `docs/mlflow_setup.md` พร้อมแล้ว — เหลือสมัคร DagsHub, เชื่อม repo, แจก URI และทดสอบกับทีม
 
 ### wk4–5 (13–26 ต.ค.) — SHAP + Progress Check (Data Gate ★ wk4)
-- [ ] Company-wide Aggregate Summary ร่วมกับ Nanthamon
+- [x] Company-wide Aggregate Summary ร่วมกับ Nanthamon
   - **วิธีทำ:** รอผล SHAP รายบุคคลของ Yanisa/Puripat เสร็จก่อน แล้วคำนวณ `mean(|shap_value|)` แยกตามแผนก จับคู่กับ rule-based recommendation table ตาม [6.6](README.md#66-company-wide-aggregate-summary)
   - **ผลลัพธ์ที่ต้องส่ง:** module คำนวณ company summary + ตัวอย่างผลลัพธ์ (พร้อมต่อ endpoint `/company-summary`)
+  - **สถานะ:** `src/company_summary.py` + `src/business_rules.py` (Financial Impact) ต่อเข้า `/company-summary` แล้ว ส่วน cache ลง `company_risk_summary` รอ database กลาง
 - [ ] เตรียม slide หัวข้อ **Modeling Results & MLflow** (2–3 แผ่น) สำหรับ Data Gate
 
 ### wk6–7 (27 ต.ค.–9 พ.ย.) — Backend & Analysis
-- [ ] FastAPI endpoint หลัก: `/predict`, `/whatif` — **เป็นตัวหลัก** ร่วมกับ Puripat (Puripat ทำ `/shap`, `/recalibrate`, `/company-summary`)
+- [x] FastAPI endpoint หลัก: `/predict`, `/whatif` — **เป็นตัวหลัก** ร่วมกับ Puripat (Puripat ทำ `/shap`, `/recalibrate`, `/company-summary`)
   - **วิธีทำ:** สร้าง `routers/predict.py`, `routers/whatif.py` เชื่อม MLflow model + dev database กลาง เขียน Pydantic schema ตามตารางใน README หัวข้อ 7
   - **ผลลัพธ์ที่ต้องส่ง:** endpoint ทำงานได้จริง มี response ตรง schema + basic test
 
 ### wk8–9 (10–23 พ.ย.) — BI & Frontend + Closing (Model Gate ★ wk8, Product Gate buffer)
-- [ ] React: **What-if Simulator** — **เป็นตัวหลัก** ร่วมกับ Puripat (Puripat ทำ SHAP viewer)
+- [x] React: **What-if Simulator** — **เป็นตัวหลัก** ร่วมกับ Puripat (Puripat ทำ SHAP viewer)
   - **วิธีทำ:** สร้างฟอร์ม/slider ปรับค่าฟีเจอร์สมมติ เรียก `POST /whatif` แบบ real-time แสดง risk_score ที่เปลี่ยนไปทันที
   - **ผลลัพธ์ที่ต้องส่ง:** component ใช้งานได้จริง เชื่อม backend แล้ว
 - [ ] Integration testing ร่วมกับทั้งทีม
 - [ ] เขียนรายงานส่วน **Business Logic / Financial Impact / Model Localization** สำหรับรายงานจบ
+  - **สถานะ:** ร่างแล้วที่ `docs/report_business_logic_draft_S.md` ต้องอัปเดตตัวเลขตามโมเดลสุดท้ายก่อนส่ง
 - [ ] ซ้อม demo ส่วน What-if Simulator + เตรียมตอบ Technical Defense เรื่องการเลือกโมเดล/recalibration
 
 ---
