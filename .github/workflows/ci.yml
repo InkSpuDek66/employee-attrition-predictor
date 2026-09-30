@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# ให้ workflow อ่าน repo ได้อย่างเดียว ไม่พึ่งค่า default ของ repo ที่อาจถูกเปลี่ยน
+permissions:
+  contents: read
+
 jobs:
   python:
     name: Python lint + train + backend tests (MLflow ใน docker compose)
@@ -20,8 +24,11 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - run: pip install -r requirements.txt
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
       - run: ruff check .
+      # สแกนแพ็กเกจที่ติดตั้งจริงหาช่องโหว่ที่รู้จัก (fail ถ้าเจอ)
+      - run: pip-audit
       - name: Start PostgreSQL + MLflow
         run: docker compose up -d --build --wait
       # เทรนโมเดลใหม่ทุกครั้ง ยืนยันว่าทำซ้ำได้จากโค้ดใน repo และ register เข้า MLflow ตัวจริงได้
@@ -45,5 +52,6 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run build

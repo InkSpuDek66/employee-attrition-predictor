@@ -60,12 +60,16 @@ cd employee-attrition-predictor
 ```bash
 python -m venv .venv
 .venv\Scripts\activate            # Windows (macOS/Linux: source .venv/bin/activate)
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 - เปิด terminal ใหม่ทุกครั้งต้อง `activate` ก่อนรันคำสั่ง Python ของโปรเจกต์ (ขึ้น `(.venv)` หน้าบรรทัด)
 - VS Code: `Ctrl+Shift+P` → **Python: Select Interpreter** → เลือก `.venv` และเลือก kernel ของ notebook เป็น `.venv` ด้วย
-- เพิ่มแพ็กเกจใหม่ให้ใส่ชื่อใน `requirements.txt` แล้ว commit เพื่อนจะได้ติดตั้งตาม
+- ไฟล์แพ็กเกจมี 2 ไฟล์ และทุกบรรทัด pin เวอร์ชันด้วย `==` ให้ทุกเครื่องและ CI ได้ชุดเดียวกัน
+  - `requirements.txt` เฉพาะที่ใช้ตอนรันจริง (pipeline + backend)
+  - `requirements-dev.txt` ดึง `requirements.txt` มาด้วย แล้วเพิ่ม notebook, test, lint
+- เพิ่มแพ็กเกจใหม่ให้ใส่ `ชื่อ==เวอร์ชัน` (ดูเวอร์ชันจาก `pip freeze`) ลงไฟล์ที่ตรงกับการใช้งาน แล้ว commit เพื่อนจะได้ติดตั้งตาม
+- หลังดึงโค้ดที่เปลี่ยนไฟล์แพ็กเกจ ให้รัน `pip install -r requirements-dev.txt` ใหม่
 
 ### รัน PostgreSQL + MLflow (self-host)
 

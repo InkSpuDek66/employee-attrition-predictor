@@ -1,21 +1,13 @@
-pandas
-numpy
-scikit-learn
-kagglehub
-jupyter
-matplotlib
-seaborn
-xgboost
-mlflow
-optuna
-shap
-streamlit
-fastapi
-uvicorn
-httpx
-pytest
-python-dotenv
-ruff
-lightgbm
-catboost
-imbalanced-learn
+# แพ็กเกจที่ใช้ตอนรันจริง (pipeline ข้อมูล→โมเดล + backend) pin เวอร์ชันให้ทุกเครื่องและ CI ได้ชุดเดียวกัน
+# เครื่องมือพัฒนา (notebook, test, lint) อยู่ใน requirements-dev.txt ติดตั้งด้วย: pip install -r requirements-dev.txt
+pandas==3.0.6
+numpy==2.5.3
+scikit-learn==1.9.1
+xgboost==3.4.1
+shap==0.52.0
+# ต้องตรงกับ image ใน docker/mlflow/Dockerfile ถ้าอัปเกรดให้แก้ทั้งสองที่พร้อมกัน
+mlflow==3.16.1
+fastapi==0.142.0
+pydantic==2.13.5
+uvicorn==0.54.0
+python-dotenv==1.2.3
