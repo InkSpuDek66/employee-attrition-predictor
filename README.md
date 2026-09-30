@@ -53,7 +53,18 @@ git clone https://github.com/InkSpuDek66/employee-attrition-predictor.git
 cd employee-attrition-predictor
 ```
 
-> ขั้นตอนสร้าง database, ตั้งค่า `.env`, `docker-compose up`, และรัน migration จะถูกเพิ่มในสัปดาห์ 2–3 (Modeling → Backend phase) เมื่อมีโค้ดให้รันจริง
+### รัน PostgreSQL + MLflow (self-host)
+
+```bash
+cp .env.example .env              # แล้วตั้ง POSTGRES_PASSWORD และ MLFLOW_TRACKING_URI=http://localhost:5000
+docker compose up -d --build --wait
+python src/train.py               # เทรน + register โมเดล แล้วตั้ง MODEL_URI ใน .env ตามที่พิมพ์ออกมา
+python -m pytest backend
+```
+
+รายละเอียดและทางเลือกอื่น (sqlite ในเครื่อง, DagsHub) ดู [docs/mlflow_setup.md](docs/mlflow_setup.md) ทุก push/PR จะรัน CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) ที่ lint ด้วย ruff/oxlint เปิด stack นี้ เทรนโมเดลใหม่ รัน backend test และ build frontend
+
+> ขั้นตอน backend/frontend แบบ container และ migration ของ database แอปจะเพิ่มใน Backend phase (wk6–7)
 
 ---
 
