@@ -16,9 +16,9 @@
 
 ---
 
-## Setup Guide (แผนเบื้องต้น)
+## Setup Guide
 
-> ยังไม่มีโค้ดจริงในโปรเจกต์ ขั้นตอนด้านล่างเป็นแผนที่จะใช้เมื่อเริ่มพัฒนา (wk2 เป็นต้นไป) จะปรับปรุงให้ตรงกับของจริงเมื่อแต่ละส่วน implement เสร็จ
+ขั้นตอนด้านล่างรันได้จริงกับโค้ดปัจจุบัน (v0.2) ส่วนที่ยังไม่มี เช่น database ของแอปและ Superset จะเพิ่มเมื่อทำเสร็จ
 
 ### โปรแกรมที่ใช้ (Prerequisites)
 
@@ -26,27 +26,37 @@
 | :--- | :--- | :--- |
 | [Python](https://www.python.org/) | 3.13.11 | ML/Data pipeline (data cleaning, feature engineering, training) + FastAPI backend |
 | [Node.js](https://nodejs.org/) | v24.21.0 (LTS) | React frontend |
-| [PostgreSQL](https://www.postgresql.org/) | 14+ (ขั้นต่ำ — ยังไม่ได้ตั้งค่าจริง จะยืนยันเวอร์ชันตอนเริ่ม Backend phase wk6–7) | Database (Source of truth) |
-| [Docker](https://www.docker.com/) + Docker Compose | ล่าสุด (ขั้นต่ำ — ยังไม่ได้ใช้งานจริง) | Containerize และรันทุก service พร้อมกัน |
+| [Docker](https://www.docker.com/) + Docker Compose v2 | Docker Desktop หรือ Docker Engine | รัน PostgreSQL + MLflow แบบ self-host (ไม่บังคับ ถ้าใช้ MLflow บน DagsHub) |
+| [PostgreSQL](https://www.postgresql.org/) | 17 (image `postgres:17-alpine` ใน docker compose ไม่ต้องติดตั้งเอง) | ตอนนี้ใช้เก็บข้อมูลของ MLflow แบบ self-host ส่วน database ของแอปยังเป็นแผน (Backend phase wk6–7) |
 
-> Python/Node เป็นเวอร์ชันที่ทีมยืนยันแล้วว่าใช้จริง ส่วน PostgreSQL/Docker ยังเป็นแผน — จะอัปเดตเป็นเวอร์ชันจริงเมื่อเริ่มตั้งค่าใน wk6–7
-
-### โครงสร้างโปรเจกต์ที่วางแผนไว้ (Planned Repo Structure)
+### โครงสร้างโปรเจกต์
 
 ```
 employee-attrition-predictor/
-├── data/               # raw & processed dataset (IBM HR CSV)
-├── ml/                 # EDA notebooks, feature engineering, training, MLflow
-├── backend/            # FastAPI app — /predict /shap /whatif /interventions
-├── frontend/           # React app — What-if Simulator, SHAP viewer, Intervention Tracker
-├── superset/           # Apache Superset config + dashboard definitions
-├── docker-compose.yml
-└── README.md
+├── data/
+│   ├── raw/               # IBM HR CSV ต้นฉบับ (read-only)
+│   ├── processed/         # ผล cleaning ที่เก็บไว้เทียบ (pipeline คำนวณใหม่จาก raw ทุกครั้ง)
+│   └── sample/            # พนักงานตัวอย่างสำหรับหน้า What-if
+├── notebooks/             # EDA, cleaning, tuning, model lab (ลงท้าย _P = Puripat, _S = Saphondanai)
+├── src/                   # pipeline ข้อมูล→โมเดล: clean_pipeline, feature_pipeline, train.py,
+│                          #   shap_explain, business_rules, company_summary, mlflow_setup
+│                          #   + หน้าทดสอบ Streamlit (test_app.py, app_pages/)
+├── backend/               # FastAPI app (main.py, routers/, schemas.py) + pytest
+├── frontend/              # React + Vite: What-if Simulator, SHAP Viewer
+├── config/                # financial_impact.json (ค่าตามกฎหมายแรงงานไทย + สมมติฐานธุรกิจ)
+├── docker/                # Dockerfile ของ MLflow + init script ของ PostgreSQL
+├── docs/                  # dataset card, วิธีตั้งค่า MLflow, รายงานร่าง, รายงาน review, Model Lab
+├── .github/               # CI (GitHub Actions) + Dependabot
+├── docker-compose.yml     # PostgreSQL + MLflow แบบ self-host
+├── requirements.txt       # แพ็กเกจที่ใช้ตอนรันจริง
+├── requirements-dev.txt   # + notebook, test, lint
+├── TASKS.md               # checklist งานรายคน
+└── CONTRIBUTING.md        # กติกาการเขียน commit message
 ```
 
-> โครงสร้างนี้เป็นแผนเริ่มต้น อาจปรับเมื่อเริ่มเขียนโค้ดจริงตาม phase
+> ยังไม่มี: `superset/` และ database ของแอป (แผน wk6–9 ดู [10. Project Timeline](#10-project-timeline-แผนดำเนินงาน))
 
-### ขั้นตอน Clone (ส่วนที่เหลือจะเพิ่มเมื่อมีโค้ด)
+### ขั้นตอน Clone
 
 ```bash
 git clone https://github.com/InkSpuDek66/employee-attrition-predictor.git
@@ -71,18 +81,52 @@ pip install -r requirements-dev.txt
 - เพิ่มแพ็กเกจใหม่ให้ใส่ `ชื่อ==เวอร์ชัน` (ดูเวอร์ชันจาก `pip freeze`) ลงไฟล์ที่ตรงกับการใช้งาน แล้ว commit เพื่อนจะได้ติดตั้งตาม
 - หลังดึงโค้ดที่เปลี่ยนไฟล์แพ็กเกจ ให้รัน `pip install -r requirements-dev.txt` ใหม่
 
-### รัน PostgreSQL + MLflow (self-host)
+### ตั้งค่า MLflow (เลือก 1 แบบ)
+
+backend โหลดโมเดลจาก MLflow Model Registry จึงต้องตั้ง `.env` ก่อน (`cp .env.example .env`)
+
+- **DagsHub (ทีมใช้ช่วงพัฒนา):** ใส่ `MLFLOW_TRACKING_URI`, ชื่อผู้ใช้ และ token ของตัวเอง ตามขั้นตอนใน [docs/mlflow_setup.md](docs/mlflow_setup.md) โมเดลสุดท้าย `models:/attrition-xgboost-P/1` อยู่บนนั้นแล้ว ไม่ต้องเทรนเอง
+- **Self-host ด้วย docker compose:** ตั้ง `POSTGRES_PASSWORD` และ `MLFLOW_TRACKING_URI=http://localhost:5000` แล้วรัน
+  ```bash
+  docker compose up -d --build --wait
+  python src/train.py               # เทรน + register โมเดล แล้วตั้ง MODEL_URI ใน .env ตามที่พิมพ์ออกมา
+  ```
+
+> MLflow บน DagsHub ของทีมเป็นสาธารณะ ห้ามใช้กับข้อมูลพนักงานจริง (รายละเอียดใน [docs/mlflow_setup.md](docs/mlflow_setup.md))
+
+### รันระบบ
+
+แต่ละข้อเปิดใน terminal ของตัวเอง เริ่มจากรากโปรเจกต์ (ข้อ 1 และ 3 ต้อง activate `.venv` ก่อน)
 
 ```bash
-cp .env.example .env              # แล้วตั้ง POSTGRES_PASSWORD และ MLFLOW_TRACKING_URI=http://localhost:5000
-docker compose up -d --build --wait
-python src/train.py               # เทรน + register โมเดล แล้วตั้ง MODEL_URI ใน .env ตามที่พิมพ์ออกมา
-python -m pytest backend
+# 1) Backend (FastAPI) → http://localhost:8000/docs
+cd backend
+uvicorn main:app --reload
+
+# 2) Frontend (React) → http://localhost:5173  (เรียก backend ผ่าน /api ที่ Vite proxy ไป port 8000)
+cd frontend
+npm install                        # ครั้งแรก
+npm run dev
+
+# 3) หน้าทดสอบ Streamlit สำหรับทีม (ไม่บังคับ)
+streamlit run src/test_app.py --server.address localhost
 ```
 
-รายละเอียดและทางเลือกอื่น (sqlite ในเครื่อง, DagsHub) ดู [docs/mlflow_setup.md](docs/mlflow_setup.md) ทุก push/PR จะรัน CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) ที่ lint ด้วย ruff/oxlint เปิด stack นี้ เทรนโมเดลใหม่ รัน backend test และ build frontend
+### Test และ CI
 
-> ขั้นตอน backend/frontend แบบ container และ migration ของ database แอปจะเพิ่มใน Backend phase (wk6–7)
+```bash
+ruff check .
+python -m pytest backend          # โหลดโมเดลจาก MLflow ตาม .env
+cd frontend && npm run lint && npm run build
+```
+
+ทุก Pull Request และทุก push เข้า `main` จะรัน CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) ดังนี้
+- lint ด้วย ruff และ oxlint
+- สแกนช่องโหว่ของแพ็กเกจด้วย pip-audit และ npm audit
+- เปิด PostgreSQL + MLflow ด้วย docker compose แล้วเทรนโมเดลใหม่ (fail ถ้า test AUC < 0.75)
+- รัน backend test และ build frontend
+
+> ยังไม่มี container ของ backend/frontend และ migration ของ database แอป (แผน Backend phase wk6–7)
 
 ---
 
@@ -93,8 +137,8 @@ python -m pytest backend
 3. [Core Workflow](#3-core-workflow-predict--explain--act--measure)
 4. [Dataset](#4-dataset)
 5. [Data Model (High-level)](#5-data-model-high-level-แผนออกแบบข้อมูล)
-6. [Business Logic Rules (แผน)](#6-business-logic-rules-แผน)
-7. [Planned API Design](#7-planned-api-design-fastapi)
+6. [Business Logic Rules](#6-business-logic-rules)
+7. [API Design](#7-api-design-fastapi)
 8. [Tech Stack](#8-tech-stack)
 9. [System Architecture](#9-system-architecture)
 10. [Project Timeline](#10-project-timeline-แผนดำเนินงาน)
@@ -184,10 +228,11 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
 
 ### การปรับให้เหมาะกับบริบทไทย (Localization Notes)
 
-ค้นแล้วไม่พบ dataset การลาออกของพนักงานไทยที่เปิดเผยต่อสาธารณะ (ทางเลือกที่พิจารณาแล้วไม่เลือก: dataset สำรวจพนักงานซาอุดีอาระเบียจาก Data in Brief 2025 — ประเทศไม่ตรง, หรือเก็บ survey พนักงานไทยเอง — ใช้เวลามากเกินกรอบ 9 สัปดาห์) จึงยังใช้ IBM dataset เป็นชุดข้อมูลหลักในการเทรน แต่ลดความเสี่ยงเรื่อง cross-cultural transferability ด้วย:
+ค้นแล้วไม่พบ dataset การลาออกของพนักงานไทยที่เปิดเผยต่อสาธารณะ (ทางเลือกที่พิจารณาแล้วไม่เลือก: dataset สำรวจพนักงานซาอุดีอาระเบียจาก Data in Brief 2025 — ประเทศไม่ตรง, หรือเก็บ survey พนักงานไทยเอง — ใช้เวลามากเกินกรอบ 9 สัปดาห์) จึงยังใช้ IBM dataset เป็นชุดข้อมูลหลักในการเทรน และจัดการความเสี่ยงเรื่อง cross-cultural transferability ดังนี้:
 
-- **คัดฟีเจอร์ที่ไม่น่า transfer ข้ามวัฒนธรรม** — ตัดหรือลดน้ำหนัก `BusinessTravel` (โครงสร้างการเดินทางธุรกิจแบบอเมริกัน) และ `StockOptionLevel` (พบน้อยในบริษัท/SME ไทย) ออกจาก feature set หลัก เก็บไว้เป็น optional feature เท่านั้น
-- **เน้นฟีเจอร์สากลที่น่าเชื่อว่ายัง generalize ได้**: `OverTime`, `MonthlyIncome`, `WorkLifeBalance`, `YearsAtCompany`, `DistanceFromHome`, `JobLevel`
+- **ทดลองตัดฟีเจอร์ที่อาจไม่ transfer ข้ามวัฒนธรรมแล้ว แต่ไม่ตัด** ทดลองตัด `BusinessTravel` (โครงสร้างการเดินทางธุรกิจแบบอเมริกัน) และ `StockOptionLevel` (พบน้อยในบริษัท/SME ไทย) ใน `notebooks/04_tuning_S.ipynb` โดยตั้งกติกาก่อนดูผลว่าจะตัดถ้า CV PR-AUC ลดไม่เกิน 0.01 ผลคือลดลง 0.02–0.035 จึง**คงไว้ในโมเดลสุดท้าย** แล้วจัดการด้วย recalibration และคำแนะนำแบบไทยแทน (เช่น `StockOptionLevel` แนะนำเป็นการสมทบกองทุนสำรองเลี้ยงชีพ) ผลเต็มอยู่ใน [รายงานร่าง Business Logic](docs/report_business_logic_draft_S.md) หัวข้อ 2
+- **ฟีเจอร์ของโมเดลสุดท้าย (`attrition-xgboost-P` v1):** ใช้คอลัมน์เดิมทั้งหมด ยกเว้น 4 คอลัมน์ที่ไม่มีข้อมูล (`EmployeeCount`, `StandardHours`, `Over18`, `EmployeeNumber`) บวกฟีเจอร์ใหม่ 3 ตัว (`OverTimeXDistance`, `AvgSatisfaction`, `TenureRatio`) รวม 50 คอลัมน์หลัง one-hot
+- **ข้อจำกัดที่ยังเปิดอยู่:** IBM ไม่ระบุสกุลเงินของ `MonthlyIncome` ถ้าบริษัทไทยส่งเงินเดือนเป็นบาท คะแนนความเสี่ยงจะผิด รอทีมตกลงหน่วยกลาง (DE-01 ใน [review Data Engineering](docs/review_data_engineering_S.md))
 - ดู [6.5 Model Localization](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง) สำหรับกลไก recalibrate โมเดลด้วยข้อมูลจริงของบริษัทที่ใช้งาน
 
 ---
@@ -195,6 +240,8 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
 ## 5. Data Model (High-level แผนออกแบบข้อมูล)
 
 > ระดับ High-level เท่านั้น — จะลง column/type ละเอียดตอนเริ่ม Backend phase (wk6–7) เมื่อ schema นิ่งแล้ว
+>
+> **ตอนนี้ (v0.2) ยังไม่ได้สร้างตารางเหล่านี้:** backend อ่านข้อมูลพนักงานจาก CSV ใน `data/raw/` และผล recalibrate เก็บเป็นไฟล์ JSON ต่อบริษัทใน `backend/calibrations/` แทนตาราง `tenant_calibrations` ชั่วคราว
 
 | Entity | หน้าที่ | Key fields (แผน) |
 | :--- | :--- | :--- |
@@ -211,9 +258,9 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
 
 ---
 
-## 6. Business Logic Rules (แผน)
+## 6. Business Logic Rules
 
-> กฎเชิงตัวเลข (threshold, cutoff) ทั้งหมดเป็น **ค่าตั้งต้น** จะปรับให้เหมาะสมจริงหลัง Modeling phase (wk2–3) เมื่อเห็นการกระจายของ risk_score จริง
+> 6.1, 6.3, 6.5 และ 6.6 implement แล้วใน `src/business_rules.py`, `src/company_summary.py` และ `config/financial_impact.json` ส่วน 6.4 ยังเป็นแผน กฎเชิงตัวเลข (threshold, cutoff) ทั้งหมดยังเป็น **ค่าตั้งต้น** รอทีมทบทวนกับการกระจายของ risk_score จริง
 
 ### 6.1 Risk Banding
 ```
@@ -221,6 +268,7 @@ risk_score >= 0.7  → High Risk
 0.4 <= risk_score < 0.7 → Medium Risk
 risk_score < 0.4   → Low Risk
 ```
+> กับโมเดล v1 พนักงาน 1,470 คนแบ่งได้ High 185 / Medium 274 / Low 1,011 คน (นับรวมแถวที่โมเดลเคยเห็นตอนเทรน) ถ้าบริษัท recalibrate แล้ว ระบบแบ่งระดับจากคะแนนที่ปรับเทียบแล้ว
 
 ### 6.2 Data Leakage Guard
 ```
@@ -248,7 +296,9 @@ retain_cost_estimate = ต้นทุนโดยประมาณของม
 
 ROI = replacement_cost_estimate - retain_cost_estimate
 ```
-> ตารางค่าชดเชยเก็บเป็น config แยกจากโค้ดโมเดล เพื่อให้อัปเดตตามกฎหมายที่เปลี่ยนแปลงได้โดยไม่ต้อง retrain
+> ตารางค่าชดเชยเก็บเป็น config แยกจากโค้ดโมเดล (`config/financial_impact.json`) เพื่อให้อัปเดตตามกฎหมายที่เปลี่ยนแปลงได้โดยไม่ต้อง retrain
+>
+> **ที่ implement จริง:** ค่าเริ่มต้น**ไม่รวม**ค่าชดเชยในต้นทุนหาคนแทน เพราะมาตรา 118 จ่ายเมื่อนายจ้างเลิกจ้าง ส่วนพนักงานที่ลาออกเองไม่ได้รับ เปิดได้ด้วย `include_severance` (เหตุผลเต็มอยู่ใน [รายงานร่าง Business Logic](docs/report_business_logic_draft_S.md) หัวข้อ 4.3)
 
 ### 6.4 Fairness Check
 ```
@@ -256,6 +306,7 @@ ROI = replacement_cost_estimate - retain_cost_estimate
   ระหว่างกลุ่มตาม protected attribute (เพศ, ช่วงอายุ) ด้วย Fairlearn
   -> threshold ที่ยอมรับได้จะกำหนดใน Backend & Analysis phase (wk6–7)
 ```
+> ยังไม่ได้ทำ ตัวเลขตั้งต้นจากคะแนน out-of-fold อยู่ใน DS-04 ของ [review Data Engineering](docs/review_data_engineering_S.md) (โมเดลจับคนลาออกอายุ 40 ปีขึ้นไปได้ไม่ถึงครึ่ง ขณะที่กลุ่มอายุ 18–29 จับได้ 79%)
 
 ### 6.5 Model Localization (เพื่อให้ใช้ในไทยได้จริง)
 ```
@@ -271,6 +322,8 @@ Deploy-time (per-tenant):
          แต่ threshold ตัดสิน High/Medium/Low จะปรับเข้ากับพฤติกรรมจริงของบริษัทนั้นได้
 ```
 > ตราบใดที่บริษัทยังไม่ได้ recalibrate ระบบต้องแสดงคำเตือนกำกับ risk_score ว่า "ยังไม่ได้ปรับเทียบกับข้อมูลจริงของบริษัท — ใช้ SHAP (ทิศทางของปัจจัย) ประกอบการตัดสินใจมากกว่าเชื่อตัวเลขตรงๆ" เพื่อความโปร่งใส
+>
+> **ที่ implement จริง:** `POST /recalibrate` รองรับ Platt scaling และ isotonic regression ส่วน endpoint ที่คืนคะแนนรับ `tenant_id` และแนบคำเตือนข้างบนเมื่อบริษัทยังไม่ได้ปรับเทียบ ผลการปรับเทียบเก็บเป็นไฟล์ JSON จนกว่าจะมีตาราง `tenant_calibrations` ยังไม่มีระบบยืนยันตัวตน จึงห้ามใช้กับข้อมูลจริง (ดู [review Security](docs/review_security_S.md))
 
 ### 6.6 Company-wide Aggregate Summary
 ```
@@ -284,41 +337,48 @@ Deploy-time (per-tenant):
   -> รวมกับ financial_impact_estimates เพื่อประเมิน "มูลค่าที่ประหยัดได้โดยประมาณ" ถ้าแก้ปัจจัยนั้น
   -> บันทึกผลลง company_risk_summary (cache ไว้ ไม่คำนวณสดทุกครั้งที่มีคนเปิด dashboard)
 ```
+> **ที่ implement จริง:** `src/company_summary.py` รวม SHAP ของคอลัมน์ one-hot กลับเป็นฟีเจอร์เดิมก่อนจัดอันดับ และแยกปัจจัยที่บริษัทปรับได้ออกจากข้อมูลส่วนตัว (อายุ, เพศ, สถานภาพ) ตอนนี้ `GET /company-summary` คำนวณสดทุก request และยังไม่ cache ลง `company_risk_summary` (รอ database ของแอป)
+>
 > **ข้อควรระวัง:** SHAP บอกความสัมพันธ์กับโมเดล ไม่ใช่ความเป็นเหตุเป็นผลที่พิสูจน์แล้ว คำแนะนำทั้งหมดต้องใช้ถ้อยคำเชิงทิศทาง ("น่าจะช่วยลดความเสี่ยง") ไม่ใช่การรับประกันผล — หลักการเดียวกับความโปร่งใสใน [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)
 
 ---
 
-## 7. Planned API Design (FastAPI)
+## 7. API Design (FastAPI)
 
-> รายการนี้เป็นแผนเริ่มต้น จะยืนยัน/ปรับ route จริงตอน Backend phase (wk6–7)
+> ✅ = ทำแล้ว (`backend/routers/`) ดู request/response จริงได้ที่ http://localhost:8000/docs ตอนรัน backend · 📝 = ยังเป็นแผน (Backend phase wk6–7)
 
-| Method | Endpoint | หน้าที่ |
-| :--- | :--- | :--- |
-| GET | `/health` | Health check |
-| POST | `/predict` | รับ employee features → คืน risk_score |
-| GET | `/shap/{employee_id}` | คืน SHAP explanation ของพนักงานคนนั้น |
-| POST | `/whatif` | จำลองการเปลี่ยนฟีเจอร์ → คืน risk_score ใหม่ (ไม่บันทึกลง DB) |
-| GET | `/financial-impact/{employee_id}` | คืนประมาณการต้นทุน retain vs replace |
-| POST | `/interventions` | บันทึกมาตรการที่ HR เลือกทำกับพนักงาน |
-| GET | `/interventions/{employee_id}` | ดูประวัติมาตรการของพนักงานคนนั้น |
-| GET | `/dashboard/summary` | ข้อมูลสรุปสำหรับ Superset/React dashboard |
-| POST | `/recalibrate` | อัปโหลดข้อมูลลาออกจริงของบริษัท (tenant) เพื่อปรับ threshold ให้เข้ากับพฤติกรรมจริง (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)) |
-| GET | `/calibration-status/{tenant_id}` | ตรวจสอบว่าบริษัทนี้ recalibrate โมเดลแล้วหรือยัง |
-| GET | `/company-summary` | สรุปปัจจัยเสี่ยงเด่นทั้งบริษัท/แผนก พร้อมคำแนะนำเชิงนโยบาย (ดู [6.6](#66-company-wide-aggregate-summary)) |
+| สถานะ | Method | Endpoint | หน้าที่ |
+| :---: | :--- | :--- | :--- |
+| ✅ | POST | `/predict` | รับ `employee_id` (มีในระบบ) หรือข้อมูลพนักงานทั้งก้อน → คืน risk_score และ risk band |
+| ✅ | GET | `/shap/{employee_id}` | คืน SHAP explanation ของพนักงานคนนั้น |
+| ✅ | POST | `/whatif` | จำลองการเปลี่ยนฟีเจอร์ → คืน risk_score ใหม่ (ไม่บันทึกลง DB) |
+| ✅ | GET | `/financial-impact/{employee_id}` | คืนประมาณการต้นทุน retain vs replace |
+| ✅ | POST | `/recalibrate` | อัปโหลดข้อมูลลาออกจริงของบริษัท (tenant) เพื่อปรับคะแนนให้เข้ากับพฤติกรรมจริง (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)) |
+| ✅ | GET | `/company-summary` | สรุปปัจจัยเสี่ยงเด่นทั้งบริษัท/แผนก พร้อมคำแนะนำเชิงนโยบาย (ดู [6.6](#66-company-wide-aggregate-summary)) |
+| ✅ | GET | `/company-summary/departments` | สรุปทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม |
+| 📝 | GET | `/health` | Health check |
+| 📝 | POST | `/interventions` | บันทึกมาตรการที่ HR เลือกทำกับพนักงาน |
+| 📝 | GET | `/interventions/{employee_id}` | ดูประวัติมาตรการของพนักงานคนนั้น |
+| 📝 | GET | `/dashboard/summary` | ข้อมูลสรุปสำหรับ Superset/React dashboard |
+| 📝 | GET | `/calibration-status/{tenant_id}` | ตรวจสอบว่าบริษัทนี้ recalibrate โมเดลแล้วหรือยัง |
+
+> ยังไม่มีระบบยืนยันตัวตน (authentication) ทุก endpoint เรียกได้โดยไม่ต้อง login จึงรันได้เฉพาะในเครื่องกับข้อมูลสมมติเท่านั้น ต้องทำก่อน deploy (SEC-01 ใน [review Security](docs/review_security_S.md))
 
 ---
 
 ## 8. Tech Stack
 
-| ส่วนประกอบ | เทคโนโลยี | หน้าที่ |
-| :--- | :--- | :--- |
-| BI / Dashboard | Apache Superset | Dashboard สรุปเชิงบริหาร ต่อ PostgreSQL โดยตรง |
-| Frontend | React + Recharts | What-if Simulator, SHAP viewer, Intervention Tracker |
-| Backend | FastAPI + Pydantic | Serve model, API endpoints, business logic |
-| ML / Data | Scikit-learn, XGBoost, SHAP | Feature engineering, เทรนโมเดล, อธิบายผลลัพธ์ |
-| Model Tracking | MLflow | Version model, เปรียบเทียบ experiment |
-| Database | PostgreSQL | Source of truth ตัวเดียวทั้งระบบ |
-| Deploy | Docker Compose + Render | Containerize และ deploy ทุกส่วน |
+| ส่วนประกอบ | เทคโนโลยี | หน้าที่ | สถานะ |
+| :--- | :--- | :--- | :--- |
+| BI / Dashboard | Apache Superset | Dashboard สรุปเชิงบริหาร ต่อ PostgreSQL โดยตรง | แผน (wk8–9) |
+| Frontend | React 19 + Vite + Recharts | What-if Simulator, SHAP viewer, Intervention Tracker | What-if + SHAP viewer ใช้ได้แล้ว |
+| หน้าทดสอบ | Streamlit | หน้าทดสอบภายในทีม (`src/test_app.py`) ไม่ใช่ตัวผลิตภัณฑ์ | ใช้ได้แล้ว |
+| Backend | FastAPI + Pydantic | Serve model, API endpoints, business logic | ใช้ได้แล้ว (ดู [7](#7-api-design-fastapi)) |
+| ML / Data | pandas, Scikit-learn, XGBoost, SHAP, Optuna | Feature engineering, เทรนและจูนโมเดล, อธิบายผลลัพธ์ | ใช้ได้แล้ว |
+| Model Tracking | MLflow | Version model, เปรียบเทียบ experiment | DagsHub (ช่วงพัฒนา) หรือ self-host ด้วย docker compose |
+| Database | PostgreSQL | Source of truth ตัวเดียวทั้งระบบ | ตอนนี้ใช้กับ MLflow self-host, database ของแอปยังเป็นแผน |
+| CI / คุณภาพโค้ด | GitHub Actions, ruff, oxlint, pytest, pip-audit, npm audit | lint, test, เทรนซ้ำ และสแกนช่องโหว่ทุก PR | ใช้ได้แล้ว |
+| Deploy | Docker Compose + Render | Containerize และ deploy ทุกส่วน | แผน |
 
 ---
 
@@ -361,7 +421,11 @@ flowchart LR
     G -- "REST API" --> D
 ```
 
+> แผนภาพนี้คือ**สถาปัตยกรรมเป้าหมาย** ตอนนี้ (v0.2) ทำแล้วส่วน CSV → ML Pipeline → MLflow → FastAPI → React ส่วน PostgreSQL ของแอป, Superset และ `/interventions` ยังเป็นแผน backend จึงอ่านข้อมูลพนักงานจาก CSV และคำนวณผลสดทุก request
+
 ### Prediction & Explanation Flow (ตัวอย่าง Sequence)
+
+> flow เป้าหมายเมื่อมี database แล้ว ตอนนี้ backend อ่าน features จาก CSV และยังไม่บันทึกผลลง database
 
 ```mermaid
 sequenceDiagram
@@ -370,7 +434,7 @@ sequenceDiagram
     participant ML as "MLflow Model"
     participant DB as PostgreSQL
 
-    HR->>API: GET /predict?employee_id=123
+    HR->>API: "POST /predict (employee_id=123)"
     API->>DB: SELECT employee features
     DB-->>API: features
     API->>ML: model.predict(features)
