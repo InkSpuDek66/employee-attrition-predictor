@@ -69,7 +69,7 @@
 3. ตรวจ notebook เฉพาะจุด: ดูใน `04_tuning_P.ipynb` และ `04_tuning_S.ipynb` ว่า Optuna ประเมินผลด้วยข้อมูลชุดไหน (เช็ก leakage จาก test set)
 4. ดู frontend เฉพาะจุดที่เกี่ยวกับข้อมูล: คือการเรียก API และหน่วยของเงินเดือนใน `WhatIfSimulator.jsx` กับหน้า Streamlit
 5. รันสคริปต์ตรวจในเครื่อง (`.venv`) โดยเทรนโมเดลซ้ำตามสูตรใน [src/train.py](../src/train.py) ได้ test AUC 0.814 ตรงกับ `attrition-xgboost-P` v1 บน DagsHub (รอบ 2 โหลด v1 มาเทียบแล้ว คะแนนตรงกันทุกแถว ต่างกัน 0.0 ตัวเลขทุกตัวในรายงานนี้จึงเป็นของ v1 จริง) จากนั้นวัด:
-   - ช่วงความเชื่อมั่นของ AUC (bootstrap 2,000 รอบ)
+   - ช่วงความเชื่อมั่นของ AUC (bootstrap 10,000 รอบ)
    - คะแนนแบบ in-sample เทียบกับ out-of-fold
    - ผลเมื่อเงินเดือนเป็นหน่วยบาท
    - ผลเมื่อค่าหมวดหมู่สะกดผิด
@@ -341,7 +341,7 @@
 | จำนวนคนในกลุ่ม High (≥ 0.7) | 185 คน | 157 คน |
 | ในกลุ่ม High ลาออกจริงกี่ % | 83% | 66% |
 
-bootstrap 95% CI ของ test AUC = 0.73 – 0.88
+bootstrap 95% CI ของ test AUC = 0.73 – 0.88 (10,000 รอบ ใช้ฟังก์ชันและ seed เดียวกับ `train.py` และ notebook 07)
 
 **ทำไมต้องแก้:**
 - dashboard จะบอก HR ว่ากลุ่ม High แม่น 83% ทั้งที่กับพนักงานที่โมเดลไม่เคยเห็นจะแม่นราว 66% ถือว่าอ้างเกินจริงใน demo และ Defense
@@ -524,13 +524,13 @@ bootstrap 95% CI ของ test AUC = 0.73 – 0.88
 | หญิง | 588 | 14.8% | 22.6% | 67.8% | 14.8% | 0.83 |
 | ชาย | 882 | 17.0% | 23.8% | 62.7% | 15.8% | 0.83 |
 
-ช่องว่างของ TPR ระหว่างกลุ่มที่สูงสุดกับต่ำสุด (bootstrap 1,000 รอบ):
+ช่องว่างของ TPR ระหว่างกลุ่มที่สูงสุดกับต่ำสุด (bootstrap 10,000 รอบ):
 
 | มิติ | ช่องว่าง TPR | 95% CI |
 | :--- | :--- | :--- |
-| อายุ | 0.38 | 0.24–0.59 |
-| สถานภาพ | 0.27 | 0.15–0.42 |
-| เพศ | 0.05 | 0.00–0.17 |
+| อายุ | 0.38 | 0.25–0.60 |
+| สถานภาพ | 0.27 | 0.15–0.41 |
+| เพศ | 0.05 | 0.00–0.18 |
 
 **ทดลองสลับค่าเพศอย่างเดียวกับโมเดล v1 (counterfactual):**
 - ระดับความเสี่ยงเปลี่ยน 60 จาก 1,470 คน (4.1%)
@@ -690,7 +690,7 @@ ROOT = sys.argv[1]
 sys.path.insert(0, os.path.join(ROOT, "src"))
 from clean_pipeline import RAW_FILENAME, TARGET_COLUMN, clean_data, load_raw_data  # noqa: E402
 from feature_pipeline import SELECTED_FEATURES, add_features  # noqa: E402
-from train import PARAMS  # noqa: E402
+from train import PARAMS, bootstrap_auc_ci  # noqa: E402
 
 raw = load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
 
@@ -714,14 +714,8 @@ out["train_auc"] = roc_auc_score(ytr, p_tr)
 out["test_leavers"] = int(yte.sum())
 out["test_n"] = len(yte)
 
-# bootstrap CI of test AUC
-rng = np.random.default_rng(0)
-boots = []
-for _ in range(2000):
-    s = rng.integers(0, len(yte), len(yte))
-    if yte.iloc[s].nunique() == 2:
-        boots.append(roc_auc_score(yte.iloc[s], p_te[s]))
-out["test_auc_boot95"] = [float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))]
+# bootstrap CI of test AUC (same function, rounds and seed as src/train.py and notebook 07)
+out["test_auc_boot95"] = bootstrap_auc_ci(yte.to_numpy(), p_te).tolist()
 
 
 def bands(p):
@@ -781,12 +775,12 @@ print(json.dumps(out, ensure_ascii=False, indent=1, default=float))
 </details>
 
 <details>
-<summary>ผลที่ได้ ณ วันตรวจ (1 ต.ค. 2026, commit 45f926a)</summary>
+<summary>ผลที่ได้ ณ วันตรวจ (1 ต.ค. 2026, commit 45f926a บรรทัด bootstrap รันใหม่ด้วย 10,000 รอบ)</summary>
 
 ```text
 test_auc                             0.8141   (train_auc 0.9564)
 test set                             294 คน, ลาออก 47 คน
-test_auc bootstrap 95% CI            0.732 – 0.879
+test_auc bootstrap 95% CI            0.734 – 0.884
 in-sample bands (1,470 คน)            High 185 / Medium 274 / Low 1011   → High ลาออกจริง 83.2%
 out-of-fold bands (1,470 คน)          High 157 / Medium 334 / Low 979    → High ลาออกจริง 66.2%
 ลาออกจริงทั้งชุด                       237 คน
@@ -895,7 +889,7 @@ from xgboost import XGBClassifier
 sys.path.insert(0, "src")
 from clean_pipeline import RAW_FILENAME, TARGET_COLUMN, clean_data, load_raw_data  # noqa: E402
 from feature_pipeline import SELECTED_FEATURES, add_features  # noqa: E402
-from train import PARAMS  # noqa: E402
+from train import BOOT_N, BOOT_SEED, PARAMS  # noqa: E402
 
 raw = load_raw_data(f"data/raw/{RAW_FILENAME}")
 df = add_features(clean_data(raw), only=SELECTED_FEATURES)
@@ -922,7 +916,7 @@ def metrics(yy, pp):
     }
 
 
-rng = np.random.default_rng(0)
+rng = np.random.default_rng(BOOT_SEED)
 for name, g in groups.items():
     g = g.to_numpy()
     table = pd.DataFrame({k: metrics(y[g == k], oof[g == k]) for k in sorted(set(g))}).T
@@ -932,7 +926,7 @@ for name, g in groups.items():
     print(f"selection-rate ratio min/max = {sel.min() / sel.max():.2f} | TPR gap max-min = {tpr.max() - tpr.min():.3f} "
           f"| FPR gap = {table['FPR@0.5'].max() - table['FPR@0.5'].min():.3f}")
     gaps = []  # bootstrap 95% CI of the TPR gap (resample employees)
-    for _ in range(1000):
+    for _ in range(BOOT_N):
         i = rng.integers(0, len(y), len(y))
         yi, pi, gi = y[i], oof[i], g[i]
         t = [((pi[(gi == k) & (yi == 1)]) >= 0.5).mean() for k in sorted(set(g)) if ((gi == k) & (yi == 1)).any()]
@@ -965,7 +959,7 @@ print(f"trees splitting on Gender: {sum(splits_on(t, 'Gender') > 0 for t in dump
 
 </details>
 
-ผล ณ วันตรวจ:
+ผล ณ วันตรวจ (บรรทัด bootstrap รันใหม่ด้วย 10,000 รอบ):
 
 ```text
 === Gender (OOF, threshold 0.5 unless stated)
@@ -973,7 +967,7 @@ print(f"trees splitting on Gender: {sum(splits_on(t, 'Gender') > 0 for t in dump
 Female  588.0           0.148       0.325         0.226              0.109    0.678    0.148          0.444  0.831
 Male    882.0           0.170       0.330         0.238              0.109    0.627    0.158          0.448  0.828
 selection-rate ratio min/max = 0.95 | TPR gap max-min = 0.051 | FPR gap = 0.011
-TPR gap bootstrap 95% CI: 0.002 - 0.173
+TPR gap bootstrap 95% CI: 0.003 - 0.178
 === AgeBand (OOF, threshold 0.5 unless stated)
            n  attrition_rate  mean_score  selected@0.5  selected_High@0.7  TPR@0.5  FPR@0.5  precision@0.5    AUC
 18-29  326.0           0.279       0.471         0.442              0.258    0.791    0.306          0.500  0.843
@@ -981,14 +975,14 @@ TPR gap bootstrap 95% CI: 0.002 - 0.173
 40-49  349.0           0.097       0.259         0.143              0.040    0.412    0.114          0.280  0.781
 50+    173.0           0.133       0.296         0.220              0.064    0.435    0.187          0.263  0.704
 selection-rate ratio min/max = 0.32 | TPR gap max-min = 0.379 | FPR gap = 0.205
-TPR gap bootstrap 95% CI: 0.244 - 0.587
+TPR gap bootstrap 95% CI: 0.254 - 0.599
 === MaritalStatus (OOF, threshold 0.5 unless stated)
               n  attrition_rate  mean_score  selected@0.5  selected_High@0.7  TPR@0.5  FPR@0.5  precision@0.5    AUC
 Divorced  327.0           0.101       0.240         0.135              0.052    0.636    0.078          0.477  0.890
 Married   673.0           0.125       0.290         0.184              0.077    0.488    0.141          0.331  0.747
 Single    470.0           0.255       0.444         0.372              0.194    0.758    0.240          0.520  0.847
 selection-rate ratio min/max = 0.36 | TPR gap max-min = 0.270 | FPR gap = 0.162
-TPR gap bootstrap 95% CI: 0.145 - 0.416
+TPR gap bootstrap 95% CI: 0.151 - 0.407
 === Counterfactual on v1 replica: flip Gender only
 mean |score change| = 0.0204 | max = 0.0825 | employees whose risk band changes = 60 of 1470
 trees splitting on Gender: 12 of 500
