@@ -17,18 +17,18 @@
 
 ## สัญญาอนุญาต (License)
 
-Kaggle ระบุว่า **"Database: Open Database, Contents: Database Contents"** หมายถึงใช้ 2 สัญญาคู่กัน:
+Kaggle ระบุว่า "Database: Open Database, Contents: Database Contents" หมายถึงใช้ 2 สัญญาคู่กัน:
 
-- **ตัวฐานข้อมูล** (โครงสร้าง การคัดเลือก และการจัดเรียงข้อมูล): [Open Database License (ODbL) v1.0](https://opendatacommons.org/licenses/odbl/1-0/)
-- **เนื้อหาแต่ละค่าในฐานข้อมูล**: [Database Contents License (DbCL) v1.0](https://opendatacommons.org/licenses/dbcl/1-0/)
+- ตัวฐานข้อมูล (โครงสร้าง การคัดเลือก และการจัดเรียงข้อมูล): [Open Database License (ODbL) v1.0](https://opendatacommons.org/licenses/odbl/1-0/)
+- เนื้อหาแต่ละค่าในฐานข้อมูล: [Database Contents License (DbCL) v1.0](https://opendatacommons.org/licenses/dbcl/1-0/)
 
-**สิ่งที่อนุญาต:** คัดลอก แจกจ่าย ดัดแปลง และใช้งาน**รวมถึงเชิงพาณิชย์**
+สิ่งที่อนุญาต: คัดลอก แจกจ่าย ดัดแปลง และใช้งาน รวมถึงใช้เชิงพาณิชย์
 
-**เงื่อนไขที่ต้องทำตาม:**
+เงื่อนไขที่ต้องทำตาม:
 
-1. **Attribute (ให้เครดิต):** ถ้าเผยแพร่ฐานข้อมูลนี้หรือฐานข้อมูลที่ดัดแปลงจากมัน ต้องแจ้งว่าใช้ ODbL และบอกที่มา ถ้าเผยแพร่ **Produced Work** (สิ่งที่สร้างจากฐานข้อมูล เช่น กราฟ รายงาน หรือโมเดลที่เทรนจากข้อมูลนี้) ต่อสาธารณะ ต้องมีข้อความแจ้งที่มาด้วย
-2. **Share-Alike:** ถ้าเผยแพร่ **ฐานข้อมูลที่ดัดแปลง** (Derivative Database) ต่อสาธารณะ ต้องเผยแพร่ภายใต้ ODbL เหมือนกัน เงื่อนไขนี้ใช้กับตัวข้อมูลเท่านั้น ไม่ครอบคลุมโค้ดหรือ Produced Work
-3. **Keep open:** ถ้าแจกจ่ายฐานข้อมูลในรูปแบบที่ใส่ DRM หรือล็อกไว้ ต้องแจกเวอร์ชันที่ไม่ล็อกให้ด้วย
+1. Attribute (ให้เครดิต): ถ้าเผยแพร่ฐานข้อมูลนี้หรือฐานข้อมูลที่ดัดแปลงจากมัน ต้องแจ้งว่าใช้ ODbL และบอกที่มา ถ้าเผยแพร่ Produced Work (สิ่งที่สร้างจากฐานข้อมูล เช่น กราฟ รายงาน หรือโมเดลที่เทรนจากข้อมูลนี้) ต่อสาธารณะ ต้องมีข้อความแจ้งที่มาด้วย
+2. Share-Alike: ถ้าเผยแพร่ฐานข้อมูลที่ดัดแปลง (Derivative Database) ต่อสาธารณะ ต้องเผยแพร่ภายใต้ ODbL เหมือนกัน เงื่อนไขนี้ใช้กับตัวข้อมูลเท่านั้น ไม่ครอบคลุมโค้ดหรือ Produced Work
+3. Keep open: ถ้าแจกจ่ายฐานข้อมูลในรูปแบบที่ใส่ DRM หรือล็อกไว้ ต้องแจกเวอร์ชันที่ไม่ล็อกให้ด้วย
 
 ### ผลต่อโปรเจกต์นี้
 
@@ -39,22 +39,22 @@ Kaggle ระบุว่า **"Database: Open Database, Contents: Database Cont
 | โมเดล XGBoost, SHAP, กราฟ, รายงาน, สไลด์ | Produced Work | ใส่เครดิต dataset ในรายงาน สไลด์ และหน้า About ของเว็บ |
 | โค้ด (Python/React) | ไม่อยู่ใต้ ODbL | เลือก license ของโค้ดเองได้ |
 
-**ข้อความเครดิตที่ใช้ในรายงาน สไลด์ และหน้าเว็บ:**
+ข้อความเครดิตที่ใช้ในรายงาน สไลด์ และหน้าเว็บ:
 
-> Dataset: "IBM HR Analytics Employee Attrition & Performance" (fictional data created by IBM data scientists), retrieved from Kaggle — https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset — licensed under ODbL v1.0 (database) and DbCL v1.0 (contents).
+> Dataset: "IBM HR Analytics Employee Attrition & Performance" (fictional data created by IBM data scientists), retrieved from Kaggle (https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset), licensed under ODbL v1.0 (database) and DbCL v1.0 (contents).
 
 ### ข้อควรระวัง
 
-- **ที่มาต้นทางไม่ได้มาจาก IBM โดยตรง:** ผู้อัปโหลดเป็นบุคคลทั่วไป ข้อมูลชุดนี้เดิมเผยแพร่เป็น sample data ของ IBM Watson Analytics แต่ Kaggle ไม่ได้ลิงก์ไปยังแหล่งต้นทางของ IBM หรือระบุเงื่อนไขเดิมของ IBM สัญญาอนุญาตที่อ้างได้จึงมีแค่ ODbL/DbCL ที่ผู้อัปโหลดเลือกไว้บน Kaggle
-- **ไม่ใช่คำปรึกษาทางกฎหมาย:** ถ้าจะนำไปขายจริง ควรให้ฝ่ายกฎหมายตรวจอีกครั้ง แนวทางที่ปลอดภัยคือ ผลิตภัณฑ์ขาย**ซอฟต์แวร์** และให้บริษัทลูกค้าใช้ข้อมูลของตัวเอง (ดู README หัวข้อ 6.5) ส่วน IBM dataset ใช้แค่เทรนโมเดลตั้งต้นและเดโม พร้อมใส่เครดิตตามด้านบน
+- ที่มาต้นทางไม่ได้มาจาก IBM โดยตรง ผู้อัปโหลดเป็นบุคคลทั่วไป ข้อมูลชุดนี้เดิมเผยแพร่เป็น sample data ของ IBM Watson Analytics แต่ Kaggle ไม่ได้ลิงก์ไปยังแหล่งต้นทางของ IBM หรือระบุเงื่อนไขเดิมของ IBM สัญญาอนุญาตที่อ้างได้จึงมีแค่ ODbL/DbCL ที่ผู้อัปโหลดเลือกไว้บน Kaggle
+- ส่วนนี้ไม่ใช่คำปรึกษาทางกฎหมาย ถ้าจะนำไปขายจริง ควรให้ฝ่ายกฎหมายตรวจอีกครั้ง แนวทางที่ปลอดภัยคือ ผลิตภัณฑ์ขายซอฟต์แวร์ และให้บริษัทลูกค้าใช้ข้อมูลของตัวเอง (ดู README หัวข้อ 6.5) ส่วน IBM dataset ใช้แค่เทรนโมเดลตั้งต้นและเดโม พร้อมใส่เครดิตตามด้านบน
 
 ## ลักษณะข้อมูล (ตามคำอธิบายบน Kaggle)
 
 คำอธิบายต้นฉบับ:
 
-> "Uncover the factors that lead to employee attrition and explore important questions such as 'show me a breakdown of distance from home by job role and attrition' or 'compare average monthly income by education and attrition'. **This is a fictional data set created by IBM data scientists.**"
+> "Uncover the factors that lead to employee attrition and explore important questions such as 'show me a breakdown of distance from home by job role and attrition' or 'compare average monthly income by education and attrition'. This is a fictional data set created by IBM data scientists."
 
-- **เป็นข้อมูลสมมติ (fictional/synthetic)** ไม่ใช่ข้อมูลพนักงานจริง จึงไม่มีข้อมูลส่วนบุคคลของคนจริง และไม่ติดเงื่อนไข PDPA สำหรับตัว dataset นี้ แต่ผลลัพธ์ที่ได้จึงไม่ใช่หลักฐานพฤติกรรมพนักงานจริง
+- เป็นข้อมูลสมมติ (fictional/synthetic) ไม่ใช่ข้อมูลพนักงานจริง จึงไม่มีข้อมูลส่วนบุคคลของคนจริง และตัว dataset ไม่ติดเงื่อนไข PDPA ข้อเสียคือผลที่ได้ใช้เป็นหลักฐานพฤติกรรมของพนักงานจริงไม่ได้
 - Kaggle ไม่ได้อธิบายวิธีสร้างข้อมูล การกระจายตัว หรือประเทศ/อุตสาหกรรมที่ใช้อ้างอิง (บริบทเป็นแบบอเมริกัน ดู README หัวข้อ 4 เรื่อง Localization)
 
 ### ความหมายของคอลัมน์ที่เป็นรหัส (จากหน้า Kaggle)

@@ -1,18 +1,18 @@
 # Employee Attrition Predictor & HR Analytics Platform: Design Blueprint
 
-**เวอร์ชัน:** v0.2 (Prototype in development — wk2–3 Modeling)
-**อัปเดตล่าสุด:** 1 ต.ค. 2026
+เวอร์ชัน: v0.2 (Prototype in development, wk2–3 Modeling)
+อัปเดตล่าสุด: 1 ต.ค. 2026
 
-> เอกสารนี้เป็น **Living Document** — เขียนขึ้นก่อนเริ่มพัฒนาเพื่อเป็นแนวทางร่วมกันของทีม และจะถูกอัปเดตให้ตรงกับของจริงเมื่อแต่ละ phase พัฒนาเสร็จ บางส่วน implement แล้ว (ดู "สถานะปัจจุบัน" ด้านล่าง) ส่วนที่เหลือ เช่น Data Model/database กลาง, Superset dashboard และ authentication ยังเป็น "แผน"
+> เอกสารนี้เป็น Living Document ทีมเขียนขึ้นก่อนเริ่มพัฒนาเพื่อใช้เป็นแนวทางร่วมกัน และอัปเดตให้ตรงกับของจริงทุกครั้งที่ phase หนึ่งเสร็จ ตอนนี้บางส่วน implement แล้ว (ดู "สถานะปัจจุบัน" ด้านล่าง) ส่วนที่เหลือ เช่น Data Model/database กลาง, Superset dashboard และ authentication ยังเป็น "แผน"
 
 ---
 
 ## บริบทโปรเจกต์ (Project Context)
 
-- **ประเภทโปรเจกต์:** งานนักศึกษาชั้นปีที่ 4 เทอม 1 สาขาวิทยาการคอมพิวเตอร์ (Proposal Defense) — School of Information Technology (SIT), Sripatum University (SPU)
-- **ระยะเวลาพัฒนา:** ทีมทำงานหลัก 9 สัปดาห์ (22 ก.ย. – 23 พ.ย. 2026) + buffer ก่อน Final Exam จริงของรายวิชา (course week 15–16, ~24 พ.ย.–7 ธ.ค. 2026) ดูรายละเอียดที่ [10. Project Timeline](#10-project-timeline-แผนดำเนินงาน)
-- **สถานะปัจจุบัน:** wk2–3 — Modeling มี clean/feature pipeline, โมเดลสุดท้าย `attrition-xgboost-P` v1 บน MLflow (DagsHub), FastAPI (`/predict`, `/whatif`, `/shap`, `/financial-impact`, `/recalibrate`, `/company-summary`), React What-if Simulator + SHAP Viewer และ CI แล้ว ยังไม่มี database กลาง, Superset และ authentication
-- **ขอบเขต:** ระบบต้นแบบ (Prototype) บน IBM HR Analytics Employee Attrition & Performance dataset (Kaggle) ซึ่งเป็น **ข้อมูลจำลอง (synthetic)** ไม่ใช่ข้อมูลองค์กรจริง — ผลลัพธ์และสมมติฐานทางธุรกิจในเอกสารนี้ตั้งอยู่บนข้อจำกัดนี้
+- ประเภทโปรเจกต์: งานนักศึกษาชั้นปีที่ 4 เทอม 1 สาขาวิทยาการคอมพิวเตอร์ (Proposal Defense) ของ School of Information Technology (SIT), Sripatum University (SPU)
+- ระยะเวลาพัฒนา: ทีมทำงานหลัก 9 สัปดาห์ (22 ก.ย. – 23 พ.ย. 2026) + buffer ก่อน Final Exam จริงของรายวิชา (course week 15–16, ~24 พ.ย.–7 ธ.ค. 2026) ดูรายละเอียดที่ [10. Project Timeline](#10-project-timeline-แผนดำเนินงาน)
+- สถานะปัจจุบัน: อยู่ใน wk2–3 (Modeling) ตอนนี้มี clean/feature pipeline, โมเดลสุดท้าย `attrition-xgboost-P` v1 บน MLflow (DagsHub), FastAPI (`/predict`, `/whatif`, `/shap`, `/financial-impact`, `/recalibrate`, `/company-summary`), React What-if Simulator + SHAP Viewer และ CI แล้ว ยังไม่มี database กลาง, Superset และ authentication
+- ขอบเขต: ระบบต้นแบบ (Prototype) บน IBM HR Analytics Employee Attrition & Performance dataset (Kaggle) ซึ่งเป็นข้อมูลจำลอง (synthetic) ไม่ใช่ข้อมูลองค์กรจริง ผลลัพธ์และสมมติฐานทางธุรกิจในเอกสารนี้จึงมีข้อจำกัดตามนั้น
 
 ---
 
@@ -85,8 +85,8 @@ pip install -r requirements-dev.txt
 
 backend โหลดโมเดลจาก MLflow Model Registry จึงต้องตั้ง `.env` ก่อน (`cp .env.example .env`)
 
-- **DagsHub (ทีมใช้ช่วงพัฒนา):** ใส่ `MLFLOW_TRACKING_URI`, ชื่อผู้ใช้ และ token ของตัวเอง ตามขั้นตอนใน [docs/mlflow_setup.md](docs/mlflow_setup.md) โมเดลสุดท้าย `models:/attrition-xgboost-P/1` อยู่บนนั้นแล้ว ไม่ต้องเทรนเอง
-- **Self-host ด้วย docker compose:** ตั้ง `POSTGRES_PASSWORD` และ `MLFLOW_TRACKING_URI=http://localhost:5000` แล้วรัน
+- DagsHub (ทีมใช้ช่วงพัฒนา): ใส่ `MLFLOW_TRACKING_URI`, ชื่อผู้ใช้ และ token ของตัวเอง ตามขั้นตอนใน [docs/mlflow_setup.md](docs/mlflow_setup.md) โมเดลสุดท้าย `models:/attrition-xgboost-P/1` อยู่บนนั้นแล้ว ไม่ต้องเทรนเอง
+- Self-host ด้วย docker compose: ตั้ง `POSTGRES_PASSWORD` และ `MLFLOW_TRACKING_URI=http://localhost:5000` แล้วรัน
   ```bash
   docker compose up -d --build --wait
   python src/train.py               # เทรน + register โมเดล แล้วตั้ง MODEL_URI ใน .env ตามที่พิมพ์ออกมา
@@ -149,23 +149,23 @@ cd frontend && npm run lint && npm run build
 
 ## 1. System Overview (ภาพรวมระบบ)
 
-HR ส่วนใหญ่รู้ว่าพนักงานจะลาออก **"หลัง"** จากที่ตัดสินใจไปแล้ว ทำให้ขาดโอกาสดูแลหรือรักษาคนไว้ทัน องค์กรจึงต้องแบกต้นทุนสรรหา/ฝึกอบรมคนใหม่ซ้ำ ๆ (เฉลี่ย 50–200% ของเงินเดือน 1 ปีต่อคน)
+HR ส่วนใหญ่รู้ว่าพนักงานจะลาออก "หลัง" จากที่เขาตัดสินใจไปแล้ว ทำให้ขาดโอกาสดูแลหรือรักษาคนไว้ทัน องค์กรจึงต้องแบกต้นทุนสรรหา/ฝึกอบรมคนใหม่ซ้ำ ๆ (เฉลี่ย 50–200% ของเงินเดือน 1 ปีต่อคน)
 
-โปรเจกต์นี้สร้างระบบที่เลื่อนจุดที่ HR "รู้" ปัญหาให้เร็วขึ้น โดยไม่ได้หยุดแค่การพยากรณ์ (โมเดลในสมุดโน้ต) แต่ต่อยอดเป็นระบบที่ใช้งานได้จริง — พยากรณ์ความเสี่ยงรายบุคคล อธิบายเหตุผลได้ แปลงเป็นตัวเลขต้นทุนให้ตัดสินใจได้ และติดตามผลมาตรการที่ทำไป
+โปรเจกต์นี้สร้างระบบที่ทำให้ HR รู้ปัญหาเร็วขึ้น ระบบพยากรณ์ความเสี่ยงรายบุคคล อธิบายเหตุผลของคะแนน แปลงความเสี่ยงเป็นตัวเลขต้นทุนเพื่อใช้ตัดสินใจ และติดตามผลของมาตรการที่ทำไป ทั้งหมดอยู่ในเว็บแอปที่ HR ใช้งานได้ ไม่ได้จบแค่โมเดลใน notebook
 
 ### Key Objectives
 
-1. **Risk Prediction** — พยากรณ์ความเสี่ยงลาออกรายบุคคลด้วย Machine Learning (XGBoost)
-2. **Explainability (XAI)** — อธิบาย "ทำไม" พนักงานคนนั้นเสี่ยง ด้วย SHAP ไม่ใช่แค่ตัวเลข probability
-3. **Financial Impact** — แปลงความเสี่ยงเป็นมูลค่าธุรกิจ เปรียบเทียบ Retain vs Replace เพื่อช่วยจัดลำดับความสำคัญ
-4. **Actionable System** — Dashboard + Intervention Tracker ที่ HR ใช้ติดตามและวัดผลมาตรการได้จริง ไม่ใช่แค่รายงานสถิติ
-5. **Organization-wide Insight** — สรุปปัจจัยเสี่ยงเด่นทั้งบริษัท/แผนกจาก SHAP รวม ช่วย HR จัดลำดับนโยบายระดับองค์กร ไม่ใช่ดูทีละคนอย่างเดียว
+1. Risk Prediction: พยากรณ์ความเสี่ยงลาออกรายบุคคลด้วย Machine Learning (XGBoost)
+2. Explainability (XAI): ใช้ SHAP อธิบายว่าทำไมพนักงานคนนั้นเสี่ยง นอกเหนือจากตัวเลข probability
+3. Financial Impact: แปลงความเสี่ยงเป็นมูลค่าธุรกิจ เปรียบเทียบ Retain vs Replace เพื่อช่วยจัดลำดับความสำคัญ
+4. Actionable System: Dashboard และ Intervention Tracker ที่ HR ใช้ติดตามและวัดผลมาตรการ
+5. Organization-wide Insight: รวม SHAP ทั้งบริษัทหรือรายแผนกเพื่อสรุปปัจจัยเสี่ยงเด่น ให้ HR จัดลำดับนโยบายระดับองค์กรได้โดยไม่ต้องไล่ดูทีละคน
 
 ---
 
 ## 2. Team & Working Model (ทีมและรูปแบบการทำงาน)
 
-**กลุ่ม 38 - เอเอ๊สกักะดุ๊งกะดิง** | School of Information Technology (SIT), Computer Science — SPU
+กลุ่ม 38 เอเอ๊สกักะดุ๊งกะดิง | School of Information Technology (SIT), Computer Science, SPU
 
 | รหัสนักศึกษา | ชื่อ |
 | :--- | :--- |
@@ -174,13 +174,13 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
 | 66079943 | Mr. Puripat Wongtangton |
 | 66083478 | Miss. Nanthamon Supo |
 
-**รูปแบบการทำงาน:** ทั้งทีม 4 คนทำงาน phase เดียวกันพร้อมกันตาม [Timeline](#10-project-timeline-แผนดำเนินงาน) แทนการแบ่งสายงานตายตัวรายบุคคล เพื่อให้ทุกคนมีส่วนร่วมและเข้าใจทุกส่วนของระบบ (ไม่มี owner ประจำโมดูลใดโมดูลหนึ่งแบบถาวร)
+รูปแบบการทำงาน: ทั้งทีม 4 คนทำงาน phase เดียวกันพร้อมกันตาม [Timeline](#10-project-timeline-แผนดำเนินงาน) แทนการแบ่งสายงานตายตัวรายบุคคล เพื่อให้ทุกคนมีส่วนร่วมและเข้าใจทุกส่วนของระบบ (ไม่มี owner ประจำโมดูลใดโมดูลหนึ่งแบบถาวร)
 
 ---
 
 ## 3. Core Workflow: Predict → Explain → Act → Measure
 
-ระบบออกแบบเป็นวงจรปิด (closed loop) ไม่ใช่แค่ pipeline ทางเดียว:
+ระบบออกแบบเป็นวงจรปิด (closed loop) ผลจากขั้นสุดท้ายย้อนกลับไปปรับขั้นแรก:
 
 ```
 1. Predict  → FastAPI /predict อ่าน feature ของพนักงานจาก PostgreSQL
@@ -197,24 +197,24 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
               → ผลใช้ปรับปรุงโมเดลและมาตรการในรอบถัดไป (retrain / re-evaluate)
 ```
 
-**What-if Simulator** (ส่วนหนึ่งของ Act phase): ผู้ใช้ปรับค่าฟีเจอร์สมมติ (เช่น เพิ่มเงินเดือน, ลด OT) ผ่าน frontend → เรียก `POST /whatif` → ระบบคำนวณ risk_score ใหม่แบบ real-time โดยไม่บันทึกลง database (ใช้ประกอบการตัดสินใจก่อนทำ intervention จริง)
+What-if Simulator เป็นส่วนหนึ่งของขั้น Act ผู้ใช้ปรับค่าฟีเจอร์สมมติ (เช่น เพิ่มเงินเดือน, ลด OT) ผ่าน frontend → เรียก `POST /whatif` → ระบบคำนวณ risk_score ใหม่แบบ real-time โดยไม่บันทึกลง database (ใช้ประกอบการตัดสินใจก่อนทำ intervention จริง)
 
-**Company-wide Aggregate Summary** (ส่วนขยายของ Explain phase): นอกจาก SHAP รายบุคคล ระบบรวมค่า SHAP เฉลี่ยของพนักงานทั้งบริษัท/ตามแผนก เพื่อสรุปให้ HR เห็นภาพรวมว่า "ปัจจัยอะไรเป็นตัวขับความเสี่ยงลาออกสูงสุดทั้งองค์กร" พร้อมคำแนะนำเชิงนโยบายแบบ rule-based (เช่น ถ้า OT เป็นปัจจัยอันดับ 1 ทั้งบริษัท → แนะนำทบทวนนโยบาย OT) ผ่าน `GET /company-summary` — ดู [6.6](#66-company-wide-aggregate-summary)
+Company-wide Aggregate Summary ต่อยอดจากขั้น Explain นอกจาก SHAP รายบุคคล ระบบรวมค่า SHAP เฉลี่ยของพนักงานทั้งบริษัท/ตามแผนก เพื่อสรุปให้ HR เห็นภาพรวมว่า "ปัจจัยอะไรเป็นตัวขับความเสี่ยงลาออกสูงสุดทั้งองค์กร" พร้อมคำแนะนำเชิงนโยบายแบบ rule-based (เช่น ถ้า OT เป็นปัจจัยอันดับ 1 ทั้งบริษัท → แนะนำทบทวนนโยบาย OT) ผ่าน `GET /company-summary` (ดู [6.6](#66-company-wide-aggregate-summary))
 
 ---
 
 ## 4. Dataset
 
-**IBM HR Analytics Employee Attrition & Performance** (Kaggle Open Dataset)
+IBM HR Analytics Employee Attrition & Performance (Kaggle Open Dataset)
 
 | รายการ | ค่า |
 | :--- | :--- |
 | จำนวนแถว | 1,470 (พนักงาน 1,470 คน) |
 | จำนวนคอลัมน์ | 35 ฟีเจอร์ (ตัวเลข + หมวดหมู่) |
 | Target column | `Attrition` (Yes/No) |
-| อัตราลาออกในชุดข้อมูล | 16.1% (237 คน) — ชุดข้อมูลไม่สมดุล ต้องพิจารณา class imbalance ตอนเทรน |
+| อัตราลาออกในชุดข้อมูล | 16.1% (237 คน) ข้อมูลไม่สมดุล ต้องพิจารณา class imbalance ตอนเทรน |
 
-**ผลจาก EDA เบื้องต้น** (ใช้กำหนดทิศทาง feature engineering ใน Modeling phase):
+ผลจาก EDA เบื้องต้น (ใช้กำหนดทิศทาง feature engineering ใน Modeling phase):
 
 - ฟีเจอร์ที่สัมพันธ์กับการลาออกชัดสุด: `OverTime` (ลาออก 30.5% เทียบ 10.4% ของคนไม่ทำ OT), `JobRole` (Sales Representative สูงสุด 39.8%)
 - กลุ่มฟีเจอร์ที่คาดว่าทำนายได้ดี: `MonthlyIncome`, `Age`, `OverTime`, `TotalWorkingYears`, `YearsAtCompany`, `DistanceFromHome`, `StockOptionLevel`
@@ -222,26 +222,26 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
 
 ### ที่มาและสัญญาอนุญาต (License)
 
-- **แหล่งข้อมูล:** [Kaggle: pavansubhasht/ibm-hr-analytics-attrition-dataset](https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset) อัปเดตล่าสุด 31 มี.ค. 2017 คำอธิบายบน Kaggle ระบุว่าเป็น *"a fictional data set created by IBM data scientists"*
-- **License:** [ODbL v1.0](https://opendatacommons.org/licenses/odbl/1-0/) สำหรับตัวฐานข้อมูล และ [DbCL v1.0](https://opendatacommons.org/licenses/dbcl/1-0/) สำหรับเนื้อหา ใช้เชิงพาณิชย์ได้ แต่ต้อง**ให้เครดิตที่มา**ทุกที่ที่เผยแพร่ผลงาน (รายงาน สไลด์ เว็บ) และถ้าเผยแพร่ข้อมูลที่ดัดแปลงแล้ว (`data/processed/`) ต้องใช้ ODbL เหมือนกัน (share-alike)
+- แหล่งข้อมูล: [Kaggle: pavansubhasht/ibm-hr-analytics-attrition-dataset](https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset) อัปเดตล่าสุด 31 มี.ค. 2017 คำอธิบายบน Kaggle ระบุว่าเป็น *"a fictional data set created by IBM data scientists"*
+- License: [ODbL v1.0](https://opendatacommons.org/licenses/odbl/1-0/) สำหรับตัวฐานข้อมูล และ [DbCL v1.0](https://opendatacommons.org/licenses/dbcl/1-0/) สำหรับเนื้อหา ใช้เชิงพาณิชย์ได้ แต่ต้องให้เครดิตที่มาทุกที่ที่เผยแพร่ผลงาน (รายงาน สไลด์ เว็บ) และถ้าเผยแพร่ข้อมูลที่ดัดแปลงแล้ว (`data/processed/`) ต้องใช้ ODbL เหมือนกัน (share-alike)
 - ผลต่อแต่ละส่วนของโปรเจกต์ ข้อความเครดิตสำเร็จรูป และความหมายของคอลัมน์ที่เป็นรหัส ดูที่ [docs/dataset.md](docs/dataset.md)
 
 ### การปรับให้เหมาะกับบริบทไทย (Localization Notes)
 
-ค้นแล้วไม่พบ dataset การลาออกของพนักงานไทยที่เปิดเผยต่อสาธารณะ (ทางเลือกที่พิจารณาแล้วไม่เลือก: dataset สำรวจพนักงานซาอุดีอาระเบียจาก Data in Brief 2025 — ประเทศไม่ตรง, หรือเก็บ survey พนักงานไทยเอง — ใช้เวลามากเกินกรอบ 9 สัปดาห์) จึงยังใช้ IBM dataset เป็นชุดข้อมูลหลักในการเทรน และจัดการความเสี่ยงเรื่อง cross-cultural transferability ดังนี้:
+ค้นแล้วไม่พบ dataset การลาออกของพนักงานไทยที่เปิดเผยต่อสาธารณะ (ทางเลือกที่พิจารณาแล้วไม่เลือก คือ dataset สำรวจพนักงานซาอุดีอาระเบียจาก Data in Brief 2025 ซึ่งประเทศไม่ตรง และการเก็บ survey พนักงานไทยเอง ซึ่งใช้เวลาเกินกรอบ 9 สัปดาห์) จึงยังใช้ IBM dataset เป็นชุดข้อมูลหลักในการเทรน และจัดการความเสี่ยงเรื่อง cross-cultural transferability ดังนี้:
 
-- **ทดลองตัดฟีเจอร์ที่อาจไม่ transfer ข้ามวัฒนธรรมแล้ว แต่ไม่ตัด** ทดลองตัด `BusinessTravel` (โครงสร้างการเดินทางธุรกิจแบบอเมริกัน) และ `StockOptionLevel` (พบน้อยในบริษัท/SME ไทย) ใน `notebooks/04_tuning_S.ipynb` โดยตั้งกติกาก่อนดูผลว่าจะตัดถ้า CV PR-AUC ลดไม่เกิน 0.01 ผลคือลดลง 0.02–0.035 จึง**คงไว้ในโมเดลสุดท้าย** แล้วจัดการด้วย recalibration และคำแนะนำแบบไทยแทน (เช่น `StockOptionLevel` แนะนำเป็นการสมทบกองทุนสำรองเลี้ยงชีพ) ผลเต็มอยู่ใน [รายงานร่าง Business Logic](docs/report_business_logic_draft_S.md) หัวข้อ 2
-- **ฟีเจอร์ของโมเดลสุดท้าย (`attrition-xgboost-P` v1):** ใช้คอลัมน์เดิมทั้งหมด ยกเว้น 4 คอลัมน์ที่ไม่มีข้อมูล (`EmployeeCount`, `StandardHours`, `Over18`, `EmployeeNumber`) บวกฟีเจอร์ใหม่ 3 ตัว (`OverTimeXDistance`, `AvgSatisfaction`, `TenureRatio`) รวม 50 คอลัมน์หลัง one-hot
-- **ข้อจำกัดที่ยังเปิดอยู่:** IBM ไม่ระบุสกุลเงินของ `MonthlyIncome` ถ้าบริษัทไทยส่งเงินเดือนเป็นบาท คะแนนความเสี่ยงจะผิด รอทีมตกลงหน่วยกลาง (DE-01 ใน [review Data Engineering](docs/review_data_engineering_S.md))
+- ทดลองตัดฟีเจอร์ที่อาจไม่ transfer ข้ามวัฒนธรรม คือ `BusinessTravel` (โครงสร้างการเดินทางธุรกิจแบบอเมริกัน) และ `StockOptionLevel` (พบน้อยในบริษัท/SME ไทย) ใน `notebooks/04_tuning_S.ipynb` โดยตั้งกติกาก่อนดูผลว่าจะตัดถ้า CV PR-AUC ลดไม่เกิน 0.01 ผลคือลดลง 0.02–0.035 จึงคงไว้ในโมเดลสุดท้าย แล้วจัดการด้วย recalibration และคำแนะนำแบบไทยแทน (เช่น `StockOptionLevel` แนะนำเป็นการสมทบกองทุนสำรองเลี้ยงชีพ) ผลเต็มอยู่ใน [รายงานร่าง Business Logic](docs/report_business_logic_draft_S.md) หัวข้อ 2
+- โมเดลสุดท้าย (`attrition-xgboost-P` v1) ใช้คอลัมน์เดิมทั้งหมด ยกเว้น 4 คอลัมน์ที่ไม่มีข้อมูล (`EmployeeCount`, `StandardHours`, `Over18`, `EmployeeNumber`) บวกฟีเจอร์ใหม่ 3 ตัว (`OverTimeXDistance`, `AvgSatisfaction`, `TenureRatio`) รวม 50 คอลัมน์หลัง one-hot
+- ข้อจำกัดที่ยังค้างอยู่คือ IBM ไม่ระบุสกุลเงินของ `MonthlyIncome` ถ้าบริษัทไทยส่งเงินเดือนเป็นบาท คะแนนความเสี่ยงจะผิด รอทีมตกลงหน่วยกลาง (DE-01 ใน [review Data Engineering](docs/review_data_engineering_S.md))
 - ดู [6.5 Model Localization](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง) สำหรับกลไก recalibrate โมเดลด้วยข้อมูลจริงของบริษัทที่ใช้งาน
 
 ---
 
 ## 5. Data Model (High-level แผนออกแบบข้อมูล)
 
-> ระดับ High-level เท่านั้น — จะลง column/type ละเอียดตอนเริ่ม Backend phase (wk6–7) เมื่อ schema นิ่งแล้ว
+> ระดับ High-level เท่านั้น จะลง column/type ละเอียดตอนเริ่ม Backend phase (wk6–7) เมื่อ schema นิ่งแล้ว
 >
-> **ตอนนี้ (v0.2) ยังไม่ได้สร้างตารางเหล่านี้:** backend อ่านข้อมูลพนักงานจาก CSV ใน `data/raw/` และผล recalibrate เก็บเป็นไฟล์ JSON ต่อบริษัทใน `backend/calibrations/` แทนตาราง `tenant_calibrations` ชั่วคราว
+> ตอนนี้ (v0.2) ยังไม่ได้สร้างตารางเหล่านี้ backend อ่านข้อมูลพนักงานจาก CSV ใน `data/raw/` และผล recalibrate เก็บเป็นไฟล์ JSON ต่อบริษัทใน `backend/calibrations/` แทนตาราง `tenant_calibrations` ชั่วคราว
 
 | Entity | หน้าที่ | Key fields (แผน) |
 | :--- | :--- | :--- |
@@ -254,13 +254,13 @@ HR ส่วนใหญ่รู้ว่าพนักงานจะลา�
 | `tenant_calibrations` | ผล recalibration เฉพาะบริษัท (tenant) จากข้อมูลลาออกจริงที่อัปโหลด | tenant_id, calibration_method, sample_size, applied_at |
 | `company_risk_summary` | Cache ผลสรุปความเสี่ยงรวมทั้งบริษัท/แผนก (อัปเดตเป็นรอบ) | department, top_risk_factors, avg_risk_score, generated_at |
 
-**ความสัมพันธ์คร่าว ๆ:** `employees 1—* attrition_predictions`, `attrition_predictions 1—* shap_explanations`, `employees 1—* interventions`, `model_runs 1—* attrition_predictions`
+ความสัมพันธ์คร่าว ๆ: `employees 1:N attrition_predictions`, `attrition_predictions 1:N shap_explanations`, `employees 1:N interventions`, `model_runs 1:N attrition_predictions`
 
 ---
 
 ## 6. Business Logic Rules
 
-> 6.1, 6.3, 6.5 และ 6.6 implement แล้วใน `src/business_rules.py`, `src/company_summary.py` และ `config/financial_impact.json` ส่วน 6.4 ยังเป็นแผน กฎเชิงตัวเลข (threshold, cutoff) ทั้งหมดยังเป็น **ค่าตั้งต้น** รอทีมทบทวนกับการกระจายของ risk_score จริง
+> 6.1, 6.3, 6.5 และ 6.6 implement แล้วใน `src/business_rules.py`, `src/company_summary.py` และ `config/financial_impact.json` ส่วน 6.4 ยังเป็นแผน กฎเชิงตัวเลข (threshold, cutoff) ทั้งหมดยังเป็นค่าตั้งต้น รอทีมทบทวนกับการกระจายของ risk_score จริง
 
 ### 6.1 Risk Banding
 ```
@@ -298,7 +298,7 @@ ROI = replacement_cost_estimate - retain_cost_estimate
 ```
 > ตารางค่าชดเชยเก็บเป็น config แยกจากโค้ดโมเดล (`config/financial_impact.json`) เพื่อให้อัปเดตตามกฎหมายที่เปลี่ยนแปลงได้โดยไม่ต้อง retrain
 >
-> **ที่ implement จริง:** ค่าเริ่มต้น**ไม่รวม**ค่าชดเชยในต้นทุนหาคนแทน เพราะมาตรา 118 จ่ายเมื่อนายจ้างเลิกจ้าง ส่วนพนักงานที่ลาออกเองไม่ได้รับ เปิดได้ด้วย `include_severance` (เหตุผลเต็มอยู่ใน [รายงานร่าง Business Logic](docs/report_business_logic_draft_S.md) หัวข้อ 4.3)
+> ที่ implement จริง: ค่าเริ่มต้นไม่รวมค่าชดเชยในต้นทุนหาคนแทน เพราะมาตรา 118 จ่ายเมื่อนายจ้างเลิกจ้าง ส่วนพนักงานที่ลาออกเองไม่ได้รับ เปิดได้ด้วย `include_severance` (เหตุผลเต็มอยู่ใน [รายงานร่าง Business Logic](docs/report_business_logic_draft_S.md) หัวข้อ 4.3)
 
 ### 6.4 Fairness Check
 ```
@@ -311,7 +311,7 @@ ROI = replacement_cost_estimate - retain_cost_estimate
 ### 6.5 Model Localization (เพื่อให้ใช้ในไทยได้จริง)
 ```
 Deploy-time (per-tenant):
-  ระบบเทรน "โมเดลกลาง" จาก IBM dataset (universal signal เท่านั้น — ดู 4. Dataset)
+  ระบบเทรน "โมเดลกลาง" จาก IBM dataset (ดู 4. Dataset)
   เมื่อบริษัทไทยเริ่มใช้งานจริงและมีข้อมูลลาออกในอดีตของตัวเอง:
     -> อัปโหลดผ่าน POST /recalibrate
     -> ปรับ threshold/probability ของโมเดลกลางด้วย Platt scaling หรือ isotonic regression
@@ -323,7 +323,7 @@ Deploy-time (per-tenant):
 ```
 > ตราบใดที่บริษัทยังไม่ได้ recalibrate ระบบต้องแสดงคำเตือนกำกับ risk_score ว่า "ยังไม่ได้ปรับเทียบกับข้อมูลจริงของบริษัท — ใช้ SHAP (ทิศทางของปัจจัย) ประกอบการตัดสินใจมากกว่าเชื่อตัวเลขตรงๆ" เพื่อความโปร่งใส
 >
-> **ที่ implement จริง:** `POST /recalibrate` รองรับ Platt scaling และ isotonic regression ส่วน endpoint ที่คืนคะแนนรับ `tenant_id` และแนบคำเตือนข้างบนเมื่อบริษัทยังไม่ได้ปรับเทียบ ผลการปรับเทียบเก็บเป็นไฟล์ JSON จนกว่าจะมีตาราง `tenant_calibrations` ยังไม่มีระบบยืนยันตัวตน จึงห้ามใช้กับข้อมูลจริง (ดู [review Security](docs/review_security_S.md))
+> ที่ implement จริง: `POST /recalibrate` รองรับ Platt scaling และ isotonic regression ส่วน endpoint ที่คืนคะแนนรับ `tenant_id` และแนบคำเตือนข้างบนเมื่อบริษัทยังไม่ได้ปรับเทียบ ผลการปรับเทียบเก็บเป็นไฟล์ JSON จนกว่าจะมีตาราง `tenant_calibrations` ยังไม่มีระบบยืนยันตัวตน จึงห้ามใช้กับข้อมูลจริง (ดู [review Security](docs/review_security_S.md))
 
 ### 6.6 Company-wide Aggregate Summary
 ```
@@ -337,30 +337,30 @@ Deploy-time (per-tenant):
   -> รวมกับ financial_impact_estimates เพื่อประเมิน "มูลค่าที่ประหยัดได้โดยประมาณ" ถ้าแก้ปัจจัยนั้น
   -> บันทึกผลลง company_risk_summary (cache ไว้ ไม่คำนวณสดทุกครั้งที่มีคนเปิด dashboard)
 ```
-> **ที่ implement จริง:** `src/company_summary.py` รวม SHAP ของคอลัมน์ one-hot กลับเป็นฟีเจอร์เดิมก่อนจัดอันดับ และแยกปัจจัยที่บริษัทปรับได้ออกจากข้อมูลส่วนตัว (อายุ, เพศ, สถานภาพ) ตอนนี้ `GET /company-summary` คำนวณสดทุก request และยังไม่ cache ลง `company_risk_summary` (รอ database ของแอป)
+> ที่ implement จริง: `src/company_summary.py` รวม SHAP ของคอลัมน์ one-hot กลับเป็นฟีเจอร์เดิมก่อนจัดอันดับ และแยกปัจจัยที่บริษัทปรับได้ออกจากข้อมูลส่วนตัว (อายุ, เพศ, สถานภาพ) ตอนนี้ `GET /company-summary` คำนวณสดทุก request และยังไม่ cache ลง `company_risk_summary` (รอ database ของแอป)
 >
-> **ข้อควรระวัง:** SHAP บอกความสัมพันธ์กับโมเดล ไม่ใช่ความเป็นเหตุเป็นผลที่พิสูจน์แล้ว คำแนะนำทั้งหมดต้องใช้ถ้อยคำเชิงทิศทาง ("น่าจะช่วยลดความเสี่ยง") ไม่ใช่การรับประกันผล — หลักการเดียวกับความโปร่งใสใน [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)
+> ข้อควรระวัง: SHAP บอกความสัมพันธ์กับโมเดล ไม่ได้พิสูจน์ว่าเป็นเหตุเป็นผล คำแนะนำทั้งหมดจึงต้องใช้ถ้อยคำเชิงทิศทาง ("น่าจะช่วยลดความเสี่ยง") ไม่รับประกันผล ตามหลักความโปร่งใสเดียวกับ [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)
 
 ---
 
 ## 7. API Design (FastAPI)
 
-> ✅ = ทำแล้ว (`backend/routers/`) ดู request/response จริงได้ที่ http://localhost:8000/docs ตอนรัน backend · 📝 = ยังเป็นแผน (Backend phase wk6–7)
+> "ทำแล้ว" คือมีใน `backend/routers/` แล้ว ดู request/response จริงได้ที่ http://localhost:8000/docs ตอนรัน backend ส่วน "แผน" จะทำใน Backend phase (wk6–7)
 
 | สถานะ | Method | Endpoint | หน้าที่ |
 | :---: | :--- | :--- | :--- |
-| ✅ | POST | `/predict` | รับ `employee_id` (มีในระบบ) หรือข้อมูลพนักงานทั้งก้อน → คืน risk_score และ risk band |
-| ✅ | GET | `/shap/{employee_id}` | คืน SHAP explanation ของพนักงานคนนั้น |
-| ✅ | POST | `/whatif` | จำลองการเปลี่ยนฟีเจอร์ → คืน risk_score ใหม่ (ไม่บันทึกลง DB) |
-| ✅ | GET | `/financial-impact/{employee_id}` | คืนประมาณการต้นทุน retain vs replace |
-| ✅ | POST | `/recalibrate` | อัปโหลดข้อมูลลาออกจริงของบริษัท (tenant) เพื่อปรับคะแนนให้เข้ากับพฤติกรรมจริง (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)) |
-| ✅ | GET | `/company-summary` | สรุปปัจจัยเสี่ยงเด่นทั้งบริษัท/แผนก พร้อมคำแนะนำเชิงนโยบาย (ดู [6.6](#66-company-wide-aggregate-summary)) |
-| ✅ | GET | `/company-summary/departments` | สรุปทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม |
-| 📝 | GET | `/health` | Health check |
-| 📝 | POST | `/interventions` | บันทึกมาตรการที่ HR เลือกทำกับพนักงาน |
-| 📝 | GET | `/interventions/{employee_id}` | ดูประวัติมาตรการของพนักงานคนนั้น |
-| 📝 | GET | `/dashboard/summary` | ข้อมูลสรุปสำหรับ Superset/React dashboard |
-| 📝 | GET | `/calibration-status/{tenant_id}` | ตรวจสอบว่าบริษัทนี้ recalibrate โมเดลแล้วหรือยัง |
+| ทำแล้ว | POST | `/predict` | รับ `employee_id` (มีในระบบ) หรือข้อมูลพนักงานทั้งก้อน → คืน risk_score และ risk band |
+| ทำแล้ว | GET | `/shap/{employee_id}` | คืน SHAP explanation ของพนักงานคนนั้น |
+| ทำแล้ว | POST | `/whatif` | จำลองการเปลี่ยนฟีเจอร์ → คืน risk_score ใหม่ (ไม่บันทึกลง DB) |
+| ทำแล้ว | GET | `/financial-impact/{employee_id}` | คืนประมาณการต้นทุน retain vs replace |
+| ทำแล้ว | POST | `/recalibrate` | อัปโหลดข้อมูลลาออกจริงของบริษัท (tenant) เพื่อปรับคะแนนให้เข้ากับพฤติกรรมจริง (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)) |
+| ทำแล้ว | GET | `/company-summary` | สรุปปัจจัยเสี่ยงเด่นทั้งบริษัท/แผนก พร้อมคำแนะนำเชิงนโยบาย (ดู [6.6](#66-company-wide-aggregate-summary)) |
+| ทำแล้ว | GET | `/company-summary/departments` | สรุปทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม |
+| แผน | GET | `/health` | Health check |
+| แผน | POST | `/interventions` | บันทึกมาตรการที่ HR เลือกทำกับพนักงาน |
+| แผน | GET | `/interventions/{employee_id}` | ดูประวัติมาตรการของพนักงานคนนั้น |
+| แผน | GET | `/dashboard/summary` | ข้อมูลสรุปสำหรับ Superset/React dashboard |
+| แผน | GET | `/calibration-status/{tenant_id}` | ตรวจสอบว่าบริษัทนี้ recalibrate โมเดลแล้วหรือยัง |
 
 > ยังไม่มีระบบยืนยันตัวตน (authentication) ทุก endpoint เรียกได้โดยไม่ต้อง login จึงรันได้เฉพาะในเครื่องกับข้อมูลสมมติเท่านั้น ต้องทำก่อน deploy (SEC-01 ใน [review Security](docs/review_security_S.md))
 
@@ -421,7 +421,7 @@ flowchart LR
     G -- "REST API" --> D
 ```
 
-> แผนภาพนี้คือ**สถาปัตยกรรมเป้าหมาย** ตอนนี้ (v0.2) ทำแล้วส่วน CSV → ML Pipeline → MLflow → FastAPI → React ส่วน PostgreSQL ของแอป, Superset และ `/interventions` ยังเป็นแผน backend จึงอ่านข้อมูลพนักงานจาก CSV และคำนวณผลสดทุก request
+> แผนภาพนี้คือสถาปัตยกรรมเป้าหมาย ตอนนี้ (v0.2) ทำแล้วส่วน CSV → ML Pipeline → MLflow → FastAPI → React ส่วน PostgreSQL ของแอป, Superset และ `/interventions` ยังเป็นแผน backend จึงอ่านข้อมูลพนักงานจาก CSV และคำนวณผลสดทุก request
 
 ### Prediction & Explanation Flow (ตัวอย่าง Sequence)
 
@@ -459,22 +459,22 @@ sequenceDiagram
 
 ### 10.1 Course Milestones (กำหนดการนำเสนอตามรายวิชา)
 
-รายวิชา Machine Learning & Deep Learning for AIoT กำหนด Milestone การนำเสนอไว้ 4 จุดตลอดเทอม — ทีมวางแผนงานภายในให้ deliverable พร้อมก่อนหรือทันแต่ละจุดเหล่านี้:
+รายวิชา Machine Learning & Deep Learning for AIoT กำหนด Milestone การนำเสนอไว้ 4 จุดตลอดเทอม ทีมวางแผนงานให้ deliverable พร้อมก่อนหรือทันแต่ละจุด:
 
 | Course Week | Milestone | Gate | สิ่งที่ต้องนำเสนอ |
 | :--- | :--- | :--- | :--- |
-| Week 5 | Proposal Presentation | Proposal Gate | ปัญหาที่ต้องการแก้, ผู้ใช้เป้าหมาย/Impact/SDG, Data source, AI Task และโมเดลเบื้องต้น, แนวคิด Web App — **เสร็จแล้ว** (คือที่มาของสไลด์ตั้งต้นของโปรเจกต์นี้) |
+| Week 5 | Proposal Presentation | Proposal Gate | ปัญหาที่ต้องการแก้, ผู้ใช้เป้าหมาย/Impact/SDG, Data source, AI Task และโมเดลเบื้องต้น, แนวคิด Web App (เสร็จแล้ว และเป็นที่มาของสไลด์ตั้งต้นของโปรเจกต์นี้) |
 | Week 9 | Data Progress Presentation | Data Gate | Data Collection, EDA, Data Cleaning/Preparation, Split Strategy, ประเด็น Data Leakage หรือข้อจำกัด |
 | Week 13 | Model Progress Presentation | Model Gate | Baseline & Candidate Models, Evaluation Metrics, Experiment Results, Error Analysis, เหตุผลการเลือกโมเดล |
 | Week 15–16 | Final Project Examination | Product Gate | Final Presentation, Live Demo ของ Web App, Technical Defense, สรุป Impact/Innovation/SDG, ส่งไฟล์และเอกสารประกอบ |
 
-**สิ่งที่ต้องเตรียมทุกครั้งที่นำเสนอ:** สไลด์นำเสนอ, Demo หรือผลการทดสอบ, หลักฐานข้อมูล/โค้ด/กราฟ/ตารางผลลัพธ์, ไฟล์งานใน GitHub Repository, การแบ่งบทบาทสมาชิกในทีม
+สิ่งที่ต้องเตรียมทุกครั้งที่นำเสนอ: สไลด์นำเสนอ, Demo หรือผลการทดสอบ, หลักฐานข้อมูล/โค้ด/กราฟ/ตารางผลลัพธ์, ไฟล์งานใน GitHub Repository, การแบ่งบทบาทสมาชิกในทีม
 
-**หมายเหตุจากรายวิชา:** สัปดาห์ที่มีการนำเสนอไม่มีการสอนเนื้อหาใหม่ / ทุกทีมควรอัปเดตความก้าวหน้าอย่างต่อเนื่อง / ผลงานต้องทำงานได้จริงในรูปแบบ AI-powered Web App / เน้น Innovation, Impact และความเป็นไปได้ในการนำไปใช้จริง
+หมายเหตุจากรายวิชา: สัปดาห์ที่มีการนำเสนอไม่มีการสอนเนื้อหาใหม่ / ทุกทีมควรอัปเดตความก้าวหน้าอย่างต่อเนื่อง / ผลงานต้องทำงานได้จริงในรูปแบบ AI-powered Web App / เน้น Innovation, Impact และความเป็นไปได้ในการนำไปใช้จริง
 
 ### 10.2 แผนงานทีม (Team Sprint) เทียบกับ Course Week
 
-> **สมมติฐานวันที่:** คำนวณจากที่ทีมยืนยันว่า Week 9 (Data Gate) ตรงกับสัปดาห์ที่ 4 ของแผนทีม (wk4–5) → **Course Week = Team Week + 5** — ถ้าวันที่จริงของปฏิทินรายวิชาไม่ตรงกับที่คำนวณไว้ ช่วยแจ้งเพื่อปรับตารางด้านล่าง
+> สมมติฐานวันที่: ทีมยืนยันว่า Week 9 (Data Gate) ตรงกับสัปดาห์ที่ 4 ของแผนทีม (wk4–5) จึงคำนวณได้ว่า Course Week = Team Week + 5 ถ้าวันที่จริงของปฏิทินรายวิชาไม่ตรง ช่วยแจ้งเพื่อปรับตารางด้านล่าง
 
 Scope เต็มตามที่เสนอ (รวม Survival Analysis, Fairness, Superset embedding) บีบจากแผนเดิม 12 สัปดาห์เหลือ 9 สัปดาห์ทำงานหลัก โดยคง core phase (Modeling, SHAP+Progress Check, Backend&Analysis, BI&Frontend) ไว้เท่าเดิม และเผื่อ buffer ก่อนสอบจริง
 
@@ -482,83 +482,83 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 | :--- | :--- | :--- | :--- | :--- |
 | wk1 | 22–28 ก.ย. | Foundation & EDA | Week 6 | — |
 | wk2–3 | 29 ก.ย.–12 ต.ค. | Modeling | Week 7–8 | โมเดลเทรนเสร็จ (baseline + candidate) พร้อม MLflow tracking |
-| wk4–5 | 13–26 ต.ค. | SHAP + Progress Check | **Week 9–10 — Data Gate ★** | ต้องมีโมเดลที่เทรนเสร็จแล้ว (จาก wk2–3) + SHAP เบื้องต้น พร้อม slide นำเสนอ Data Gate |
+| wk4–5 | 13–26 ต.ค. | SHAP + Progress Check | Week 9–10 (Data Gate) | ต้องมีโมเดลที่เทรนเสร็จแล้ว (จาก wk2–3) + SHAP เบื้องต้น พร้อม slide นำเสนอ Data Gate |
 | wk6–7 | 27 ต.ค.–9 พ.ย. | Backend & Analysis | Week 11–12 | — |
-| wk8–9 | 10–23 พ.ย. | BI & Frontend + Closing & Delivery | **Week 13–14 — Model Gate ★** | นำเสนอผล Model/Experiment ที่ Model Gate + ปิดงาน Dashboard/Frontend |
-| buffer | 24 พ.ย.–7 ธ.ค. | Final polish + สอบจริง | **Week 15–16 — Product Gate ★** | Final Presentation, Live Demo, Technical Defense |
+| wk8–9 | 10–23 พ.ย. | BI & Frontend + Closing & Delivery | Week 13–14 (Model Gate) | นำเสนอผล Model/Experiment ที่ Model Gate + ปิดงาน Dashboard/Frontend |
+| buffer | 24 พ.ย.–7 ธ.ค. | Final polish + สอบจริง | Week 15–16 (Product Gate) | Final Presentation, Live Demo, Technical Defense |
 
-★ = Course Milestone Gate ตาม [10.1](#101-course-milestones-กำหนดการนำเสนอตามรายวิชา)
+Gate คือ Course Milestone ตาม [10.1](#101-course-milestones-กำหนดการนำเสนอตามรายวิชา)
 
 ### 10.3 การแบ่งงานรายบุคคลในแต่ละ Phase (ละเอียด)
 
-**หลักการแบ่งงาน:**
+หลักการแบ่งงาน:
 
-- งานยิ่งยาก ยิ่งใช้คนเยอะ — ดูระดับความยากได้จากสัญลักษณ์: 🔴 ยาก (3–4 คน) / 🟡 ปานกลาง (2 คน) / 🟢 ง่ายแต่ใช้เวลานาน (กระจายทำทั้งทีม)
-- **งาน 🔴 ยาก ทุกจุดเน้นให้ Puripat + Saphondanai เป็นตัวหลัก** — คู่นี้เป็นเจ้าของ pipeline ข้อมูล→โมเดลแบบไม่ขาดสายตลอดโปรเจกต์ (Data Cleaning → Feature Engineering → Train/tune Model → FastAPI endpoints หลัก → React ส่วนซับซ้อน) เพื่อให้ context ของงานต่อเนื่องกัน ไม่ต้องส่งต่อข้อมูลข้ามคน
-- **Yanisa + Nanthamon** รับงาน 🟡/🟢 ที่เหลือเป็นหลัก (EDA → baseline model → endpoint รอง → Survival/Fairness → React ส่วนที่เบากว่า) แต่ยังช่วยข้ามกลุ่มได้เสมอเมื่อใครติดขัดหรือมีเวลาว่าง
+- งานยิ่งยากยิ่งใช้คนเยอะ คอลัมน์ "ระดับ" ในตารางมี 3 ค่า คือ ยาก (3–4 คน), ปานกลาง (2 คน) และง่ายแต่ใช้เวลานาน (กระจายทำทั้งทีม)
+- งานยากทุกจุดให้ Puripat + Saphondanai เป็นตัวหลัก เพราะคู่นี้เป็นเจ้าของ pipeline ข้อมูล→โมเดลต่อเนื่องตลอดโปรเจกต์ (Data Cleaning → Feature Engineering → Train/tune Model → FastAPI endpoints หลัก → React ส่วนซับซ้อน) context ของงานจึงต่อกัน ไม่ต้องส่งต่อข้อมูลข้ามคน
+- Yanisa + Nanthamon รับงานระดับปานกลางและงานที่ใช้เวลานานที่เหลือเป็นหลัก (EDA → baseline model → endpoint รอง → Survival/Fairness → React ส่วนที่เบากว่า) แต่ยังช่วยข้ามกลุ่มได้เสมอเมื่อใครติดขัดหรือมีเวลาว่าง
 - งานที่ง่ายแต่กินเวลาให้กระจายทำเป็นชิ้นเล็ก ๆ ทั้งทีม แทนที่จะดึงคนไปทำเต็มเวลาคนเดียว
-- งานที่ตามธรรมชาติต้อง "รวมเป็นหนึ่งเดียว" (โมเดล, database, schema) แก้ด้วยเครื่องมือที่ออกแบบมาให้ทำงานคนละเครื่องแล้ว sync กันได้ ไม่ใช่การนั่งเครื่องเดียวกันจริง ๆ — สรุปวิธีไว้ท้ายหัวข้อนี้
+- งานที่ตามธรรมชาติต้อง "รวมเป็นหนึ่งเดียว" (โมเดล, database, schema) แก้ด้วยเครื่องมือที่ออกแบบมาให้ทำงานคนละเครื่องแล้ว sync กันได้ ไม่ต้องนั่งเครื่องเดียวกันจริง ๆ (สรุปวิธีไว้ท้ายหัวข้อนี้)
 
-> **หมายเหตุภาระงาน:** ด้วยโครงสร้างนี้ Puripat + Saphondanai จะแบกงานเทคนิคหนักต่อเนื่องเกือบตลอดทั้งโปรเจกต์ เป็นการตัดสินใจที่ยืนยันแล้วว่าต้องการให้เป็นแบบนี้ (เน้นความต่อเนื่องของ context มากกว่าการถ่วงดุลภาระงาน)
+> หมายเหตุภาระงาน: ด้วยโครงสร้างนี้ Puripat + Saphondanai จะแบกงานเทคนิคหนักต่อเนื่องเกือบตลอดทั้งโปรเจกต์ เป็นการตัดสินใจที่ยืนยันแล้วว่าต้องการให้เป็นแบบนี้ (เน้นความต่อเนื่องของ context มากกว่าการถ่วงดุลภาระงาน)
 
 <details open>
-<summary><strong>wk1 — Foundation & EDA</strong></summary>
+<summary><strong>wk1: Foundation & EDA</strong></summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
-| Requirement + ตั้งสมมติฐานธุรกิจ | 🟢 | ทั้ง 4 คน (1 meeting ~2–3 ชม.) | ประชุมสรุปขอบเขตจากสไลด์ proposal เดิม เขียนลง doc ร่วม (Google Docs) ไม่ต้องรอ merge code |
-| Data cleaning (missing value, encode, ตรวจ data leakage ตาม [6.2](#62-data-leakage-guard)) | 🟡 | Saphondanai + Puripat | ทำใน notebook คนละไฟล์ (`01_cleaning_S.ipynb`, `01_cleaning_P.ipynb`) เทียบกันแล้วรวมเป็น `clean_pipeline.py` ไฟล์เดียวตอนจบสัปดาห์ |
-| EDA (สถิติ/กราฟเปรียบเทียบกลุ่มลาออก/ไม่ลาออก) | 🟢 (กราฟเยอะ ใช้เวลานาน) | Yanisa + Nanthamon แบ่งครึ่งฟีเจอร์ (ตัวเลข vs หมวดหมู่) | แบ่งตามกลุ่มฟีเจอร์ ทำคนละ notebook ไม่ชนกัน |
+| Requirement + ตั้งสมมติฐานธุรกิจ | ง่ายแต่ใช้เวลานาน | ทั้ง 4 คน (1 meeting ~2–3 ชม.) | ประชุมสรุปขอบเขตจากสไลด์ proposal เดิม เขียนลง doc ร่วม (Google Docs) ไม่ต้องรอ merge code |
+| Data cleaning (missing value, encode, ตรวจ data leakage ตาม [6.2](#62-data-leakage-guard)) | ปานกลาง | Saphondanai + Puripat | ทำใน notebook คนละไฟล์ (`01_cleaning_S.ipynb`, `01_cleaning_P.ipynb`) เทียบกันแล้วรวมเป็น `clean_pipeline.py` ไฟล์เดียวตอนจบสัปดาห์ |
+| EDA (สถิติ/กราฟเปรียบเทียบกลุ่มลาออก/ไม่ลาออก) | ง่ายแต่ใช้เวลานาน (กราฟเยอะ) | Yanisa + Nanthamon แบ่งครึ่งฟีเจอร์ (ตัวเลข vs หมวดหมู่) | แบ่งตามกลุ่มฟีเจอร์ ทำคนละ notebook ไม่ชนกัน |
 
-> **ของที่ต้อง "รวมเป็นหนึ่ง":** ไฟล์ dataset ดิบ (CSV) — โหลดจาก Kaggle ครั้งเดียว push เข้า `data/raw/` ใน git แล้วทุกคน pull ไปใช้ในเครื่องตัวเอง ไม่มีใครแก้ไฟล์ raw โดยตรง (read-only) ผลลัพธ์การ clean ไปรวมที่ `data/processed/` แทน
+> ของที่ต้องรวมเป็นหนึ่งเดียวคือไฟล์ dataset ดิบ (CSV) โหลดจาก Kaggle ครั้งเดียว push เข้า `data/raw/` ใน git แล้วทุกคน pull ไปใช้ในเครื่องตัวเอง ไม่มีใครแก้ไฟล์ raw โดยตรง (read-only) ผลลัพธ์การ clean ไปรวมที่ `data/processed/` แทน
 
 </details>
 
 <details>
-<summary><strong>wk2–3 — Modeling</strong></summary>
+<summary><strong>wk2–3: Modeling</strong></summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
-| Feature engineering | 🟡 | Puripat + Saphondanai (ต่อเนื่องจากคนที่ทำ Data Cleaning ใน wk1) | ทำงานบน `data/processed/` ที่ตัวเองเป็นคนทำ cleaning มาต่อเนื่อง เข้าใจ context ของแต่ละคอลัมน์อยู่แล้ว ไม่ต้องมาอธิบายกันใหม่ commit เป็น `feature_pipeline.py` แยกจาก training script |
-| Train + tune model หลัก (XGBoost + hyperparameter search) | 🔴 ยากสุดใน phase — **เน้น Puripat + Saphondanai เป็นหลัก** | Puripat + Saphondanai (lead) | รับผิดชอบโมเดลหลักที่มีแนวโน้มถูก promote ไปใช้จริง ลอง config หลายชุดบนเครื่องตัวเอง log เข้า MLflow เป็นคนตัดสินใจเลือก run สุดท้ายร่วมกัน |
-| Train model เปรียบเทียบ (baseline: Logistic Regression, Random Forest) | 🟡 | Yanisa + Nanthamon | ลองโมเดลง่ายกว่าเพื่อเป็น baseline เทียบผล log เข้า MLflow เดียวกัน ช่วยยืนยันว่าโมเดลหลักที่ Puripat/Saphondanai เลือกดีกว่าจริง |
-| ตั้งค่า MLflow tracking server (ครั้งแรก, บล็อกงานอื่น) | 🟢 (งาน setup ครั้งเดียว) | Saphondanai คนเดียว | ทำก่อนคนอื่นเริ่ม train แจก connection URI ให้ทีมผ่าน `.env.example` |
+| Feature engineering | ปานกลาง | Puripat + Saphondanai (ต่อเนื่องจากคนที่ทำ Data Cleaning ใน wk1) | ทำงานบน `data/processed/` ที่ตัวเองเป็นคนทำ cleaning มาต่อเนื่อง เข้าใจ context ของแต่ละคอลัมน์อยู่แล้ว ไม่ต้องมาอธิบายกันใหม่ commit เป็น `feature_pipeline.py` แยกจาก training script |
+| Train + tune model หลัก (XGBoost + hyperparameter search) | ยากสุดใน phase | Puripat + Saphondanai (lead) | รับผิดชอบโมเดลหลักที่มีแนวโน้มถูก promote ไปใช้จริง ลอง config หลายชุดบนเครื่องตัวเอง log เข้า MLflow เป็นคนตัดสินใจเลือก run สุดท้ายร่วมกัน |
+| Train model เปรียบเทียบ (baseline: Logistic Regression, Random Forest) | ปานกลาง | Yanisa + Nanthamon | ลองโมเดลง่ายกว่าเพื่อเป็น baseline เทียบผล log เข้า MLflow เดียวกัน ช่วยยืนยันว่าโมเดลหลักที่ Puripat/Saphondanai เลือกดีกว่าจริง |
+| ตั้งค่า MLflow tracking server (ครั้งแรก, บล็อกงานอื่น) | ง่าย (งาน setup ครั้งเดียว) | Saphondanai คนเดียว | ทำก่อนคนอื่นเริ่ม train แจก connection URI ให้ทีมผ่าน `.env.example` |
 
 </details>
 
 <details>
-<summary><strong>wk4–5 — SHAP + Progress Check + Company-wide Summary</strong> (Data Gate ★)</summary>
+<summary><strong>wk4–5: SHAP + Progress Check + Company-wide Summary</strong> (Data Gate)</summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
-| SHAP integration รายบุคคล | 🟡 | Yanisa + Puripat | โหลด model version ที่ promote แล้วจาก MLflow registry มาคำนวณ SHAP (read-only ต่อโมเดล ไม่ชนกัน) |
-| Company-wide Aggregate Summary ([6.6](#66-company-wide-aggregate-summary)) | 🟡 | Saphondanai + Nanthamon | รวมค่า SHAP เฉลี่ยตามแผนก/บริษัท + เขียน rule-based recommendation — **รอ SHAP รายบุคคลเสร็จก่อน** (dependency ไม่ parallel 100% แม้คนละคู่ ให้เริ่มงาน SHAP รายบุคคลก่อน 2–3 วัน) |
-| เตรียม slide + นำเสนอ Data Gate | 🟢 | ทั้ง 4 คนคนละ 2–3 แผ่น แล้วซ้อมพูดพร้อมกัน 1 รอบ | ใช้ Google Slides ร่วม แก้พร้อมกันได้ ไม่ชนกันเหมือนไฟล์ local |
+| SHAP integration รายบุคคล | ปานกลาง | Yanisa + Puripat | โหลด model version ที่ promote แล้วจาก MLflow registry มาคำนวณ SHAP (read-only ต่อโมเดล ไม่ชนกัน) |
+| Company-wide Aggregate Summary ([6.6](#66-company-wide-aggregate-summary)) | ปานกลาง | Saphondanai + Nanthamon | รวมค่า SHAP เฉลี่ยตามแผนก/บริษัท + เขียน rule-based recommendation ต้องรอ SHAP รายบุคคลเสร็จก่อน (dependency ไม่ parallel 100% แม้คนละคู่ ให้เริ่มงาน SHAP รายบุคคลก่อน 2–3 วัน) |
+| เตรียม slide + นำเสนอ Data Gate | ง่ายแต่ใช้เวลานาน | ทั้ง 4 คนคนละ 2–3 แผ่น แล้วซ้อมพูดพร้อมกัน 1 รอบ | ใช้ Google Slides ร่วม แก้พร้อมกันได้ ไม่ชนกันเหมือนไฟล์ local |
 
 </details>
 
 <details>
-<summary><strong>wk6–7 — Backend & Analysis</strong></summary>
+<summary><strong>wk6–7: Backend & Analysis</strong></summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
-| FastAPI endpoints หลัก ที่ต่อกับโมเดลโดยตรง (`/predict /shap /whatif /recalibrate /company-summary`) | 🔴 ยาก — **เน้น Puripat + Saphondanai** | Puripat + Saphondanai (lead) | ยากสุดเพราะต้องต่อกับ MLflow model + SHAP explainer จริง แยกไฟล์ router คนละไฟล์ (`routers/predict.py`, `routers/recalibrate.py` ฯลฯ) ใช้ FastAPI `APIRouter` แล้ว include เข้า `main.py` ทีหลัง ต่อ **dev database กลางบน cloud ฟรี** (เช่น Supabase/Neon) แทนที่จะรัน Postgres แยกเครื่องใครเครื่องมัน |
-| FastAPI endpoints รอง (`/interventions /calibration-status /dashboard/summary /health`) | 🟡 | Yanisa + Nanthamon | เป็น CRUD/query ธรรมดา ไม่ต้องต่อโมเดลโดยตรง ทำคนละไฟล์ router เชื่อม dev database เดียวกับด้านบน |
-| Survival Analysis | 🔴 ยาก (เทคนิคใหม่ที่ทีมยังไม่เคยทำ) | Yanisa + Nanthamon (เริ่มก่อนตั้งแต่ต้นสัปดาห์เพราะเบากว่างาน endpoint หลัก, ขอความช่วยเหลือจาก Puripat/Saphondanai ได้เมื่อทำ endpoint หลักเสร็จ) | เริ่มจาก tutorial ของ `lifelines` library ก่อน แล้วค่อย apply กับ dataset จริง |
-| Fairness check (Fairlearn) | 🟡 | Yanisa + Nanthamon | ทำต่อจาก Survival Analysis ได้เลย เพราะอ่านผลจากโมเดลเดียวกัน ไม่ต้องแก้โมเดล — ถ้าเวลาไม่พอให้ Puripat/Saphondanai ช่วย review หลังทำ endpoint หลักเสร็จ |
+| FastAPI endpoints หลัก ที่ต่อกับโมเดลโดยตรง (`/predict /shap /whatif /recalibrate /company-summary`) | ยาก | Puripat + Saphondanai (lead) | ยากสุดเพราะต้องต่อกับ MLflow model + SHAP explainer จริง แยกไฟล์ router คนละไฟล์ (`routers/predict.py`, `routers/recalibrate.py` ฯลฯ) ใช้ FastAPI `APIRouter` แล้ว include เข้า `main.py` ทีหลัง ต่อ dev database กลางบน cloud ฟรี (เช่น Supabase/Neon) แทนที่จะรัน Postgres แยกเครื่องใครเครื่องมัน |
+| FastAPI endpoints รอง (`/interventions /calibration-status /dashboard/summary /health`) | ปานกลาง | Yanisa + Nanthamon | เป็น CRUD/query ธรรมดา ไม่ต้องต่อโมเดลโดยตรง ทำคนละไฟล์ router เชื่อม dev database เดียวกับด้านบน |
+| Survival Analysis | ยาก (เทคนิคใหม่ที่ทีมยังไม่เคยทำ) | Yanisa + Nanthamon (เริ่มก่อนตั้งแต่ต้นสัปดาห์เพราะเบากว่างาน endpoint หลัก, ขอความช่วยเหลือจาก Puripat/Saphondanai ได้เมื่อทำ endpoint หลักเสร็จ) | เริ่มจาก tutorial ของ `lifelines` library ก่อน แล้วค่อย apply กับ dataset จริง |
+| Fairness check (Fairlearn) | ปานกลาง | Yanisa + Nanthamon | ทำต่อจาก Survival Analysis ได้เลย เพราะอ่านผลจากโมเดลเดียวกัน ไม่ต้องแก้โมเดล ถ้าเวลาไม่พอให้ Puripat/Saphondanai ช่วย review หลังทำ endpoint หลักเสร็จ |
 
 </details>
 
 <details>
-<summary><strong>wk8–9 — BI & Frontend + Closing</strong> (Model Gate ★, Product Gate buffer)</summary>
+<summary><strong>wk8–9: BI & Frontend + Closing</strong> (Model Gate, Product Gate buffer)</summary>
 
 | งาน | ระดับ | คนที่ทำ | วิธีทำโดยละเอียด |
 | :--- | :--- | :--- | :--- |
-| React frontend — What-if Simulator + SHAP viewer (ส่วนที่ซับซ้อนสุด) | 🔴 ยากสุด — **เน้น Puripat + Saphondanai** | Puripat + Saphondanai (lead) | What-if ต้องเรียก `/whatif` แบบ real-time + จัดการ state ของค่าที่ผู้ใช้ปรับ, SHAP viewer ต้อง render ข้อมูลซ้อน (nested) เป็นกราฟ — ยากสุดในฝั่ง frontend |
-| React frontend — Intervention Tracker + Company Summary panel | 🟡 | Yanisa + Nanthamon | ส่วนใหญ่เป็น list/form CRUD ธรรมดา และแสดงผลข้อมูลสรุปแบบ static เชื่อม backend ผ่าน API contract เดียวกัน (หัวข้อ 7) — endpoint ไหนยังไม่เสร็จให้ mock response ตาม schema ไปก่อน ไม่ต้องรอ |
-| Superset dashboard + Financial Impact + Company Summary panel | 🟡 | Nanthamon (นำ) — Puripat ช่วย review หลังทำ React ส่วนหลักเสร็จ | ต่อ Superset เข้า dev database เดียวกับ backend โดยตรง ส่วนใหญ่เป็นการตั้งค่า/ลากชาร์ตผ่าน UI ไม่ใช่โค้ดหนักเหมือน React จึงให้ Nanthamon ทำนำคนเดียวได้ก่อน ทำคู่ขนานกับ React ได้เพราะคนละ service — *แก้จากเดิมที่ให้ Puripat ทำคู่ เพราะ Puripat ติดงาน React ส่วนหลักพร้อมกันในสัปดาห์เดียวกันอยู่แล้ว* |
-| Integration testing (รวมทุก service มาทดสอบพร้อมกันจริง) | 🟡 แต่ **ต้องทำพร้อมกันทั้งทีมในเวลาเดียวกัน** | ทั้ง 4 คน | งานนี้แยกกันทำไม่ได้จริง ๆ เพราะต้องเห็นทุก service ทำงานร่วมกัน — นัดเวลา call พร้อมกัน รัน `docker-compose up` พร้อมกันแล้ว screen-share ตรวจดูร่วมกัน (ไม่ต้องอยู่เครื่องเดียวกัน แค่เวลาต้องตรงกัน) |
-| รายงานจบ + slide นำเสนอ Model Gate / Final | 🟢 | ทั้ง 4 คนคนละหัวข้อ | แบ่งหัวข้อรายงานคนละส่วนเขียนใน Google Docs พร้อมกัน |
+| React frontend: What-if Simulator + SHAP viewer (ส่วนที่ซับซ้อนสุด) | ยากสุด | Puripat + Saphondanai (lead) | What-if ต้องเรียก `/whatif` แบบ real-time + จัดการ state ของค่าที่ผู้ใช้ปรับ, SHAP viewer ต้อง render ข้อมูลซ้อน (nested) เป็นกราฟ จึงยากสุดในฝั่ง frontend |
+| React frontend: Intervention Tracker + Company Summary panel | ปานกลาง | Yanisa + Nanthamon | ส่วนใหญ่เป็น list/form CRUD ธรรมดา และแสดงผลข้อมูลสรุปแบบ static เชื่อม backend ผ่าน API contract เดียวกัน (หัวข้อ 7) endpoint ไหนยังไม่เสร็จให้ mock response ตาม schema ไปก่อน ไม่ต้องรอ |
+| Superset dashboard + Financial Impact + Company Summary panel | ปานกลาง | Nanthamon (นำ), Puripat ช่วย review หลังทำ React ส่วนหลักเสร็จ | ต่อ Superset เข้า dev database เดียวกับ backend โดยตรง ส่วนใหญ่เป็นการตั้งค่า/ลากชาร์ตผ่าน UI ไม่ใช่โค้ดหนักเหมือน React จึงให้ Nanthamon ทำนำคนเดียวได้ก่อน ทำคู่ขนานกับ React ได้เพราะคนละ service (แก้จากเดิมที่ให้ Puripat ทำคู่ เพราะ Puripat ติดงาน React ส่วนหลักในสัปดาห์เดียวกันอยู่แล้ว) |
+| Integration testing (รวมทุก service มาทดสอบพร้อมกันจริง) | ปานกลาง แต่ต้องทำพร้อมกันทั้งทีม | ทั้ง 4 คน | งานนี้แยกกันทำไม่ได้จริง ๆ เพราะต้องเห็นทุก service ทำงานร่วมกัน จึงนัดเวลา call พร้อมกัน รัน `docker-compose up` พร้อมกันแล้ว screen-share ตรวจดูร่วมกัน (ไม่ต้องอยู่เครื่องเดียวกัน แค่เวลาต้องตรงกัน) |
+| รายงานจบ + slide นำเสนอ Model Gate / Final | ง่ายแต่ใช้เวลานาน | ทั้ง 4 คนคนละหัวข้อ | แบ่งหัวข้อรายงานคนละส่วนเขียนใน Google Docs พร้อมกัน |
 
 </details>
 
@@ -567,18 +567,18 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 | ปัญหา | ทางแก้ |
 | :--- | :--- |
 | โค้ดฐานเดียวกัน หลายคนแก้พร้อมกัน | Git: แต่ละคนทำงานใน feature branch ของตัวเอง → เปิด Pull Request → review → merge เข้า `main`/`dev` ไม่มีใครแก้ไฟล์เดียวกันพร้อมกันโดยไม่รู้ตัว |
-| Train โมเดลต้องมี "ตัวจริง" ตัวเดียว | MLflow tracking server กลาง — ทุกคน train บนเครื่องตัวเอง, log ผลเข้าจุดเดียวกัน, เทียบและเลือก run ที่ดีที่สุดมา promote ร่วมกัน |
+| Train โมเดลต้องมี "ตัวจริง" ตัวเดียว | MLflow tracking server กลาง ทุกคน train บนเครื่องตัวเอง, log ผลเข้าจุดเดียวกัน, เทียบและเลือก run ที่ดีที่สุดมา promote ร่วมกัน |
 | Database ต้องเป็น Source of Truth เดียว | Dev database กลางบน cloud (Supabase/Neon free tier) แทน local Postgres แยกเครื่อง ทุกคน connect เข้าตัวเดียวกัน |
 | Backend เสร็จช้ากว่า Frontend | Contract-first: ตกลง request/response schema ล่วงหน้า (หัวข้อ 7) frontend mock ข้อมูลไปก่อนได้ ไม่ต้องรอ |
 | งานที่ต้องเห็นภาพรวมพร้อมกันจริงๆ (integration test, ซ้อมนำเสนอ) | นัดเวลาทำพร้อมกัน (video call/ห้องเดียวกัน) ไม่พยายามแยกงานประเภทนี้ออกจากกัน |
 
-### งานง่ายแต่ใช้เวลานาน — วิธีจัดการ
+### วิธีจัดการงานง่ายแต่ใช้เวลานาน
 
 งานประเภทนี้ (EDA visualization, เตรียม slide, เขียนรายงาน, ค้นข้อมูลกฎหมายแรงงานไทยสำหรับ [6.3](#63-financial-impact-estimate-อิงกฎหมายแรงงานไทย)) ไม่ต้องการคนเก่งเฉพาะทาง แต่กินเวลาเยอะถ้าให้คนเดียวทำ:
 
 - แบ่งเป็นชิ้นเล็กที่สุดเท่าที่ทำได้ (เช่น กราฟคนละ 3–4 แบบ แทนที่จะให้ 1 คนทำ 15 แบบ) กระจายให้ทุกคนทำคู่ขนานแบบไม่ต้องรอกัน
 - ใช้เวลาว่างระหว่างรอ dependency (เช่น ระหว่างรอโมเดลเทรนเสร็จ ก็เตรียม slide ไปพร้อมกันได้)
-- ไม่ดึงคนที่กำลังทำงาน 🔴 ยาก ไปช่วยงานประเภทนี้ เพราะจะเสีย focus จากงานที่ต้องใช้ความเข้าใจลึก
+- ไม่ดึงคนที่กำลังทำงานยากไปช่วยงานประเภทนี้ เพราะจะเสีย focus จากงานที่ต้องใช้ความเข้าใจลึก
 
 ---
 
@@ -588,7 +588,7 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 | :--- | :--- | :--- |
 | Data Leakage | ฟีเจอร์บางตัวอาจเกิดขึ้นหลังพนักงานตัดสินใจลาออกไปแล้ว | ตรวจสอบ timeline ของแต่ละฟีเจอร์ก่อนใช้เทรน (ดู [6.2](#62-data-leakage-guard)) |
 | Synthetic Data | ข้อมูลจาก IBM เป็นข้อมูลจำลอง ไม่ใช่ข้อมูลจริงขององค์กร | ตั้งสมมติฐานธุรกิจอย่างระมัดระวัง ระบุข้อจำกัดชัดเจนตอนนำเสนอ |
-| Cross-cultural Generalization | โมเดลเทรนจากพฤติกรรมพนักงานอเมริกัน (IBM) อาจไม่ตรงกับพนักงานไทย ไม่มี dataset ไทยสำเร็จรูปให้ใช้แทน | คัดฟีเจอร์ที่ไม่ transfer ออก (ดู [4. Dataset](#4-dataset)) + เปิดให้ recalibrate ด้วยข้อมูลจริงของบริษัท (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)) + สื่อสารข้อจำกัดนี้ชัดเจนตอนนำเสนอ |
+| Cross-cultural Generalization | โมเดลเทรนจากพฤติกรรมพนักงานอเมริกัน (IBM) อาจไม่ตรงกับพนักงานไทย ไม่มี dataset ไทยสำเร็จรูปให้ใช้แทน | ทดลองตัดฟีเจอร์ที่อาจไม่ transfer แล้วผลแย่ลงจึงคงไว้ (ดู [4. Dataset](#4-dataset)) + เปิดให้ recalibrate ด้วยข้อมูลจริงของบริษัท (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)) + สื่อสารข้อจำกัดนี้ชัดเจนตอนนำเสนอ |
 | เวลาพัฒนาจำกัด (9 สัปดาห์) | Scope เต็มมีหลายฟีเจอร์ขั้นสูง (Survival, Fairness, Superset) ในเวลาที่บีบลงจาก 12 สัปดาห์ | จัดลำดับความสำคัญ core feature ก่อน ฟีเจอร์เสริมเป็น stretch goal หากเวลาไม่พอ |
 | Superset Embedding | การเชื่อม Auth ระหว่าง Superset กับ frontend อาจซับซ้อน | สำรองแผนใช้ iframe แบบพื้นฐานหากติดปัญหาเรื่องเวลา |
 
@@ -596,10 +596,10 @@ Scope เต็มตามที่เสนอ (รวม Survival Analysis, F
 
 ## 12. Expected Outcomes
 
-ระบบต้นแบบที่ HR นำไปใช้ลดการลาออกได้จริง ไม่ใช่แค่โมเดลในสมุดโน้ต:
+ผลที่คาดว่าจะได้คือระบบต้นแบบที่ HR ใช้ลดการลาออกได้ ประกอบด้วย
 
 - โมเดลพยากรณ์ความเสี่ยงลาออกพร้อม Explainability (SHAP)
 - Dashboard เชิงบริหาร (Superset) + Interactive App สำหรับ HR
-- Financial Impact Estimate ที่อิงกฎหมายแรงงานไทย แปลงผลเป็นการตัดสินใจเชิงธุรกิจได้จริง
+- Financial Impact Estimate ที่อิงกฎหมายแรงงานไทย ใช้เทียบต้นทุนรักษาคนกับต้นทุนหาคนแทน
 - กลไก Recalibration ที่ปรับโมเดลกลางให้เข้ากับพฤติกรรมพนักงานของแต่ละบริษัทไทยที่ใช้งานจริง (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง))
 - Company-wide Aggregate Summary ที่แปล SHAP รายบุคคลจำนวนมากให้เป็นคำแนะนำเชิงนโยบายระดับองค์กร ให้ HR ดูภาพรวมได้ในหน้าเดียว (ดู [6.6](#66-company-wide-aggregate-summary))

@@ -2,13 +2,13 @@
 
 | หัวข้อ | รายละเอียด |
 | :--- | :--- |
-| วันที่ตรวจ | 1 ต.ค. 2026 (ทีมอยู่ wk2 — Modeling) |
-| รอบการตรวจ | **รอบ 1** อ่านโค้ดและ config · **รอบ 2** (วันเดียวกัน) ทดสอบจริงในส่วนที่รอบ 1 ระบุเป็นข้อจำกัด: ยิง API, สแกน dependency, ตรวจการตั้งค่า GitHub/DagsHub, สแกน notebook |
+| วันที่ตรวจ | 1 ต.ค. 2026 (ทีมอยู่ wk2 ช่วง Modeling) |
+| รอบการตรวจ | รอบ 1 อ่านโค้ดและ config · รอบ 2 (วันเดียวกัน) ทดสอบจริงในส่วนที่รอบ 1 ระบุเป็นข้อจำกัด: ยิง API, สแกน dependency, ตรวจการตั้งค่า GitHub/DagsHub, สแกน notebook |
 | เวอร์ชันที่ตรวจ | โค้ด: commit `45f926a` บน `main` (ตรงกับ `dev001-Ink` ณ วันตรวจ) commit `fc4a969` ที่ตามมาแก้แค่ notebook/เอกสาร/requirements ไม่ได้แก้โค้ดที่ตรวจ · การตั้งค่า GitHub/DagsHub: ค่าจริง ณ วันตรวจ |
 | ผู้ตรวจ | Claude Code (AI, Claude Opus 5.5) รับบท senior security engineer ตามคำขอของ Saphondanai |
 | ผู้ดูแลเอกสาร | Saphondanai (ถามหรือแย้งได้ที่ Saphondanai) |
 | สถานะ | รอทีมยืนยันผู้รับผิดชอบและกำหนดเสร็จ |
-| เอกสารชุดเดียวกัน | [Data Engineering](review_data_engineering_S.md) · **Security (ไฟล์นี้)** · [UX/UI](review_ux_ui_S.md) |
+| เอกสารชุดเดียวกัน | [Data Engineering](review_data_engineering_S.md) · Security (ไฟล์นี้) · [UX/UI](review_ux_ui_S.md) |
 
 **วิธีใช้เอกสารนี้**
 
@@ -17,50 +17,50 @@
 3. แก้เสร็จแล้วให้ติ๊ก checkbox พร้อมใส่ commit hash
 4. ถ้าไม่เห็นด้วยกับข้อไหน ให้เขียนเหตุผลไว้ใน [7. ความเห็นทีม](#7-ความเห็นทีม)
 
-> ผู้รับผิดชอบที่ระบุในเอกสารนี้**เป็นข้อเสนอ** อ้างอิงจาก [TASKS.md](../TASKS.md) และผู้เขียนไฟล์ใน git log ทีมต้องยืนยันกันอีกครั้ง
+> ผู้รับผิดชอบที่ระบุในเอกสารนี้เป็นข้อเสนอ อ้างอิงจาก [TASKS.md](../TASKS.md) และผู้เขียนไฟล์ใน git log ทีมต้องยืนยันกันอีกครั้ง
 > บัญชี git ที่ใช้อ้างอิง: `Ink-SPU` = Saphondanai, `NungUmSudNaRak` (commit ขึ้นต้น Dev007) = Puripat (อนุมานจาก commit ที่ตรงกับงานของ Puripat ใน TASKS.md)
 
 ---
 
 ## 1. สรุป
 
-ตอนนี้ระบบรันแค่ในเครื่องและใช้ข้อมูล synthetic **ความเสียหายจริงจึงยังต่ำ** แต่ README หัวข้อ 8 วางแผนจะ deploy ขึ้น **Render** (อินเทอร์เน็ตสาธารณะ) และขายเรื่อง "ใช้กับข้อมูลพนักงานไทยจริงผ่าน `/recalibrate`" เมื่อถึงจุดนั้น 2 ข้อแรกจะกลายเป็นช่องโหว่ร้ายแรงทันที
+ตอนนี้ระบบรันแค่ในเครื่องและใช้ข้อมูล synthetic ความเสียหายจริงจึงยังต่ำ แต่ README หัวข้อ 8 วางแผนจะ deploy ขึ้น Render (อินเทอร์เน็ตสาธารณะ) และขายเรื่อง "ใช้กับข้อมูลพนักงานไทยจริงผ่าน `/recalibrate`" เมื่อถึงจุดนั้น 2 ข้อแรกจะกลายเป็นช่องโหว่ร้ายแรงทันที
 
-- **SEC-01:** API ไม่มีการยืนยันตัวตนเลย และคืนข้อมูลส่วนตัวของพนักงานทั้งก้อน **ทดสอบจริงแล้ว ไม่ต้อง login ก็ดึงข้อมูลได้ครบ 1,470 คน คนละ 30 ฟิลด์ ใน 76 วินาที**
-- **SEC-02:** ไม่ได้แยกข้อมูลของแต่ละบริษัท (tenant) ออกจากกัน **ทดสอบจริงแล้ว ใครก็เขียนทับค่าปรับเทียบของบริษัทอื่นได้ จน "ลำดับความเสี่ยงกลับหัว" (AUC จาก 0.93 เหลือ 0.07)**
+- **SEC-01:** API ไม่มีการยืนยันตัวตนเลย และคืนข้อมูลส่วนตัวของพนักงานทั้งก้อน ทดสอบจริงแล้ว ไม่ต้อง login ก็ดึงข้อมูลได้ครบ 1,470 คน คนละ 30 ฟิลด์ ใน 76 วินาที
+- **SEC-02:** ไม่ได้แยกข้อมูลของแต่ละบริษัท (tenant) ออกจากกัน ทดสอบจริงแล้ว ใครก็เขียนทับค่าปรับเทียบของบริษัทอื่นได้ จน "ลำดับความเสี่ยงกลับหัว" (AUC จาก 0.93 เหลือ 0.07)
 
 รอบ 2 เจอเพิ่มอีก 3 ข้อ:
 - **SEC-11:** branch `main` บน GitHub ไม่มีการป้องกัน
 - **SEC-12:** repo บน DagsHub เป็นสาธารณะ คนที่ไม่ได้ login ดาวน์โหลดโมเดลและแถวข้อมูลตัวอย่างได้
 - **SEC-13:** output ของ notebook มี path ในเครื่องหลุดอยู่
 
-ส่วนพื้นฐานที่ทีมทำไว้ดีแล้ว: ไม่มี secret หลุดเข้า git (GitHub เปิด secret scanning + push protection ไว้ด้วย), port ผูกไว้ที่ localhost, มีการตรวจ input ด้วย Pydantic และ **dependency ทั้ง Python (195 ตัว) และ npm (106 ตัว) ยังไม่มีช่องโหว่ที่รู้จัก ณ วันตรวจ**
+ส่วนพื้นฐานที่ทีมทำไว้ดีแล้ว: ไม่มี secret หลุดเข้า git (GitHub เปิด secret scanning + push protection ไว้ด้วย), port ผูกไว้ที่ localhost, มีการตรวจ input ด้วย Pydantic และ dependency ทั้ง Python (195 ตัว) และ npm (106 ตัว) ยังไม่มีช่องโหว่ที่รู้จัก ณ วันตรวจ
 
 ระดับความรุนแรงแยกเป็น 2 บริบท:
-- **ตอนนี้** = รันในเครื่อง ข้อมูล synthetic
-- **ก่อน deploy** = ขึ้น Render หรือใช้ข้อมูลจริง
+- ตอนนี้ คือรันในเครื่องด้วยข้อมูล synthetic
+- ก่อน deploy คือขึ้น Render หรือใช้ข้อมูลจริง
 
 | ID | ตอนนี้ | ก่อน deploy | เรื่อง | ผู้รับผิดชอบ (เสนอ) | เสนอให้เสร็จ |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| [SEC-01](#sec-01-api-ไม่มีการยืนยันตัวตน-และคืนข้อมูลส่วนตัวทั้งก้อน) | 🟠 | 🔴 | API ไม่มี auth และคืนข้อมูลส่วนตัวทั้งก้อน | **ทั้งทีมเลือกวิธี** แล้ว Saphondanai + Puripat ทำ | ก่อน deploy (ไม่ช้ากว่า wk8–9 ช่วง integration) |
-| [SEC-02](#sec-02-ไม่ได้แยกข้อมูลของแต่ละบริษัท-tenant-isolation) | 🟠 | 🔴 | ไม่แยกข้อมูลแต่ละบริษัท `tenant_id` มาจากผู้ใช้เอง | Puripat (หลัก), Saphondanai | พร้อม SEC-01 |
-| [SEC-03](#sec-03-ไม่จำกัดขนาดข้อมูลและจำนวนครั้งที่เรียก) | 🟡 | 🟠 | ไม่จำกัดขนาดข้อมูลและจำนวนครั้งที่เรียก | Puripat | ก่อน deploy |
-| [SEC-04](#sec-04-backend-ถือ-token-ส่วนตัวที่เขียน-mlflow-ได้) | 🟡 | 🟠 | backend ถือ DagsHub token ส่วนตัวที่เขียนได้ | Saphondanai | ก่อน deploy |
-| [SEC-05](#sec-05-ความเสี่ยงจากไฟล์โมเดล-model-supply-chain) | 🟡 | 🟠 | ความเสี่ยงจากไฟล์โมเดล (model supply chain) | Saphondanai | ตอนตัดสินใจ DE-03 |
-| [SEC-06](#sec-06-dependency-และ-ci-ยังไม่ได้ป้องกันเรื่อง-supply-chain) | 🟡 | 🟠 | dependency และ CI ยังไม่ป้องกัน supply chain | Saphondanai | พร้อม DE-05 (ก่อน Data Gate) |
-| [SEC-07](#sec-07-หน้า-streamlit-เปิดให้ทุกเครื่องใน-network-เดียวกันเข้าได้) | 🟡 | 🟡 | หน้า Streamlit เปิดให้เครื่องอื่นใน network เดียวกันเข้าได้ | Puripat | ทำได้ทันที |
-| [SEC-08](#sec-08-error-เปิดเผยรายละเอียดภายใน-และเปิดหน้า-docs-สาธารณะ) | 🟡 | 🟡 | error เปิดเผยรายละเอียดภายใน และ `/docs` เปิดสาธารณะ | Puripat + Saphondanai | ก่อน deploy |
-| [SEC-09](#sec-09-pdpa-ไม่มีบันทึกการเข้าถึงและนโยบายข้อมูล) | 🟡 | 🟠 | PDPA: ไม่มีบันทึกการเข้าถึงและนโยบายข้อมูล | เจ้าของ backend + Saphondanai (รายงาน) | audit log หลัง DE-04, รายงานก่อน Model Gate |
-| [SEC-10](#sec-10-สิ่งที่ต้องตั้งค่าตอน-deploy) | — | 🟠 | สิ่งที่ต้องตั้งค่าตอน deploy (CORS, HTTPS, Superset) | Puripat + Nanthamon | ตอน deploy |
-| [SEC-11](#sec-11-branch-main-บน-github-ไม่มีการป้องกัน) (รอบ 2) | 🟠 | 🟠 | branch `main` ไม่มีการป้องกัน push ตรงหรือ force-push ได้ | Saphondanai (admin ของ repo) | ทำได้ทันที (~10 นาที) |
-| [SEC-12](#sec-12-repo-บน-dagshub-เป็นสาธารณะ-ดาวน์โหลดโมเดลและข้อมูลตัวอย่างได้โดยไม่ต้อง-login) (รอบ 2) | 🟡 | 🔴 ถ้าใช้ข้อมูลจริง | repo บน DagsHub เป็นสาธารณะ ดาวน์โหลดโมเดลและข้อมูลตัวอย่างได้โดยไม่ต้อง login | Saphondanai | ก่อนใช้ข้อมูลจริงใด ๆ |
-| [SEC-13](#sec-13-output-ของ-notebook-มี-path-ในเครื่องหลุดอยู่) (รอบ 2) | 🟡 | 🟡 | output ของ notebook มี path ในเครื่องหลุดอยู่ | Puripat + Saphondanai | ถ้ามีเวลา |
+| [SEC-01](#sec-01-api-ไม่มีการยืนยันตัวตน-และคืนข้อมูลส่วนตัวทั้งก้อน) | กลาง | สูง | API ไม่มี auth และคืนข้อมูลส่วนตัวทั้งก้อน | ทั้งทีมเลือกวิธี แล้ว Saphondanai + Puripat ทำ | ก่อน deploy (ไม่ช้ากว่า wk8–9 ช่วง integration) |
+| [SEC-02](#sec-02-ไม่ได้แยกข้อมูลของแต่ละบริษัท-tenant-isolation) | กลาง | สูง | ไม่แยกข้อมูลแต่ละบริษัท `tenant_id` มาจากผู้ใช้เอง | Puripat (หลัก), Saphondanai | พร้อม SEC-01 |
+| [SEC-03](#sec-03-ไม่จำกัดขนาดข้อมูลและจำนวนครั้งที่เรียก) | ต่ำ | กลาง | ไม่จำกัดขนาดข้อมูลและจำนวนครั้งที่เรียก | Puripat | ก่อน deploy |
+| [SEC-04](#sec-04-backend-ถือ-token-ส่วนตัวที่เขียน-mlflow-ได้) | ต่ำ | กลาง | backend ถือ DagsHub token ส่วนตัวที่เขียนได้ | Saphondanai | ก่อน deploy |
+| [SEC-05](#sec-05-ความเสี่ยงจากไฟล์โมเดล-model-supply-chain) | ต่ำ | กลาง | ความเสี่ยงจากไฟล์โมเดล (model supply chain) | Saphondanai | ตอนตัดสินใจ DE-03 |
+| [SEC-06](#sec-06-dependency-และ-ci-ยังไม่ได้ป้องกันเรื่อง-supply-chain) | ต่ำ | กลาง | dependency และ CI ยังไม่ป้องกัน supply chain | Saphondanai | พร้อม DE-05 (ก่อน Data Gate) |
+| [SEC-07](#sec-07-หน้า-streamlit-เปิดให้ทุกเครื่องใน-network-เดียวกันเข้าได้) | ต่ำ | ต่ำ | หน้า Streamlit เปิดให้เครื่องอื่นใน network เดียวกันเข้าได้ | Puripat | ทำได้ทันที |
+| [SEC-08](#sec-08-error-เปิดเผยรายละเอียดภายใน-และเปิดหน้า-docs-สาธารณะ) | ต่ำ | ต่ำ | error เปิดเผยรายละเอียดภายใน และ `/docs` เปิดสาธารณะ | Puripat + Saphondanai | ก่อน deploy |
+| [SEC-09](#sec-09-pdpa-ไม่มีบันทึกการเข้าถึงและนโยบายข้อมูล) | ต่ำ | กลาง | PDPA: ไม่มีบันทึกการเข้าถึงและนโยบายข้อมูล | เจ้าของ backend + Saphondanai (รายงาน) | audit log หลัง DE-04, รายงานก่อน Model Gate |
+| [SEC-10](#sec-10-สิ่งที่ต้องตั้งค่าตอน-deploy) | ไม่เกี่ยว | กลาง | สิ่งที่ต้องตั้งค่าตอน deploy (CORS, HTTPS, Superset) | Puripat + Nanthamon | ตอน deploy |
+| [SEC-11](#sec-11-branch-main-บน-github-ไม่มีการป้องกัน) (รอบ 2) | กลาง | กลาง | branch `main` ไม่มีการป้องกัน push ตรงหรือ force-push ได้ | Saphondanai (admin ของ repo) | ทำได้ทันที (~10 นาที) |
+| [SEC-12](#sec-12-repo-บน-dagshub-เป็นสาธารณะ-ดาวน์โหลดโมเดลและข้อมูลตัวอย่างได้โดยไม่ต้อง-login) (รอบ 2) | ต่ำ | สูง ถ้าใช้ข้อมูลจริง | repo บน DagsHub เป็นสาธารณะ ดาวน์โหลดโมเดลและข้อมูลตัวอย่างได้โดยไม่ต้อง login | Saphondanai | ก่อนใช้ข้อมูลจริงใด ๆ |
+| [SEC-13](#sec-13-output-ของ-notebook-มี-path-ในเครื่องหลุดอยู่) (รอบ 2) | ต่ำ | ต่ำ | output ของ notebook มี path ในเครื่องหลุดอยู่ | Puripat + Saphondanai | ถ้ามีเวลา |
 
 **ระดับความรุนแรง**
-- 🔴 เปิดทางให้ข้อมูลส่วนบุคคลรั่วหรือถูกแก้โดยคนที่ไม่มีสิทธิ์
-- 🟠 ช่องโหว่ที่ต้องปิดก่อน deploy
-- 🟡 เป็นการเสริมความแข็งแรง (hardening) หรือเอกสาร
-- — ยังไม่เกี่ยวในบริบทนั้น
+- สูง: เปิดทางให้ข้อมูลส่วนบุคคลรั่วหรือถูกแก้โดยคนที่ไม่มีสิทธิ์
+- กลาง: ช่องโหว่ที่ต้องปิดก่อน deploy
+- ต่ำ: เป็นการเสริมความแข็งแรง (hardening) หรือเอกสาร
+- ไม่เกี่ยว: ข้อนี้ยังไม่มีผลในบริบทนั้น
 
 ---
 
@@ -86,26 +86,26 @@
 
 ### ขั้นตอนที่ทำ
 
-1. **อ่านโค้ดทุกช่องทางเข้า** `backend/main.py`, `backend/routers/*.py`, `backend/schemas.py`, `backend/calibration.py`, `backend/model_store.py`, `src/mlflow_setup.py`, `src/test_app.py`, `frontend/src/*.jsx`, `frontend/vite.config.js`
-2. **ตรวจ config และ infrastructure** `docker-compose.yml`, `docker/`, `.github/workflows/ci.yml`, `.env.example`, `.gitignore`, `requirements.txt`, `frontend/package.json`
-3. **เทียบกับ checklist** [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x11-t10/) เป็นหลัก
-4. **ค้นหารูปแบบที่อันตราย** ทั้ง repo: `dangerouslySetInnerHTML`, `innerHTML`, `unsafe_allow_html`, `eval(`, `pickle`, `CORSMiddleware`, `token`, `password`
-5. **ตรวจ git history หา secret** ดูว่าเคยมี `.env` ถูก commit ไหม และเคยมีค่า `MLFLOW_TRACKING_PASSWORD=`/`POSTGRES_PASSWORD=` จริงอยู่ในทุก commit ของทุก branch ไหม ([ภาคผนวก](#ภาคผนวก-คำสั่งที่ใช้ตรวจ))
-6. **ตรวจค่า default ของเครื่องมือ** รัน `streamlit config show` ดูค่า `server.address`
-7. **วัดต้นทุนการคำนวณ** SHAP 1,470 แถวใช้เวลา 0.14 วินาที ใช้ประเมินความเสี่ยงเรื่อง DoS
+1. อ่านโค้ดทุกช่องทางเข้า: `backend/main.py`, `backend/routers/*.py`, `backend/schemas.py`, `backend/calibration.py`, `backend/model_store.py`, `src/mlflow_setup.py`, `src/test_app.py`, `frontend/src/*.jsx`, `frontend/vite.config.js`
+2. ตรวจ config และ infrastructure: `docker-compose.yml`, `docker/`, `.github/workflows/ci.yml`, `.env.example`, `.gitignore`, `requirements.txt`, `frontend/package.json`
+3. เทียบกับ checklist: [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x11-t10/) เป็นหลัก
+4. ค้นหารูปแบบที่อันตราย: ทั้ง repo: `dangerouslySetInnerHTML`, `innerHTML`, `unsafe_allow_html`, `eval(`, `pickle`, `CORSMiddleware`, `token`, `password`
+5. ตรวจ git history หา secret: ดูว่าเคยมี `.env` ถูก commit ไหม และเคยมีค่า `MLFLOW_TRACKING_PASSWORD=`/`POSTGRES_PASSWORD=` จริงอยู่ในทุก commit ของทุก branch ไหม ([ภาคผนวก](#ภาคผนวก-คำสั่งที่ใช้ตรวจ))
+6. ตรวจค่า default ของเครื่องมือ: รัน `streamlit config show` ดูค่า `server.address`
+7. วัดต้นทุนการคำนวณ: SHAP 1,470 แถวใช้เวลา 0.14 วินาที ใช้ประเมินความเสี่ยงเรื่อง DoS
 
 **รอบ 2: ทดสอบจริงในส่วนที่รอบ 1 ยังไม่ได้ทำ**
 
-8. **ยิง API จริงแบบ in-process** ใช้ FastAPI `TestClient` (วิธีเดียวกับ `backend/test_api.py`) กับแอปจริงใน `backend/main.py`
+8. ยิง API จริงแบบ in-process: ใช้ FastAPI `TestClient` (วิธีเดียวกับ `backend/test_api.py`) กับแอปจริงใน `backend/main.py`
    - สลับโมเดลจาก MLflow เป็นโมเดลที่เทรนซ้ำในเครื่องตามสูตร `train.py` จึงไม่ต้องเปิด server และไม่ต่อ DagsHub
    - ไฟล์ calibration เขียนลงโฟลเดอร์ชั่วคราวที่ลบทิ้งหลังรัน
    - ทดสอบ SEC-01, 02, 03, 08 และทดสอบกรณีที่ต้องถูกปฏิเสธ (path traversal) ([ภาคผนวก 5](#5-สคริปต์ยิง-api-แบบ-in-process-รอบ-2))
-9. **สแกน dependency หาช่องโหว่ที่รู้จัก**
+9. สแกน dependency หาช่องโหว่ที่รู้จัก
    - `npm audit` ใน `frontend/`
    - `pip-audit` กับแพ็กเกจที่ติดตั้งจริงใน `.venv` (ได้จาก `pip freeze`) โดยติดตั้ง `pip-audit` ใน venv ชั่วคราวนอกโปรเจกต์
-10. **ตรวจการตั้งค่า GitHub** ผ่าน `gh api` แบบอ่านอย่างเดียว ด้วยบัญชี InkSpuDek66 (เจ้าของ repo): การมองเห็น, collaborator, branch protection, rulesets, สิทธิ์ของ Actions, secret scanning, Dependabot, deploy keys
-11. **ตรวจ DagsHub** ผ่าน API แบบอ่านอย่างเดียว ดูการมองเห็นของ repo, collaborator และทดลอง**ดาวน์โหลดโมเดลโดยไม่ใส่ credential** เพื่อดูว่าคนนอกเห็นอะไรบ้าง (ไฟล์ที่ดาวน์โหลดลบทิ้งแล้ว)
-12. **สแกน notebook และ `docs/`** ทุกไฟล์ที่ track ใน git ทั้ง source และ output ของทุก cell หา secret, token, รหัสผ่าน, path ในเครื่อง, email, credential ใน URL และลิงก์ MLflow run
+10. ตรวจการตั้งค่า GitHub: ผ่าน `gh api` แบบอ่านอย่างเดียว ด้วยบัญชี InkSpuDek66 (เจ้าของ repo): การมองเห็น, collaborator, branch protection, rulesets, สิทธิ์ของ Actions, secret scanning, Dependabot, deploy keys
+11. ตรวจ DagsHub: ผ่าน API แบบอ่านอย่างเดียว ดูการมองเห็นของ repo, collaborator และทดลองดาวน์โหลดโมเดลโดยไม่ใส่ credential เพื่อดูว่าคนนอกเห็นอะไรบ้าง (ไฟล์ที่ดาวน์โหลดลบทิ้งแล้ว)
+12. สแกน notebook และ `docs/`: ทุกไฟล์ที่ track ใน git ทั้ง source และ output ของทุก cell หา secret, token, รหัสผ่าน, path ในเครื่อง, email, credential ใน URL และลิงก์ MLflow run
 
 ### สิ่งที่ยังไม่ได้ตรวจ (ข้อจำกัด)
 
@@ -124,8 +124,8 @@
 
 ## 3. จุดที่ทำได้ดี (ควรรักษาไว้)
 
-- **ไม่มี secret ใน git:** `.env` อยู่ใน `.gitignore` และ**ตรวจ history แล้วไม่เคยถูก commit** ส่วน [.env.example](../.env.example) ใช้แค่ placeholder
-- **GitHub ช่วยกันอีกชั้น (ตรวจรอบ 2):** เปิด secret scanning และ **push protection** ไว้ (มี alert 0 รายการ), สิทธิ์เริ่มต้นของ workflow เป็น `read`, ไม่มี deploy key และ CI ไม่ได้ใช้ secret ใด ๆ
+- **ไม่มี secret ใน git:** `.env` อยู่ใน `.gitignore` และตรวจ history แล้วไม่เคยถูก commit ส่วน [.env.example](../.env.example) ใช้แค่ placeholder
+- **GitHub ช่วยกันอีกชั้น (ตรวจรอบ 2):** เปิด secret scanning และ push protection ไว้ (มี alert 0 รายการ), สิทธิ์เริ่มต้นของ workflow เป็น `read`, ไม่มี deploy key และ CI ไม่ได้ใช้ secret ใด ๆ
 - **dependency ยังไม่มีช่องโหว่ที่รู้จัก (ตรวจรอบ 2):** `pip-audit` 195 แพ็กเกจ และ `npm audit` 106 แพ็กเกจ ผลเป็น 0 ทั้งคู่ ณ วันตรวจ
 - **token แยกรายคน:** [docs/mlflow_setup.md](mlflow_setup.md) ให้แต่ละคนสร้าง DagsHub token ของตัวเองและห้ามแชร์
 - **service ไม่เปิดสู่ network ภายนอก:**
@@ -146,11 +146,11 @@
 
 ## 4. รายการที่ต้องแก้ก่อน deploy
 
-ทุกข้อใช้โครงเดียวกัน: **ปัญหา → หลักฐาน → ทำไมต้องแก้ → วิธีแก้ → เสร็จเมื่อ → ผู้รับผิดชอบ**
+ทุกข้อใช้โครงเดียวกัน: ปัญหา → หลักฐาน → ทำไมต้องแก้ → วิธีแก้ → เสร็จเมื่อ → ผู้รับผิดชอบ
 
 ### SEC-01 API ไม่มีการยืนยันตัวตน และคืนข้อมูลส่วนตัวทั้งก้อน
 
-🟠 ตอนนี้ / 🔴 ก่อน deploy — ตรงกับ OWASP **API1 Broken Object Level Authorization** + **API3 Broken Object Property Level Authorization**
+ระดับ: ตอนนี้ กลาง, ก่อน deploy สูง (ตรงกับ OWASP API1 Broken Object Level Authorization + API3 Broken Object Property Level Authorization)
 
 **ปัญหา:**
 - ทุก endpoint ใน [backend/main.py](../backend/main.py) ไม่มีการยืนยันตัวตน (authentication) และไม่มีการตรวจสิทธิ์ (authorization)
@@ -167,10 +167,10 @@
 
 | ทดสอบ | ผล |
 | :--- | :--- |
-| `POST /whatif {"employee_id": 1}` | **200** ได้ `employee` มา 30 ฟิลด์ เช่น `Age 41, Gender "Female", MaritalStatus "Single", MonthlyIncome 5993, JobSatisfaction 4, PerformanceRating 3` |
-| วน `employee_id` 1–2068 ที่ `/whatif` | ได้ข้อมูล **ครบ 1,470 คน ใน 75.9 วินาที** (หญิง 588 ชาย 882) |
-| `GET /shap/1?top_n=100` | **200** ได้ค่าของทั้ง 50 ฟีเจอร์ รวม `Age 41`, `Gender 0`, `MaritalStatus_Single 1` |
-| `GET /financial-impact/1` | **200** ได้ `monthly_income 5993` |
+| `POST /whatif {"employee_id": 1}` | 200 ได้ `employee` มา 30 ฟิลด์ เช่น `Age 41, Gender "Female", MaritalStatus "Single", MonthlyIncome 5993, JobSatisfaction 4, PerformanceRating 3` |
+| วน `employee_id` 1–2068 ที่ `/whatif` | ได้ข้อมูล ครบ 1,470 คน ใน 75.9 วินาที (หญิง 588 ชาย 882) |
+| `GET /shap/1?top_n=100` | 200 ได้ค่าของทั้ง 50 ฟีเจอร์ รวม `Age 41`, `Gender 0`, `MaritalStatus_Single 1` |
+| `GET /financial-impact/1` | 200 ได้ `monthly_income 5993` |
 
 ตัวอย่างคำสั่งแบบ `curl` สำหรับ server จริงและสคริปต์ที่ใช้ อยู่ใน[ภาคผนวก](#ภาคผนวก-คำสั่งที่ใช้ตรวจ)
 
@@ -179,13 +179,13 @@
 - `/whatif` ที่รับ `employee` ทั้งก้อนยังเปิดให้ query โมเดลได้ไม่จำกัด (เสี่ยงถูกลอกโมเดล หรือ model extraction)
 
 **วิธีแก้ (เรียงจากงานน้อยไปมาก):**
-1. **ตัดข้อมูลที่ไม่จำเป็นออกจาก response** (ทำได้ทันที ไม่ต้องรอ auth)
+1. ตัดข้อมูลที่ไม่จำเป็นออกจาก response (ทำได้ทันที ไม่ต้องรอ auth)
    - ให้ `/whatif` คืนเฉพาะฟิลด์ที่ปรับได้ใน What-if ([WhatIfSimulator.jsx:6-25](../frontend/src/WhatIfSimulator.jsx#L6-L25) ใช้แค่ชุดนี้)
    - ให้ `/shap` ไม่คืนค่าจริงของ protected attribute (Gender, Age, MaritalStatus)
-   - ⚠ หน้า Streamlit [whatif_page.py](../src/app_pages/whatif_page.py) เรียกฟังก์ชัน `whatif` ตรง ๆ และใช้ `result.employee` ทั้งก้อน ต้องเปลี่ยนไปใช้ `resolve_employee` ของ `routers/predict.py` แทน
-2. **ใส่ authentication ที่ระดับ router** ใช้ FastAPI dependency ตัวเดียว ครอบทุก router ใน `main.py` เช่น `app.include_router(predict.router, dependencies=[Depends(require_user)])`
+   - ข้อควรระวัง: หน้า Streamlit [whatif_page.py](../src/app_pages/whatif_page.py) เรียกฟังก์ชัน `whatif` ตรง ๆ และใช้ `result.employee` ทั้งก้อน ต้องเปลี่ยนไปใช้ `resolve_employee` ของ `routers/predict.py` แทน
+2. ใส่ authentication ที่ระดับ router: ใช้ FastAPI dependency ตัวเดียว ครอบทุก router ใน `main.py` เช่น `app.include_router(predict.router, dependencies=[Depends(require_user)])`
    - ขั้นต่ำสำหรับ demo: login ด้วย username/password ของ HR แล้วได้ token (JWT หรือ session)
-   - **ห้ามใส่ API key ไว้ใน frontend** เพราะทุกคนที่เปิดเว็บเห็นได้
+   - ห้ามใส่ API key ไว้ใน frontend: เพราะทุกคนที่เปิดเว็บเห็นได้
 3. **แยก role:** HR ทั่วไปดูได้ ส่วน `/recalibrate` ให้เฉพาะ admin ของบริษัท (ดู SEC-02)
 4. (ถ้ามีเวลา) ใช้ ID แบบสุ่ม (UUID) แทนเลขเรียงใน URL
 
@@ -195,15 +195,15 @@
 - มี test ครอบทั้งสองข้อใน `backend/test_*.py`
 
 **ผู้รับผิดชอบ:**
-- **ทั้งทีม** เลือกวิธี auth (ประชุมเดียวกับเรื่อง DB ใน DE-04)
-- **Saphondanai** ทำ `/predict`, `/whatif`, `/financial-impact` และ `schemas.py`
-- **Puripat** ทำ `/shap`, `/recalibrate`, `/company-summary` และหน้า Streamlit
+- ทั้งทีม: เลือกวิธี auth (ประชุมเดียวกับเรื่อง DB ใน DE-04)
+- Saphondanai: ทำ `/predict`, `/whatif`, `/financial-impact` และ `schemas.py`
+- Puripat: ทำ `/shap`, `/recalibrate`, `/company-summary` และหน้า Streamlit
 
 ---
 
 ### SEC-02 ไม่ได้แยกข้อมูลของแต่ละบริษัท (tenant isolation)
 
-🟠 ตอนนี้ / 🔴 ก่อน deploy — ตรงกับ OWASP **API1** และ **API5 Broken Function Level Authorization**
+ระดับ: ตอนนี้ กลาง, ก่อน deploy สูง (ตรงกับ OWASP API1 และ API5 Broken Function Level Authorization)
 
 **ปัญหา:**
 - `tenant_id` มาจากผู้ใช้เองผ่าน body หรือ query ([schemas.py:65](../backend/schemas.py#L65), `/shap`, `/financial-impact`)
@@ -213,20 +213,20 @@
 
 **หลักฐาน (รอบ 2 ยิงจริง):**
 1. "บริษัท B" ปรับเทียบด้วยข้อมูลที่ถูกต้อง 300 แถว (`tenant_id="company_b"`, Platt) ได้ 200
-2. "ผู้โจมตี" ไม่มี token ส่งข้อมูล 300 แถวเดียวกันแต่**สลับ label ลาออก/ไม่ลาออก** ไปที่ `tenant_id="company_b"` ได้ **200** และไฟล์ของบริษัท B ถูกเขียนทับ (สัมประสิทธิ์ Platt กลายเป็นค่าลบ −5.17)
+2. "ผู้โจมตี" ไม่มี token ส่งข้อมูล 300 แถวเดียวกันแต่สลับ label ลาออก/ไม่ลาออก ไปที่ `tenant_id="company_b"` ได้ 200 และไฟล์ของบริษัท B ถูกเขียนทับ (สัมประสิทธิ์ Platt กลายเป็นค่าลบ −5.17)
 3. ผลต่อบริษัท B (วัดบนพนักงานทั้ง 1,470 คน):
 
 | ตัววัด | ก่อนถูกโจมตี | หลังถูกโจมตี |
 | :--- | :--- | :--- |
-| AUC ของคะแนนหลังปรับเทียบ | 0.93 | **0.07** (ลำดับกลับหัว) |
-| คนที่เสี่ยงสูงสุด 10% (147 คน) อยู่ในระดับ "สูง" | 50 คน | **0 คน** |
-| คนที่เสี่ยงสูงสุด 10% ถูกจัดเป็นระดับ "ต่ำ" | — | **107 คน** |
+| AUC ของคะแนนหลังปรับเทียบ | 0.93 | 0.07 (ลำดับกลับหัว) |
+| คนที่เสี่ยงสูงสุด 10% (147 คน) อยู่ในระดับ "สูง" | 50 คน | 0 คน |
+| คนที่เสี่ยงสูงสุด 10% ถูกจัดเป็นระดับ "ต่ำ" | — | 107 คน |
 
 พูดง่าย ๆ คือ หลังถูกโจมตี ระบบจะบอก HR ของบริษัท B ว่าคนที่เสี่ยงที่สุด "ไม่ต้องห่วง" โดยไม่มีสัญญาณเตือนใด ๆ
 
 **ทำไมต้องแก้:**
 - ผู้ใช้บริษัท A พิมพ์ `tenant_id` ของบริษัท B ก็ใช้ calibration ของ B ได้
-- ที่แย่กว่านั้นคือเรียก `/recalibrate` ด้วยข้อมูลขยะเพื่อ**ทำให้คะแนนของบริษัท B เพี้ยนทั้งหมด**โดยไม่มีใครรู้
+- ที่แย่กว่านั้นคือเรียก `/recalibrate` ด้วยข้อมูลขยะเพื่อทำให้คะแนนของบริษัท B เพี้ยนทั้งหมดโดยไม่มีใครรู้
 - README หัวข้อ 6.5 ขายเรื่อง per-tenant calibration จึงน่าจะถูกถามตอน Defense
 
 **วิธีแก้:**
@@ -241,22 +241,22 @@
 - มี test ว่า user ของ tenant A เรียก `/recalibrate` ให้ tenant B ไม่ได้
 
 **ผู้รับผิดชอบ:**
-- **Puripat (หลัก)** ดูแล `calibration.py`, `/recalibrate`, `/shap`, `ShapViewer.jsx`
-- **Saphondanai** ดูแล `schemas.py`, `WhatIfSimulator.jsx`
+- Puripat (หลัก): ดูแล `calibration.py`, `/recalibrate`, `/shap`, `ShapViewer.jsx`
+- Saphondanai: ดูแล `schemas.py`, `WhatIfSimulator.jsx`
 
 ---
 
 ### SEC-03 ไม่จำกัดขนาดข้อมูลและจำนวนครั้งที่เรียก
 
-🟡 ตอนนี้ / 🟠 ก่อน deploy — ตรงกับ OWASP **API4 Unrestricted Resource Consumption**
+ระดับ: ตอนนี้ ต่ำ, ก่อน deploy กลาง (ตรงกับ OWASP API4 Unrestricted Resource Consumption)
 
 **ปัญหา:**
 - `records: list[dict] = Field(min_length=MIN_ROWS)` กำหนดแค่ขั้นต่ำ ไม่มีขั้นสูง ([recalibrate.py:21](../backend/routers/recalibrate.py#L21)) และ FastAPI/uvicorn ไม่จำกัดขนาด body ให้เอง
 - ทุก endpoint ไม่มี rate limit
 
 **หลักฐาน:**
-- วัดแล้วว่า `/company-summary` ที่คำนวณ SHAP 1,470 แถวใช้แค่ **0.14 วินาที** จุดนี้จึงเสี่ยงต่ำ
-- รอบ 2 ส่ง `/recalibrate` ขนาด **50,000 แถว (41.3 MB)** ระบบรับไว้และตอบ **200** ใน 1.4 วินาที (in-process) แปลว่า**ไม่มีเพดานเลย**
+- วัดแล้วว่า `/company-summary` ที่คำนวณ SHAP 1,470 แถวใช้แค่ 0.14 วินาที จุดนี้จึงเสี่ยงต่ำ
+- รอบ 2 ส่ง `/recalibrate` ขนาด 50,000 แถว (41.3 MB) ระบบรับไว้และตอบ 200 ใน 1.4 วินาที (in-process) แปลว่าไม่มีเพดานเลย
 - request เดียวขนาดนี้ยังไม่ทำให้ระบบล่ม ความเสี่ยงจริงอยู่ที่การส่งซ้ำ ๆ หรือส่ง payload ใหญ่กว่านี้หลายเท่าไปที่ instance ฟรีของ Render ที่หน่วยความจำน้อย
 
 **ทำไมต้องแก้:**
@@ -270,17 +270,17 @@
 
 **เสร็จเมื่อ:** body ที่เกินขนาดได้ 413 หรือ 422, เรียกถี่เกินได้ 429 และมี test ครอบ
 
-**ผู้รับผิดชอบ:** **Puripat**
+**ผู้รับผิดชอบ:** Puripat
 
 ---
 
 ### SEC-04 backend ถือ token ส่วนตัวที่เขียน MLflow ได้
 
-🟡 ตอนนี้ / 🟠 ก่อน deploy — หลัก **least privilege** (ให้สิทธิ์น้อยที่สุดเท่าที่งานต้องใช้)
+ระดับ: ตอนนี้ ต่ำ, ก่อน deploy กลาง ตามหลัก least privilege คือให้สิทธิ์น้อยที่สุดเท่าที่งานต้องใช้
 
 **ปัญหา:**
 - [backend/model_store.py:21](../backend/model_store.py#L21) import `mlflow_setup` ซึ่ง [load `.env` ทั้งไฟล์](../src/mlflow_setup.py#L17)
-- process ที่เสิร์ฟ API จึงถือ `MLFLOW_TRACKING_PASSWORD` ซึ่งเป็น DagsHub token **ส่วนตัว** ที่มีสิทธิ์ Write ไฟล์เดียวกับที่ใช้เทรน
+- process ที่เสิร์ฟ API จึงถือ `MLFLOW_TRACKING_PASSWORD` ซึ่งเป็น DagsHub token ส่วนตัว ที่มีสิทธิ์ Write ไฟล์เดียวกับที่ใช้เทรน
 
 **ทำไมต้องแก้:**
 - backend ต้องการแค่ "อ่านโมเดล" แต่ถือสิทธิ์ "เขียน registry"
@@ -288,27 +288,27 @@
 - token ส่วนตัวผูกกับบัญชีของสมาชิกในทีม
 
 **วิธีแก้:**
-1. ตอน deploy ใช้บัญชีหรือ token แยกสำหรับ backend ที่มี**สิทธิ์อ่านอย่างเดียว** และห้ามใช้ token ส่วนตัวของสมาชิก
+1. ตอน deploy ใช้บัญชีหรือ token แยกสำหรับ backend ที่มีสิทธิ์อ่านอย่างเดียว และห้ามใช้ token ส่วนตัวของสมาชิก
 2. หรือ bake ไฟล์โมเดลเข้า Docker image ตอน build ให้ backend ไม่ต้องต่อ MLflow ตอนรันเลย
 3. เพิ่มในเอกสาร [docs/mlflow_setup.md](mlflow_setup.md) ว่าห้ามใส่ token ส่วนตัวใน environment ของ Render
 
 **เสร็จเมื่อ:** environment ของ backend ที่ deploy ไม่มี token ที่เขียนได้ และเอกสารระบุวิธีไว้
 
-**ผู้รับผิดชอบ:** **Saphondanai** (ดูแล `mlflow_setup.py` และ docs)
+**ผู้รับผิดชอบ:** Saphondanai (ดูแล `mlflow_setup.py` และ docs)
 
 ---
 
 ### SEC-05 ความเสี่ยงจากไฟล์โมเดล (model supply chain)
 
-🟡 ตอนนี้ / 🟠 ก่อน deploy
+ระดับ: ตอนนี้ ต่ำ, ก่อน deploy กลาง
 
 **ปัญหา:**
 - ทุกคนที่มีสิทธิ์ Write บน DagsHub register โมเดล version ใหม่ได้
 - ถ้าทำ DE-03 ด้วย alias `@champion` ใครมีสิทธิ์ย้าย alias ก็เปลี่ยนโมเดลที่ backend ใช้ได้
-- ถ้าเลือก **DE-03 ทางเลือก B** (sklearn `Pipeline` หรือ `mlflow.pyfunc`) โมเดลจะถูกเก็บด้วย **cloudpickle** ซึ่งตอนโหลดรันโค้ด Python ใด ๆ ที่ฝังอยู่ในไฟล์ได้
+- ถ้าเลือก DE-03 ทางเลือก B (sklearn `Pipeline` หรือ `mlflow.pyfunc`) โมเดลจะถูกเก็บด้วย cloudpickle ซึ่งตอนโหลดรันโค้ด Python ใด ๆ ที่ฝังอยู่ในไฟล์ได้
 
 **หลักฐาน (รอบ 2):**
-- โมเดลที่ register ไว้มีแค่ `attrition-xgboost-P` v1 และ**ยังไม่มี alias**
+- โมเดลที่ register ไว้มีแค่ `attrition-xgboost-P` v1 และยังไม่มี alias
 - ไฟล์โมเดลคือ `model.ubj` ซึ่งเป็น native format ของ XGBoost ไม่ใช่ pickle (เห็นจากการดาวน์โหลดใน SEC-12)
 - collaborator ที่มีสิทธิ์ Write บน GitHub มี 3 บัญชี (`NungUmSudNaRak`, `Mon-Blacklove`, `yanisa1111`) และทั้ง 3 บัญชีเป็น collaborator บน DagsHub ด้วย
 
@@ -317,29 +317,29 @@
 - ตอนนี้ใช้ `mlflow.xgboost` แบบ native format ความเสี่ยงนี้จึงยังต่ำ
 
 **วิธีแก้:**
-1. ในการตัดสินใจ DE-03 ให้**เลือกทางเลือก A** (native xgboost + feature spec เป็น JSON) ถ้าต้องเลือก B ให้ถือว่า registry เป็นของที่ต้องเชื่อถือได้เต็มที่
+1. ในการตัดสินใจ DE-03 ให้เลือกทางเลือก A (native xgboost + feature spec เป็น JSON) ถ้าต้องเลือก B ให้ถือว่า registry เป็นของที่ต้องเชื่อถือได้เต็มที่
 2. จำกัดคนที่ย้าย alias `champion` ได้ และบันทึก version + checksum ที่อนุมัติแล้วไว้ใน README หรือ config
 3. ถ้า bake โมเดลเข้า image ตาม SEC-04 ข้อ 2 ให้ตรวจ checksum ตอน build
 
 **เสร็จเมื่อ:** มีบันทึกว่าใช้ format ไหน ใครอนุมัติ version และ checksum ตรงกับที่อนุมัติ
 
-**ผู้รับผิดชอบ:** **Saphondanai** (ร่วมตัดสินใจ DE-03 กับ Puripat)
+**ผู้รับผิดชอบ:** Saphondanai (ร่วมตัดสินใจ DE-03 กับ Puripat)
 
 ---
 
 ### SEC-06 Dependency และ CI ยังไม่ได้ป้องกันเรื่อง supply chain
 
-🟡 ตอนนี้ / 🟠 ก่อน deploy — ตรงกับ OWASP **A06 Vulnerable and Outdated Components**
+ระดับ: ตอนนี้ ต่ำ, ก่อน deploy กลาง (ตรงกับ OWASP A06 Vulnerable and Outdated Components)
 
 **ปัญหา:**
 - [requirements.txt](../requirements.txt) ไม่ pin เวอร์ชันและไม่มี hash (ตรงกับ DE-05)
-- ไม่มีการสแกนช่องโหว่ใน CI และ **Dependabot alerts กับ Dependabot security updates ปิดอยู่** (ตรวจรอบ 2 ผ่าน `gh api`)
+- ไม่มีการสแกนช่องโหว่ใน CI และ Dependabot alerts กับ Dependabot security updates ปิดอยู่ (ตรวจรอบ 2 ผ่าน `gh api`)
 - [ci.yml](../.github/workflows/ci.yml) ไม่มีบล็อก `permissions:` ตอนนี้ปลอดภัยเพราะค่า default ของ repo เป็น `read` (ตรวจรอบ 2) แต่ถ้าใครไปเปลี่ยนค่า default workflow จะได้สิทธิ์ write ทันที
 - actions อ้างด้วย tag (`@v4`) ไม่ใช่ commit SHA และ repo อนุญาตให้ใช้ action ได้ทุกตัว (`allowed_actions: all`)
 
 **หลักฐาน (รอบ 2):**
-- `pip-audit` กับแพ็กเกจที่ติดตั้งจริง **195 ตัว: ไม่พบช่องโหว่ที่รู้จัก**
-- `npm audit` **106 ตัว: 0 ช่องโหว่**
+- `pip-audit` กับแพ็กเกจที่ติดตั้งจริง 195 ตัว: ไม่พบช่องโหว่ที่รู้จัก
+- `npm audit` 106 ตัว: 0 ช่องโหว่
 
 ตอนนี้จึงยังปลอดภัย แต่เป็นผลแค่ ณ วันที่ 1 ต.ค. 2026 เท่านั้น
 
@@ -351,7 +351,7 @@
 **วิธีแก้:**
 1. ทำ DE-05 (pin เวอร์ชัน)
 2. เพิ่ม step ใน CI: `pip install pip-audit && pip-audit -r requirements.txt` และ `npm audit --audit-level=high` (ใน `frontend/`)
-3. เปิด **Dependabot alerts** และ **Dependabot security updates** ที่ Settings → Code security แล้วเพิ่ม `.github/dependabot.yml` สำหรับ pip, npm และ github-actions
+3. เปิด Dependabot alerts และ Dependabot security updates ที่ Settings → Code security แล้วเพิ่ม `.github/dependabot.yml` สำหรับ pip, npm และ github-actions
 4. เพิ่มที่ต้นไฟล์ `ci.yml`:
    ```yaml
    permissions:
@@ -360,18 +360,18 @@
 
 **เสร็จเมื่อ:** CI มี step สแกนและผ่าน, มี Dependabot และ `permissions: contents: read`
 
-**ผู้รับผิดชอบ:** **Saphondanai** (ดูแล CI และ requirements)
+**ผู้รับผิดชอบ:** Saphondanai (ดูแล CI และ requirements)
 
 ---
 
 ### SEC-11 branch `main` บน GitHub ไม่มีการป้องกัน
 
-🟠 ตอนนี้ / 🟠 ก่อน deploy — เพิ่มในรอบ 2 เรื่องความถูกต้องของโค้ด (code integrity)
+ระดับ: ตอนนี้ กลาง, ก่อน deploy กลาง เพิ่มในรอบ 2 เป็นเรื่องความถูกต้องของโค้ด (code integrity)
 
 **ปัญหา:**
-- `gh api repos/InkSpuDek66/employee-attrition-predictor/branches/main/protection` ตอบว่า **"Branch not protected"** และ repo ไม่มี ruleset ใด ๆ
-- collaborator มี 4 บัญชี (admin 1, write 3) ทุกคน **push ตรงเข้า `main` ได้, force-push ทับ history ได้ และลบ branch ได้**
-- CI ใน [ci.yml](../.github/workflows/ci.yml) รันหลัง push ก็จริง แต่ไม่ได้**บังคับ**ว่าต้องผ่านก่อนโค้ดจะเข้า `main`
+- `gh api repos/InkSpuDek66/employee-attrition-predictor/branches/main/protection` ตอบว่า "Branch not protected" และ repo ไม่มี ruleset ใด ๆ
+- collaborator มี 4 บัญชี (admin 1, write 3) ทุกคน push ตรงเข้า `main` ได้, force-push ทับ history ได้ และลบ branch ได้
+- CI ใน [ci.yml](../.github/workflows/ci.yml) รันหลัง push ก็จริง แต่ไม่ได้บังคับว่าต้องผ่านก่อนโค้ดจะเข้า `main`
 - repo เป็น public
 
 **ทำไมต้องแก้:**
@@ -380,48 +380,48 @@
 - ถ้าบัญชีใดถูกยึด ผู้โจมตีแก้โค้ดบน `main` ได้ทันที และถ้าตั้ง Render ให้ auto-deploy จาก `main` โค้ดนั้นจะขึ้น production เลย
 
 **วิธีแก้ (ใช้เวลาประมาณ 10 นาทีที่หน้าเว็บ):** Settings → Rules → Rulesets → New branch ruleset → target `main` แล้วเปิด
-1. **Restrict deletions** และ **Block force pushes**
-2. **Require a pull request before merging** (จะตั้ง approval เป็น 0 หรือ 1 ก็ได้ตามที่ทีมตกลง)
-3. **Require status checks to pass** เลือก 2 job ของ CI คือ "Python lint + train + backend tests (MLflow ใน docker compose)" และ "Frontend lint + build"
+1. Restrict deletions: และ Block force pushes
+2. Require a pull request before merging (จะตั้ง approval เป็น 0 หรือ 1 ก็ได้ตามที่ทีมตกลง)
+3. Require status checks to pass: เลือก 2 job ของ CI คือ "Python lint + train + backend tests (MLflow ใน docker compose)" และ "Frontend lint + build"
 
 แล้วเขียนขั้นตอนทำงานผ่าน PR ไว้ใน [CONTRIBUTING.md](../CONTRIBUTING.md) (ทีมเคย merge ผ่าน PR #1 มาแล้ว จึงไม่ใช่ขั้นตอนใหม่)
 
 **เสร็จเมื่อ:** `gh api repos/InkSpuDek66/employee-attrition-predictor/rulesets` แสดง ruleset ที่ `active` และการ push ตรงเข้า `main` ถูกปฏิเสธ
 
-**ผู้รับผิดชอบ:** **Saphondanai** (บัญชี InkSpuDek66 เป็น admin) และ **ทั้งทีม** ตกลงเรื่องการทำงานผ่าน PR
+**ผู้รับผิดชอบ:** Saphondanai (บัญชี InkSpuDek66 เป็น admin) และ ทั้งทีม ตกลงเรื่องการทำงานผ่าน PR
 
 ---
 
 ### SEC-12 repo บน DagsHub เป็นสาธารณะ ดาวน์โหลดโมเดลและข้อมูลตัวอย่างได้โดยไม่ต้อง login
 
-🟡 ตอนนี้ / 🔴 ถ้าใช้ข้อมูลจริง — เพิ่มในรอบ 2 (ผูกกับ DS-03 ใน[รายงาน DE](review_data_engineering_S.md#ds-03-pdpa-fairness-และความปลอดภัย))
+ระดับ: ตอนนี้ ต่ำ, ถ้าใช้ข้อมูลจริง สูง เพิ่มในรอบ 2 และผูกกับ DS-03 ใน[รายงาน DE](review_data_engineering_S.md#ds-03-pdpa-fairness-และความปลอดภัย)
 
-**ปัญหา:** repo `InkSpuDek66/employee-attrition-predictor` บน DagsHub เป็น **public** (`private: false` เป็น mirror ของ GitHub) MLflow ที่ผูกกับ repo นี้จึงเปิดให้คนนอกอ่านได้ด้วย
+**ปัญหา:** repo `InkSpuDek66/employee-attrition-predictor` บน DagsHub เป็น public (`private: false` เป็น mirror ของ GitHub) MLflow ที่ผูกกับ repo นี้จึงเปิดให้คนนอกอ่านได้ด้วย
 
 **หลักฐาน (รอบ 2 เรียกโดยไม่ใส่ credential ใด ๆ):**
 
 | สิ่งที่ลอง | ผล |
 | :--- | :--- |
-| ค้นหา registered model | **200** เห็น `attrition-xgboost-P` |
-| ดู run ของโมเดล | **200** เห็น metric `test_auc`, `test_f1`, `test_pr_auc` |
-| ค้นหา experiment | **200** เห็น 3 experiment (`attrition-model-lab-S`, `attrition-xgboost-train`, `connection-test`) |
-| ดาวน์โหลด `models:/attrition-xgboost-P/1` | **สำเร็จ** ได้ 8 ไฟล์ รวม `model.ubj` และ `input_example.json` ซึ่งเป็น**ข้อมูลพนักงาน 3 แถว มีคอลัมน์ `Gender`, `Age`, `MonthlyIncome`** |
+| ค้นหา registered model | 200 เห็น `attrition-xgboost-P` |
+| ดู run ของโมเดล | 200 เห็น metric `test_auc`, `test_f1`, `test_pr_auc` |
+| ค้นหา experiment | 200 เห็น 3 experiment (`attrition-model-lab-S`, `attrition-xgboost-train`, `connection-test`) |
+| ดาวน์โหลด `models:/attrition-xgboost-P/1` | สำเร็จ ได้ 8 ไฟล์ รวม `model.ubj` และ `input_example.json` ซึ่งเป็นข้อมูลพนักงาน 3 แถว มีคอลัมน์ `Gender`, `Age`, `MonthlyIncome` |
 
 **ทำไมต้องแก้:**
 - ตอนนี้ข้อมูลเป็น IBM synthetic ที่เปิดเผยบน Kaggle อยู่แล้ว ความเสียหายจริงจึงต่ำ
-- แต่**ทุกอย่างที่ log ขึ้น MLflow ของทีมจะเป็นสาธารณะทันที** ถ้าวันหนึ่งมีคนลองกับข้อมูลบริษัทจริง ข้อมูลจะหลุดทันที
+- แต่ทุกอย่างที่ log ขึ้น MLflow ของทีมจะเป็นสาธารณะทันที ถ้าวันหนึ่งมีคนลองกับข้อมูลบริษัทจริง ข้อมูลจะหลุดทันที
 - [.env.example](../.env.example) เตือนว่า "ห้ามใช้กับข้อมูลพนักงานจริง" แต่ไม่ได้บอกเหตุผลว่าเพราะเป็นสาธารณะ
 - โมเดลที่ดาวน์โหลดได้ยังเปิดให้ query แบบ offline ได้ไม่จำกัด ซึ่งเสี่ยงต่อการอนุมานข้อมูลที่ใช้เทรน (membership inference) เมื่อเป็นข้อมูลจริง
 
 **วิธีแก้:**
 1. เปลี่ยน `input_example` ใน [train.py:43](../src/train.py#L43) เป็นแถวสังเคราะห์ (ตาม DS-03) ตอน register version ถัดไป
 2. เขียนใน [docs/mlflow_setup.md](mlflow_setup.md) และ `.env.example` ให้ชัดว่า "MLflow บน DagsHub ของทีมเป็นสาธารณะ ทุก run, โมเดล และ artifact คนนอกดาวน์โหลดได้"
-3. ถ้าจะใช้ข้อมูลจริง ให้ใช้ **self-host (docker-compose ที่มีอยู่แล้ว)** หรือ DagsHub repo แบบ private เท่านั้น ซึ่งตรงกับจุดขาย "self-host ข้อมูลไม่ออกนอกบริษัท"
+3. ถ้าจะใช้ข้อมูลจริง ให้ใช้ self-host (docker-compose ที่มีอยู่แล้ว) หรือ DagsHub repo แบบ private เท่านั้น ซึ่งตรงกับแนวคิด "self-host ข้อมูลไม่ออกนอกบริษัท"
 4. (เก็บงาน) ลบ experiment `connection-test` ที่ไม่ได้ใช้แล้ว
 
 **เสร็จเมื่อ:** `input_example` ของ version ใหม่ไม่ใช่แถวข้อมูลจากชุดเทรน และเอกสารระบุเรื่องความเป็นสาธารณะไว้ชัด
 
-**ผู้รับผิดชอบ:** **Saphondanai** (เจ้าของ `train.py`, เอกสาร MLflow และบัญชี DagsHub)
+**ผู้รับผิดชอบ:** Saphondanai (เจ้าของ `train.py`, เอกสาร MLflow และบัญชี DagsHub)
 
 ---
 
@@ -429,22 +429,22 @@
 
 ### SEC-07 หน้า Streamlit เปิดให้ทุกเครื่องใน network เดียวกันเข้าได้
 
-🟡
+ระดับ: ต่ำ
 
 **ปัญหา:**
 - `streamlit config show` ยืนยันว่า `server.address` ไม่ได้ตั้งค่าไว้ ซึ่งแปลว่า Streamlit รับการเชื่อมต่อจากทุก network interface (มันจะแสดง "Network URL" ตอนรัน)
 - คำสั่งใน [src/test_app.py:6](../src/test_app.py#L6) ไม่ได้กำหนด address
-- หน้าทดสอบนี้แสดงข้อมูลพนักงานใน dataset รวมถึง**ผลจริงว่าลาออกหรือไม่**
+- หน้าทดสอบนี้แสดงข้อมูลพนักงานใน dataset รวมถึงผลจริงว่าลาออกหรือไม่
 
 **ทำไมต้องแก้:** ถ้ารันบน Wi-Fi ของมหาวิทยาลัย ใครอยู่ใน network เดียวกันก็เปิดหน้านี้ได้ เป็นนิสัยที่อันตรายถ้าวันหนึ่งใช้กับข้อมูลจริง
 
 **วิธีแก้:** เปลี่ยนคำสั่งเป็น `streamlit run src/test_app.py --server.address localhost` หรือเพิ่มไฟล์ `.streamlit/config.toml` ที่มี `[server] address = "localhost"`
 
-**ผู้รับผิดชอบ:** **Puripat**
+**ผู้รับผิดชอบ:** Puripat
 
 ### SEC-08 Error เปิดเผยรายละเอียดภายใน และเปิดหน้า docs สาธารณะ
 
-🟡
+ระดับ: ต่ำ
 
 **ปัญหา:**
 - [recalibrate.py:49](../backend/routers/recalibrate.py#L49) ส่งข้อความ exception ดิบ (`{e}`) กลับไปให้ผู้ใช้
@@ -454,7 +454,7 @@
 **หลักฐาน (รอบ 2 ยิงจริง):**
 - ส่ง `MonthlyIncome="abc"` ไปที่ `/recalibrate` ได้ข้อความ `ข้อมูลไม่ตรงรูปแบบ: unsupported operand type(s) for /: 'str' and 'int'` ซึ่งเป็น error ภายในของ Python ที่บอกว่าโค้ดทำการหารตรงไหน
 - ส่ง `{"Age": "old"}` ไปที่ `/whatif` ได้ dict ของ Pydantic ทั้งก้อน (`type`, `loc`, `msg`, `input`)
-- `GET /docs` และ `GET /openapi.json` ได้ **200** โดยไม่ต้อง login และ openapi แสดงครบทั้ง 7 path
+- `GET /docs` และ `GET /openapi.json` ได้ 200 โดยไม่ต้อง login และ openapi แสดงครบทั้ง 7 path
 
 **ทำไมต้องแก้:** ข้อความ exception อาจมีชื่อคอลัมน์ path หรือเวอร์ชันไลบรารี ส่วนหน้า docs เป็นแผนที่ของ API ทั้งหมดที่เปิดให้คนนอกดูได้
 
@@ -462,11 +462,11 @@
 1. ส่งข้อความสั้นที่ผู้ใช้เข้าใจ (ภาษาไทย) กลับไป แล้วเขียนรายละเอียดลง log ฝั่ง server
 2. ปิด docs ตอน deploy เช่น `FastAPI(docs_url=None if os.getenv("ENV") == "prod" else "/docs", openapi_url=...)`
 
-**ผู้รับผิดชอบ:** **Puripat** (`recalibrate.py`) + **Saphondanai** (`whatif.py`, `main.py`)
+**ผู้รับผิดชอบ:** Puripat (`recalibrate.py`) + Saphondanai (`whatif.py`, `main.py`)
 
 ### SEC-09 PDPA: ไม่มีบันทึกการเข้าถึงและนโยบายข้อมูล
 
-🟡 ตอนนี้ / 🟠 ก่อนใช้ข้อมูลจริง
+ระดับ: ตอนนี้ ต่ำ, ก่อนใช้ข้อมูลจริง กลาง
 
 **ปัญหา:**
 - ไม่มี audit log ว่า "ใครดูคะแนนความเสี่ยงของใคร เมื่อไร"
@@ -481,21 +481,21 @@
 1. หลังทำ DE-04 เพิ่มตาราง `access_log(user_id, tenant_id, employee_id, endpoint, accessed_at)` แล้วเขียนผ่าน dependency เดียวกับ auth
 2. เขียนหัวข้อ "PDPA และการคุ้มครองข้อมูล" ในรายงาน ครอบคลุมวัตถุประสงค์, ฐานทางกฎหมาย, ระยะเวลาเก็บ, สิทธิ์ของพนักงาน และข้อจำกัดของ prototype
 
-**ผู้รับผิดชอบ:** **Saphondanai + Puripat** (audit log เพราะเป็นเจ้าของ backend) และ **Saphondanai** (เขียนรายงานส่วน Business Logic / Localization)
+**ผู้รับผิดชอบ:** Saphondanai + Puripat (audit log เพราะเป็นเจ้าของ backend) และ Saphondanai (เขียนรายงานส่วน Business Logic / Localization)
 
 ### SEC-10 สิ่งที่ต้องตั้งค่าตอน deploy
 
-— ตอนนี้ / 🟠 ตอน deploy
+ระดับ: ตอนนี้ ไม่เกี่ยว, ตอน deploy กลาง
 
-- **CORS:** ถ้า frontend กับ backend อยู่คนละ domain บน Render ให้ใช้ `CORSMiddleware` กับรายการ origin ที่ระบุชัด **ห้ามใช้ `allow_origins=["*"]` คู่กับ credentials** (ผู้รับผิดชอบ: **Puripat**)
-- **HTTPS:** Render ให้มาแล้ว แต่ต้องตรวจว่าไม่มีการเรียก `http://` แบบฮาร์ดโค้ดเหลืออยู่ (ผู้รับผิดชอบ: **Puripat**)
-- **Superset embed:** README หัวข้อ 9 วางแผนใช้ guest token ต้องสร้าง token ฝั่ง server หลังตรวจสิทธิ์ผู้ใช้ และตั้ง Row Level Security ตาม `tenant_id` ห้ามสร้างจาก frontend (ผู้รับผิดชอบ: **Nanthamon**)
+- **CORS:** ถ้า frontend กับ backend อยู่คนละ domain บน Render ให้ใช้ `CORSMiddleware` กับรายการ origin ที่ระบุชัด **ห้ามใช้ `allow_origins=["*"]` คู่กับ credentials (ผู้รับผิดชอบ: Puripat**)
+- **HTTPS:** Render ให้มาแล้ว แต่ต้องตรวจว่าไม่มีการเรียก `http://` แบบฮาร์ดโค้ดเหลืออยู่ (ผู้รับผิดชอบ: Puripat)
+- **Superset embed:** README หัวข้อ 9 วางแผนใช้ guest token ต้องสร้าง token ฝั่ง server หลังตรวจสิทธิ์ผู้ใช้ และตั้ง Row Level Security ตาม `tenant_id` ห้ามสร้างจาก frontend (ผู้รับผิดชอบ: Nanthamon)
 
 ### SEC-13 output ของ notebook มี path ในเครื่องหลุดอยู่
 
-🟡 — เพิ่มในรอบ 2
+ระดับ: ต่ำ (เพิ่มในรอบ 2)
 
-**ปัญหา:** สแกน source และ output ของทุก notebook ที่ track ใน git แล้ว **ไม่พบ secret, token, รหัสผ่าน, email หรือ credential ใน URL** แต่พบ path ในเครื่องของสมาชิกใน output ที่ commit ไว้
+**ปัญหา:** สแกน source และ output ของทุก notebook ที่ track ใน git แล้ว ไม่พบ secret, token, รหัสผ่าน, email หรือ credential ใน URL แต่พบ path ในเครื่องของสมาชิกใน output ที่ commit ไว้
 
 | ไฟล์ | สิ่งที่หลุด |
 | :--- | :--- |
@@ -507,13 +507,13 @@
 
 **ทำไมต้องแก้:** ความเสี่ยงต่ำเพราะไม่ใช่ secret แต่ repo เป็น public การเปิดเผยชื่อผู้ใช้และโครงสร้างโฟลเดอร์ช่วยให้ผู้โจมตีเดาเป้าหมายได้ง่ายขึ้นเล็กน้อย และ warning ยังทำให้ notebook ที่ใช้นำเสนอดูรก
 
-**วิธีแก้:** ทีมตั้งใจเก็บ output ไว้ จึง**ไม่แนะนำให้ล้าง output ทั้งหมด**
+**วิธีแก้:** ทีมตั้งใจเก็บ output ไว้ จึงไม่แนะนำให้ล้าง output ทั้งหมด
 1. cell แรกของแต่ละ notebook ใส่ `warnings.filterwarnings("ignore", category=...)` เฉพาะ warning ที่รู้แล้ว
 2. ตั้ง `MLFLOW_DISABLE_AGENT_HINT=1` ใน `.env` (และเพิ่มใน `.env.example`)
 3. พิมพ์ path แบบ relative แทน absolute
 4. รัน notebook ใหม่ด้วย kernel ของ `.venv` แล้ว commit
 
-**ผู้รับผิดชอบ:** **Puripat** (notebook 03) + **Saphondanai** (notebook 04, 07 และ `.env.example`)
+**ผู้รับผิดชอบ:** Puripat (notebook 03) + Saphondanai (notebook 04, 07 และ `.env.example`)
 
 ---
 
@@ -593,7 +593,7 @@
 
 รันจากรากโปรเจกต์ใน Git Bash
 
-ข้อ 1–4 และ 6 มาจากรอบ 1 ส่วนข้อ 5 และ 7–10 มาจากรอบ 2 สคริปต์ทุกตัว**ไม่แก้ไฟล์ในโปรเจกต์** และไม่เขียนอะไรขึ้น MLflow/DagsHub/GitHub
+ข้อ 1–4 และ 6 มาจากรอบ 1 ส่วนข้อ 5 และ 7–10 มาจากรอบ 2 สคริปต์ทุกตัวไม่แก้ไฟล์ในโปรเจกต์ และไม่เขียนอะไรขึ้น MLflow/DagsHub/GitHub
 
 ### 1. ตรวจว่าไม่มี secret ใน git (ไม่แสดงค่า secret ออกมา)
 ```bash
@@ -629,7 +629,7 @@ curl -s -X POST http://localhost:8000/whatif \
 
 ### 5. สคริปต์ยิง API แบบ in-process (รอบ 2)
 
-ใช้ `TestClient` กับแอปจริงใน `backend/main.py` แต่สลับโมเดล MLflow เป็นโมเดลที่เทรนซ้ำในเครื่อง จึง**ไม่ต้องเปิด server และไม่ต่อ DagsHub** ไฟล์ calibration เขียนลงโฟลเดอร์ชั่วคราวแล้วลบทิ้ง (ตรวจแล้วว่าไม่มี `backend/calibrations/` เหลืออยู่ในโปรเจกต์)
+ใช้ `TestClient` กับแอปจริงใน `backend/main.py` แต่สลับโมเดล MLflow เป็นโมเดลที่เทรนซ้ำในเครื่อง จึงไม่ต้องเปิด server และไม่ต่อ DagsHub ไฟล์ calibration เขียนลงโฟลเดอร์ชั่วคราวแล้วลบทิ้ง (ตรวจแล้วว่าไม่มี `backend/calibrations/` เหลืออยู่ในโปรเจกต์)
 
 วิธีรัน: บันทึกโค้ดเป็น `pentest_inprocess.py` ที่ใดก็ได้ แล้วรัน `python pentest_inprocess.py .` จากรากโปรเจกต์ (ใช้เวลาราว 2 นาที ส่วนใหญ่เป็นการวน 2,068 ID)
 
@@ -841,17 +841,17 @@ gh api repos/$R/keys --jq length
 | :--- | :--- |
 | visibility | `public` |
 | collaborator | `InkSpuDek66` admin · `NungUmSudNaRak`, `Mon-Blacklove`, `yanisa1111` write |
-| branch protection ของ `main` / rulesets | **ไม่มี** / **ไม่มี** |
+| branch protection ของ `main` / rulesets | ไม่มี / ไม่มี |
 | สิทธิ์เริ่มต้นของ workflow | `read` |
 | actions ที่อนุญาต | `all` (ไม่บังคับ SHA pinning) |
 | secret scanning / push protection | เปิด / เปิด (alert 0) |
-| Dependabot alerts / security updates | **ปิด** / **ปิด** |
+| Dependabot alerts / security updates | ปิด / ปิด |
 | deploy keys | 0 |
 | webhooks | ตรวจไม่ได้ (token ไม่มี scope `admin:repo_hook`) |
 
 ### 9. ตรวจสิ่งที่คนนอกเห็นบน DagsHub (รอบ 2)
 
-ดาวน์โหลดโมเดลโดย**ลบ credential ออกจาก environment** ก่อน เพื่อจำลองคนนอกที่ไม่ได้ login (ไฟล์ที่ได้ลบทิ้งหลังตรวจ)
+ดาวน์โหลดโมเดลโดยลบ credential ออกจาก environment ก่อน เพื่อจำลองคนนอกที่ไม่ได้ login (ไฟล์ที่ได้ลบทิ้งหลังตรวจ)
 ```bash
 env -u MLFLOW_TRACKING_USERNAME -u MLFLOW_TRACKING_PASSWORD \
   MLFLOW_TRACKING_URI=https://dagshub.com/InkSpuDek66/employee-attrition-predictor.mlflow \
