@@ -32,10 +32,14 @@ PARAMS = {"n_estimators": 500, "max_depth": 2, "learning_rate": 0.03132429398213
 N_JOBS = 4  # จำนวน thread มีผลต่อโมเดลที่ได้ จึงบันทึกเป็น tag ด้วย
 # เกณฑ์ขั้นต่ำก่อน register (CI fail ถ้าต่ำกว่านี้) ต่ำกว่าช่วงที่วัดได้จริง 0.805-0.815 พอให้ไม่ fail เพราะต่างเครื่อง
 MIN_TEST_AUC = 0.75
+# bootstrap มาตรฐานของโปรเจกต์ (notebook 07 และสคริปต์ในรายงาน review ใช้ค่านี้ด้วย)
+# 1,000 รอบยังแกว่งตาม seed ได้ราว 0.01 ที่ปลายช่วง 10,000 รอบได้ค่าเดียวกันทุก seed ที่ทศนิยม 2 ตำแหน่ง
+BOOT_N = 10_000
+BOOT_SEED = 42
 RAW_PATH = f"data/raw/{RAW_FILENAME}"  # relative เพราะ source ถูก log ขึ้น MLflow ห้ามมี path ในเครื่อง
 
 
-def bootstrap_auc_ci(y, p, n=1000, seed=42):
+def bootstrap_auc_ci(y, p, n=BOOT_N, seed=BOOT_SEED):
     """95% CI ของ AUC โดยสุ่มแถว test ซ้ำแบบใส่คืน (วิธีเดียวกับ notebooks/07_imbalance_S.ipynb หัวข้อ 5)"""
     rng = np.random.default_rng(seed)
     aucs = [roc_auc_score(y[i], p[i]) for i in (rng.integers(0, len(y), len(y)) for _ in range(n))]
