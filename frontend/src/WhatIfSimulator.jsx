@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { featureLabel } from './featureLabels'
 import { api, baht, BAND, friendly, INCOME_MIN_BAHT, INCOME_RANGE_USD, inputClass } from './theme'
-import { AssistantHint, NotFoundState, SorryState } from './Mascot'
+import { NotFoundState, SorryState } from './Mascot'
+import { EmptyPicker } from './Overview'
 import { Alert, Card, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 // ฟีเจอร์ที่ HR ปรับได้จริงผ่านมาตรการ (ไม่ใส่ข้อมูลส่วนตัว เช่น อายุ เพศ สถานภาพ)
@@ -209,7 +210,29 @@ function Celebrate() {
   )
 }
 
-export default function WhatIfSimulator({ query, rate, who, onRisk }) {
+// มาตรการสำเร็จรูป: กดทีเดียวปรับหลายช่อง (ค่าเป็นหน่วยของโมเดล: เงินเดือนเป็นดอลลาร์)
+const PRESETS = [
+  { label: 'ปิด OT', apply: () => ({ OverTime: 'No' }) },
+  { label: 'ขึ้นเงินเดือน 10%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.1, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 10) }) },
+  { label: 'ขึ้นเงินเดือน 20%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 20) }) },
+  { label: 'เลื่อนตำแหน่ง', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0 }) },
+  { label: 'ลดการเดินทาง', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
+  { label: 'อบรมเพิ่ม', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
+  { label: 'ให้สิทธิ์ซื้อหุ้น', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
+]
+const CONTROL = Object.fromEntries(GROUPS.flatMap((g) => g.controls.map((c) => [c.field, c])))
+
+// ค่าที่คนอ่านเข้าใจ เช่น "ทำงานล่วงเวลา (OT): ไม่ทำ", "รายได้ต่อเดือน: 40,000 บาท"
+function describe(changes, rate) {
+  return Object.entries(changes)
+    .map(([f, v]) => {
+      const opt = CONTROL[f]?.options?.find(([o]) => String(o) === String(v))?.[1]
+      return `${featureLabel(f)}: ${f === 'MonthlyIncome' ? baht(v * rate) : (opt ?? v.toLocaleString())}`
+    })
+    .join(' · ')
+}
+
+export default function WhatIfSimulator({ query, rate, who, onRisk, onDone, onPick }) {
   const money = (usd) => baht(usd * rate)
   const [loaded, setLoaded] = useState(null) // { n, id, tenant, base } หรือ { n, error } ของพนักงานที่โหลดล่าสุด
   const [changes, setChanges] = useState({})
@@ -217,6 +240,7 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
   const [impact, setImpact] = useState(null)
   const [retention, setRetention] = useState('')
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState([]) // ผลจำลองที่บันทึกไว้เทียบ (ต่อพนักงานหนึ่งคน สูงสุด 4)
   const [celebrate, setCelebrate] = useState(0) // เพิ่มทุกครั้งที่ความเสี่ยงหลังปรับเพิ่งตกเป็นระดับต่ำ
   const lastBand = useRef(null)
 
@@ -227,7 +251,9 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
     post({ employee_id: query.id, changes: {}, ...(query.tenant && { tenant_id: query.tenant }) }, ctrl.signal).then(
       (res) => {
         setLoaded({ n: query.n, id: query.id, tenant: query.tenant, base: res.employee })
+        onDone()
         setChanges({})
+        setSaved([])
         setResult(res)
         lastBand.current = res.after.risk_band
         onRisk({ id: query.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
@@ -238,11 +264,12 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
         if (err.name === 'AbortError') return
         const notFound = err.status === 404
         setLoaded({ n: query.n, error: friendly(err), notFound })
+        onDone()
         onRisk({ error: true, notFound })
       },
     )
     return () => ctrl.abort()
-  }, [query, onRisk])
+  }, [query, onRisk, onDone])
 
   // ปรับค่าแล้วคำนวณใหม่อัตโนมัติ (หน่วง 300ms ระหว่างลากแถบเลื่อน)
   useEffect(() => {
@@ -279,6 +306,23 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
     api(`/financial-impact/${loaded.id}?${params}`).then(setImpact, (err) => setError(friendly(err)))
   }, [loaded, retention])
 
+  // ค่าเท่าค่าเดิมไหม (เงินเดือนเทียบเป็นบาทปัดเต็ม เพราะเก็บดอลลาร์ทศนิยม)
+  const isBase = (field, v) =>
+    field === 'MonthlyIncome' ? Math.round(v * rate) === Math.round(loaded.base[field] * rate) : v === loaded.base[field]
+
+  function applyPreset(p) {
+    const patch = p.apply(loaded.base)
+    setChanges((c) => {
+      const next = { ...c, ...patch }
+      for (const k of Object.keys(patch)) if (isBase(k, next[k])) delete next[k]
+      return next
+    })
+  }
+
+  function saveScenario() {
+    setSaved((s) => [...s, { key: Date.now(), changes, after: scoreOf(result.after), band: result.after.risk_band, delta: result.delta ?? 0 }])
+  }
+
   function setValue(field, raw) {
     const base = loaded.base[field]
     // เงินเดือนรับเป็นบาท แปลงกลับเป็นดอลลาร์ก่อนส่งเข้าโมเดล ถือว่าเท่าค่าเดิมถ้าปัดเป็นบาทแล้วตรงกัน
@@ -294,9 +338,9 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
 
   if (!query) {
     return (
-      <AssistantHint who={who} title="มาลองจำลองกันเถอะ">
+      <EmptyPicker who={who} title="มาลองจำลองกันเถอะ" onPick={onPick}>
         ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” จากนั้นลองปรับเงินเดือน OT หรือความพึงพอใจ เดี๋ยวเราคำนวณความเสี่ยงใหม่ให้ทันที
-      </AssistantHint>
+      </EmptyPicker>
     )
   }
   if (loaded?.n === query.n && loaded.error) {
@@ -315,6 +359,7 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
   const delta = result.delta ?? 0
   const afterScore = scoreOf(result.after)
   const nChanged = Object.keys(changes).length
+  const alreadySaved = saved.some((s) => JSON.stringify(s.changes) === JSON.stringify(changes))
 
   return (
     <div className="space-y-4">
@@ -337,6 +382,22 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
               </button>
             }
           >
+            <div className="mb-6">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-fg">มาตรการสำเร็จรูป</div>
+              <div className="flex flex-wrap gap-2">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => applyPreset(p)}
+                    className="h-9 cursor-pointer rounded-full border border-line bg-card px-3.5 text-sm font-medium text-fg transition-colors duration-150 hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  >
+                    + {p.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-fg">กดหลายอันได้ ผลรวมกัน · ปรับละเอียดต่อได้ที่ช่องด้านล่าง</p>
+            </div>
             <div className="space-y-6">
               {GROUPS.map((g) => (
                 <fieldset key={g.title}>
@@ -370,6 +431,18 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
                 <Stat label={`ต้นทุนมาตรการ: ${impact.retention_label}`} value={money(impact.retain_cost)} tone="blue" />
                 <Stat label="ส่วนต่างถ้ารักษาไว้ได้" value={money(impact.net_benefit_if_retained)} tone="green" />
               </div>
+              {/* บอกที่มาของตัวเลข กันคนเข้าใจผิดว่าเป็นต้นทุนจริงของบริษัท (สูตรใน src/business_rules.py) */}
+              <div className="mt-3 space-y-1 rounded-lg bg-muted px-4 py-3 text-xs text-muted-fg">
+                <p>
+                  <b className="text-fg">ต้นทุนหาคนแทน</b> = เงินเดือน {money(impact.monthly_income)} × 12 เดือน ×{' '}
+                  {(impact.hiring_cost / (impact.monthly_income * 12)).toFixed(2)} (ตัวคูณของตำแหน่งระดับ {impact.job_level})
+                  {impact.include_severance && ` + ค่าชดเชย ${impact.severance_days} วัน (${money(impact.severance_pay)})`}
+                </p>
+                <p>
+                  <b className="text-fg">ต้นทุนมาตรการ</b> = เงินเดือน × {(impact.retain_cost / impact.monthly_income).toFixed(1)} เดือน
+                </p>
+                <p>ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล (README 6.3) ปรับให้ตรงกับบริษัทได้ที่ config/financial_impact.json</p>
+              </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-ink px-4 py-3 text-white dark:border dark:border-line">
                 <span className="text-sm text-zinc-400">มูลค่าความเสี่ยง (คะแนน × ต้นทุนหาคนแทน)</span>
                 <span className="flex items-center gap-2 text-lg font-semibold tabular-nums">
@@ -400,6 +473,53 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
               <RiskGauge size="md" title="ก่อนปรับ" score={scoreOf(result.before)} band={result.before.risk_band} bandTh={result.before.risk_band_th} />
               <RiskGauge size="md" title="หลังปรับ" score={afterScore} band={result.after.risk_band} bandTh={result.after.risk_band_th} />
               <DeltaBadge delta={delta} />
+              <button
+                type="button"
+                onClick={saveScenario}
+                disabled={!nChanged || alreadySaved || saved.length >= 4}
+                className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <Icon name="list" className="size-4" />
+                {alreadySaved ? 'บันทึกแบบนี้ไว้แล้ว' : saved.length >= 4 ? 'บันทึกได้สูงสุด 4 แบบ' : 'บันทึกผลนี้ไว้เทียบ'}
+              </button>
+              {saved.length > 0 && (
+                <div>
+                  <div className="mb-2 text-xs font-medium text-muted-fg">ผลที่บันทึกไว้ (กดเพื่อใช้อีกครั้ง)</div>
+                  <ul className="space-y-2">
+                    {[...saved]
+                      .sort((a, b) => a.after - b.after)
+                      .map((s, i) => (
+                        <li key={s.key} className="flex items-start gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setChanges(s.changes)}
+                            className="min-w-0 flex-1 cursor-pointer rounded-lg border border-line px-3 py-2 text-left transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className={`text-lg font-semibold tabular-nums ${BAND[s.band].text}`}>{Math.round(s.after * 100)}</span>
+                              <span className={`text-xs tabular-nums ${s.delta < 0 ? 'text-risk-low' : 'text-risk-high'}`}>
+                                {s.delta > 0 ? '+' : ''}
+                                {Math.round(s.delta * 100)}
+                              </span>
+                              {i === 0 && saved.length > 1 && (
+                                <span className="ml-auto rounded bg-risk-low-soft px-1.5 py-0.5 text-[11px] font-medium text-risk-low">ดีที่สุด</span>
+                              )}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-muted-fg">{describe(s.changes, rate)}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSaved((all) => all.filter((x) => x.key !== s.key))}
+                            aria-label="ลบผลที่บันทึกนี้"
+                            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-fg transition-colors hover:bg-muted hover:text-fg"
+                          >
+                            <Icon name="error" className="size-4" />
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
               {result.warning && <Alert tone="warning">{result.warning}</Alert>}
               <p className="text-xs text-muted-fg">{result.note}</p>
             </div>

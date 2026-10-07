@@ -43,3 +43,13 @@ def test_company_summary():
     assert r["n_employees"] == 1470 and len(r["top_factors"]) == 5
     assert client.get("/company-summary", params={"department": "Sales"}).json()["n_employees"] < 1470
     assert client.get("/company-summary", params={"department": "Nope"}).status_code == 404
+
+
+def test_top_employees_sorted_and_filtered():
+    rows = client.get("/company-summary/top-employees", params={"n": 5}).json()["employees"]
+    scores = [r["risk_score"] for r in rows]
+    assert len(rows) == 5 and scores == sorted(scores, reverse=True)
+    assert rows[0]["risk_band"] in ("High", "Medium", "Low") and rows[0]["risk_band_th"]
+    sales = client.get("/company-summary/top-employees", params={"n": 3, "department": "Sales"}).json()["employees"]
+    assert {r["department"] for r in sales} == {"Sales"}
+    assert client.get("/company-summary/top-employees", params={"department": "Nope"}).status_code == 404

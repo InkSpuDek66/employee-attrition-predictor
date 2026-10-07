@@ -1,35 +1,97 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Mascot from './Mascot'
-import ShapViewer from './ShapViewer'
+import Overview from './Overview'
 import { DEFAULT_RATE, inputClass, loadMascot, saveMascot } from './theme'
-import { Field, Icon, PrimaryButton } from './ui'
+import { Field, Icon, PrimaryButton, Skeleton } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
-// หน้าหลัก: แต่ละคนเพิ่ม component ของตัวเอง (Intervention Tracker, Company Summary) เป็นแท็บใหม่ใน TABS
-// component ได้ prop query = { id, tenant, n } ของพนักงานที่เลือก (n เพิ่มทุกครั้งที่กดโหลด ให้โหลดซ้ำได้)
-// onRisk({ id, band, score, label }) = แจ้งระดับความเสี่ยงล่าสุดให้ตัวการ์ตูนใน sidebar
-// rate = บาทต่อ 1 ดอลลาร์ ใช้แปลงเงินใน dataset, dark = ธีมปัจจุบัน (กราฟ recharts ต้องรู้เพื่อเลือกสี)
+// SHAP Viewer ใช้ recharts (ก้อนใหญ่) โหลดแยกตอนเปิดใช้ หน้าแรกจะเปิดเร็วขึ้น
+const ShapViewer = lazy(() => import('./ShapViewer'))
+
+// หน้าหลัก: แต่ละคนเพิ่ม component ของตัวเอง (เช่น Intervention Tracker) เป็นแท็บใหม่ใน TABS
+// component ของเครื่องมือรายคนได้ prop:
+//   query = { id, tenant, n } ของพนักงานที่เลือก (n เพิ่มทุกครั้งที่กดโหลด ให้โหลดซ้ำได้)
+//   onRisk({ id, band, score, label } | { error, notFound }) = แจ้งตัวการ์ตูนใน sidebar
+//   onDone() = โหลดเสร็จ (สำเร็จหรือพัง) ให้ปุ่ม "โหลด" เลิกหมุน
+//   rate = บาทต่อ 1 ดอลลาร์, dark = ธีม (กราฟ recharts ต้องรู้เพื่อเลือกสี), who = ผู้ช่วยที่เลือก
+// แท็บ/รหัสพนักงาน/รหัสบริษัทเก็บใน URL (?tab=whatif&id=5) แชร์ลิงก์ได้ และปุ่ม back ใช้ได้
 const TABS = [
+  { id: 'overview', icon: 'chart', label: 'ภาพรวมบริษัท', hint: 'ใครเสี่ยงลาออก และเพราะอะไร' },
   { id: 'shap', icon: 'search', label: 'SHAP Viewer', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
   { id: 'whatif', icon: 'sliders', label: 'What-if Simulator', hint: 'ถ้าปรับเงื่อนไข ความเสี่ยงจะเปลี่ยนไหม', Component: WhatIfSimulator },
 ]
+const PER_EMPLOYEE = TABS.filter((t) => t.Component).map((t) => t.id)
+
+function fromUrl() {
+  const p = new URLSearchParams(location.search)
+  const tab = TABS.some((t) => t.id === p.get('tab')) ? p.get('tab') : 'overview'
+  const id = Number(p.get('id')) > 0 ? p.get('id') : ''
+  return { tab, id, tenant: p.get('tenant') ?? '' }
+}
 
 export default function App() {
-  const [tab, setTab] = useState('shap')
-  const [employeeId, setEmployeeId] = useState('1')
-  const [tenantId, setTenantId] = useState('')
-  const [query, setQuery] = useState(null)
+  const [initial] = useState(fromUrl) // อ่าน URL ครั้งเดียวตอนเปิดหน้า
+  const [tab, setTab] = useState(initial.tab)
+  const [employeeId, setEmployeeId] = useState(initial.id || '1')
+  const [tenantId, setTenantId] = useState(initial.tenant)
+  const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant: initial.tenant, n: 1 } : null)
+  const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
   const [rate, setRate] = useState(DEFAULT_RATE)
   const [risk, setRisk] = useState({}) // ความเสี่ยงล่าสุดแยกตามแท็บ
   const [who, setWho] = useState(loadMascot) // ผู้ช่วยที่เลือก ใช้ทั้ง sidebar และหน้าว่าง
-  // handler คงที่ต่อแท็บ ใส่ใน deps ของ effect ได้โดยไม่ทำให้โหลดซ้ำ
-  const onRisk = useMemo(() => Object.fromEntries(TABS.map((t) => [t.id, (r) => setRisk((m) => ({ ...m, [t.id]: r }))])), [])
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
+  // handler คงที่ต่อแท็บ ใส่ใน deps ของ effect ได้โดยไม่ทำให้โหลดซ้ำ
+  const onRisk = useMemo(() => Object.fromEntries(PER_EMPLOYEE.map((t) => [t, (r) => setRisk((m) => ({ ...m, [t]: r }))])), [])
+  const onDone = useMemo(() => Object.fromEntries(PER_EMPLOYEE.map((t) => [t, () => setPending((p) => ({ ...p, [t]: false }))])), [])
   const current = TABS.find((t) => t.id === tab)
+
+  // เขียนสถานะลง URL (ระบบภายนอก) — เปลี่ยนแท็บ/โหลดพนักงานใหม่ = 1 รายการใน history
+  // ครั้งแรกตอนเปิดหน้าใช้ replace ไม่งั้นต้องกด back สองครั้งถึงออกจากเว็บ
+  const firstUrlWrite = useRef(true)
+  useEffect(() => {
+    const p = new URLSearchParams({ tab })
+    if (query) p.set('id', query.id)
+    if (query?.tenant) p.set('tenant', query.tenant)
+    const next = `?${p}`
+    if (firstUrlWrite.current) history.replaceState(null, '', next)
+    else if (next !== location.search) history.pushState(null, '', next)
+    firstUrlWrite.current = false
+  }, [tab, query])
+
+  // ปุ่ม back/forward: อ่าน URL แล้วตั้งสถานะตาม
+  useEffect(() => {
+    function onPop() {
+      const u = fromUrl()
+      setTab(u.tab)
+      setEmployeeId(u.id || '1')
+      setTenantId(u.tenant)
+      if (!u.id) return setQuery(null)
+      setQuery((q) => {
+        if (q?.id === Number(u.id) && q.tenant === u.tenant) return q // คนเดิม ไม่ต้องโหลดใหม่
+        setPending(Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])))
+        return { id: Number(u.id), tenant: u.tenant, n: (q?.n ?? 0) + 1 }
+      })
+    }
+    addEventListener('popstate', onPop)
+    return () => removeEventListener('popstate', onPop)
+  }, [])
+
+  function load(id, tenant) {
+    setQuery((q) => ({ id: Number(id), tenant, n: (q?.n ?? 0) + 1 }))
+    setPending(Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])))
+  }
 
   function submit(e) {
     e.preventDefault()
-    setQuery((q) => ({ id: Number(employeeId), tenant: tenantId.trim(), n: (q?.n ?? 0) + 1 }))
+    load(employeeId, tenantId.trim())
+    if (tab === 'overview') setTab('shap')
+  }
+
+  // เลือกพนักงานจากรายชื่อ (ภาพรวม/หน้าว่าง) แล้วไปดูว่าทำไมถึงเสี่ยง
+  function pick(id) {
+    setEmployeeId(String(id))
+    load(id, tenantId.trim())
+    if (tab === 'overview') setTab('shap')
   }
 
   function toggleTheme() {
@@ -127,18 +189,23 @@ export default function App() {
                 title="dataset เป็นดอลลาร์ หน้าเว็บแปลงเป็นบาทด้วยอัตรานี้"
               />
             </Field>
-            <PrimaryButton>
+            <PrimaryButton loading={!!pending[tab]}>
               โหลด <Icon name="right" className="size-4" />
             </PrimaryButton>
           </form>
         </header>
 
+        <div hidden={tab !== 'overview'}>
+          <Overview rate={rate} onPick={pick} />
+        </div>
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
-        {TABS.map(({ id, Component }) => (
-          <div key={id} hidden={tab !== id}>
-            <Component query={query} rate={rate} dark={dark} who={who} onRisk={onRisk[id]} />
-          </div>
-        ))}
+        <Suspense fallback={<Skeleton className="h-96" />}>
+          {TABS.filter((t) => t.Component).map(({ id, Component }) => (
+            <div key={id} hidden={tab !== id}>
+              <Component query={query} rate={rate} dark={dark} who={who} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
+            </div>
+          ))}
+        </Suspense>
       </main>
     </div>
   )

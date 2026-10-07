@@ -11,7 +11,8 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 import model_store as ms
-import company_summary as cs  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
+import business_rules  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
+import company_summary as cs  # noqa: E402
 
 router = APIRouter(tags=["explain"])
 
@@ -42,6 +43,21 @@ class DepartmentSummary(Summary):
     department: str
 
 
+class TopEmployee(BaseModel):
+    employee_id: int
+    risk_score: float  # ยังไม่ปรับเทียบ (เหมือน /company-summary) ใช้จัดลำดับว่าควรดูใครก่อน
+    risk_band: str
+    risk_band_th: str
+    department: str
+    job_role: str
+    job_level: int
+
+
+class TopEmployeesResponse(BaseModel):
+    employees: list[TopEmployee]
+    note: str = "เรียงตามคะแนนความเสี่ยงจากมากไปน้อย ใช้เลือกว่าควรดูใครก่อน ไม่ใช่คำตัดสิน"
+
+
 class DepartmentsResponse(BaseModel):
     departments: list[DepartmentSummary]
     note: str = cs.NOTE
@@ -68,3 +84,30 @@ def company_summary(department: Optional[str] = None, top_n: int = Query(5, ge=1
 def departments_summary(top_n: int = Query(3, ge=1, le=50)):
     """ทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม สำหรับหน้า Company Summary / Superset"""
     return DepartmentsResponse(departments=cs.by_department(*_inputs(), top_n=top_n))
+
+
+@router.get("/company-summary/top-employees", response_model=TopEmployeesResponse)
+def top_employees(n: int = Query(10, ge=1, le=100), department: Optional[str] = None):
+    """พนักงานที่คะแนนความเสี่ยงสูงสุด n คน (ทั้งบริษัทหรือแผนกเดียว) ให้หน้าเว็บกดเลือกได้โดยไม่ต้องรู้รหัส"""
+    X = ms.employee_features()
+    employees = ms.raw_employees().set_index("EmployeeNumber").loc[X.index]
+    rows = employees.assign(risk_score=ms.risk_scores(X))
+    if department:
+        if department not in set(rows["Department"]):
+            raise HTTPException(404, f"ไม่พบแผนก '{department}' (มี: {sorted(rows['Department'].unique())})")
+        rows = rows[rows["Department"] == department]
+    top = rows.nlargest(n, "risk_score")
+    return TopEmployeesResponse(
+        employees=[
+            TopEmployee(
+                employee_id=int(emp_id),
+                risk_score=float(r.risk_score),
+                risk_band=(band := business_rules.risk_band(r.risk_score)),
+                risk_band_th=business_rules.RISK_BANDS[band],
+                department=r.Department,
+                job_role=r.JobRole,
+                job_level=int(r.JobLevel),
+            )
+            for emp_id, r in top.iterrows()
+        ]
+    )

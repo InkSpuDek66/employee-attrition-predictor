@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { featureLabel, featureValue } from './featureLabels'
 import { api, baht, bandOf, CHART, friendly } from './theme'
-import { AssistantHint, NotFoundState, SorryState } from './Mascot'
+import { NotFoundState, SorryState } from './Mascot'
+import { EmptyPicker } from './Overview'
 import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 const TOP_N = [5, 10, 15, 20].map((n) => [n, `${n}`])
@@ -24,7 +25,35 @@ function Driver({ tone, title, row, count }) {
   )
 }
 
-export default function ShapViewer({ query, rate, dark, who, onRisk }) {
+// สรุปเป็นประโยค อ่านง่ายกว่ากราฟ: 3 ปัจจัยที่ดันขึ้นมากสุด + 2 ปัจจัยที่ช่วยให้อยู่ต่อ
+function Summary({ ups, downs, band }) {
+  const list = (rows) => rows.map((r) => `${r.label} (${r.shown})`).join(', ')
+  return (
+    <div className="rounded-xl border border-line bg-card p-5">
+      <div className="flex items-start gap-3">
+        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+          <Icon name="info" className="size-5" />
+        </div>
+        <div className="space-y-1.5 text-sm leading-relaxed">
+          <p className="font-semibold text-fg">สรุปสั้นๆ</p>
+          {ups.length > 0 && (
+            <p className="text-fg">
+              {band === 'Low' ? 'แม้ความเสี่ยงต่ำ แต่สิ่งที่ควรจับตาคือ ' : 'สาเหตุหลักที่ทำให้คนนี้เสี่ยงลาออกคือ '}
+              <b>{list(ups.slice(0, 3))}</b>
+            </p>
+          )}
+          {downs.length > 0 && (
+            <p className="text-muted-fg">
+              ส่วนสิ่งที่ช่วยให้อยู่ต่อคือ <b className="text-fg">{list(downs.slice(0, 2))}</b>
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function ShapViewer({ query, rate, dark, who, onRisk, onDone, onPick }) {
   const C = CHART[dark ? 'dark' : 'light']
   const [topN, setTopN] = useState(10)
   // ผลล่าสุดผูกกับ key ของคำขอ ถ้า key ไม่ตรงกับที่ขออยู่ = กำลังโหลด (ข้อมูลเก่ายังโชว์แบบจางๆ)
@@ -39,6 +68,7 @@ export default function ShapViewer({ query, rate, dark, who, onRisk }) {
     api(`/shap/${query.id}?${params}`, { signal: ctrl.signal }).then(
       (data) => {
         setRes({ key, data })
+        onDone()
         const score = data.calibrated_risk_score ?? data.risk_score
         onRisk({ id: query.id, band: bandOf(score), score, label: 'คะแนน' })
       },
@@ -46,20 +76,21 @@ export default function ShapViewer({ query, rate, dark, who, onRisk }) {
         if (err.name === 'AbortError') return
         const notFound = err.status === 404
         setRes({ key, error: friendly(err), notFound })
+        onDone()
         onRisk({ error: true, notFound })
       },
     )
     return () => ctrl.abort()
-  }, [query, topN, key, onRisk])
+  }, [query, topN, key, onRisk, onDone])
 
   const loading = query && res.key !== key
   const { data, error, notFound } = res
 
   if (!query) {
     return (
-      <AssistantHint who={who} title="เลือกพนักงานเพื่อเริ่มได้เลย">
+      <EmptyPicker who={who} title="เลือกพนักงานเพื่อเริ่มได้เลย" onPick={onPick}>
         ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” เดี๋ยวเราบอกคะแนนความเสี่ยงและปัจจัยที่ทำให้คนนี้เสี่ยงลาออกให้
-      </AssistantHint>
+      </EmptyPicker>
     )
   }
   if (error && !loading) return notFound ? <NotFoundState who={who} message={error} /> : <SorryState message={error} />
@@ -95,6 +126,7 @@ export default function ShapViewer({ query, rate, dark, who, onRisk }) {
         <Driver tone="down" title="ปัจจัยที่ช่วยให้อยู่ต่อมากที่สุด" row={downs[0]} count={downs.length} />
       </div>
 
+      <Summary ups={ups} downs={downs} band={bandOf(score)} />
       {data.warning && <Alert tone="warning">{data.warning}</Alert>}
 
       <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
