@@ -29,6 +29,12 @@
   --color-risk-high-soft: #fef2f2;
   --color-up: #ef4444;
   --color-down: #0070f3;
+  /* ชุดตัวการ์ตูนใน sidebar (ChibiCharacter.jsx) */
+  --color-suit: #2f3b58;
+  --color-suit-line: #45527a;
+  --color-pants: #252f47;
+  --color-blazer: #26262d;
+  --color-blazer-line: #4a4a55;
 }
 
 /* โหมดมืด: แนวเดียวกับ Vercel dark — พื้นเกือบดำ ขอบเทาเข้ม ปุ่มขาว ตัวอักษรสถานะใช้โทนสว่าง (contrast ≥ 4.5:1 บนพื้นมืด) */
@@ -56,6 +62,12 @@
   --color-risk-high-soft: #2c1215;
   --color-up: #f87171;
   --color-down: #3291ff;
+  /* ชุดตัวการ์ตูนเป็นโทนครีม/ขาว ให้ตัดกับพื้นมืด */
+  --color-suit: #efe6d2;
+  --color-suit-line: #c8b995;
+  --color-pants: #ddd2b9;
+  --color-blazer: #f7f3ea;
+  --color-blazer-line: #cfc6b2;
 }
 
 body {
@@ -76,6 +88,10 @@ input[type='range'] {
 }
 
 /* ตัวการ์ตูนใน sidebar (Mascot.jsx) */
+.mascot-static,
+.mascot-static * {
+  animation: none !important;
+}
 .mascot-body {
   transform-box: fill-box;
   transform-origin: 50% 100%;
@@ -103,8 +119,53 @@ input[type='range'] {
   transform-origin: 0% 100%;
   animation: mascot-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) 200ms both;
 }
+.mascot-tail {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: mascot-tail 1.4s ease-in-out infinite;
+}
+@keyframes mascot-tail {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-12deg); }
+}
+.mascot-check {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    mascot-check-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1) 150ms both,
+    mascot-float 2.4s ease-in-out 650ms infinite;
+}
+@keyframes mascot-check-in {
+  from { transform: scale(0.3) translateY(8px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
 .mascot-float {
   animation: mascot-float 2s ease-in-out infinite;
+}
+.mascot-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-twinkle 1.8s ease-in-out infinite;
+}
+.mascot-shake {
+  animation: mascot-shake 0.5s ease-in-out infinite;
+}
+@keyframes mascot-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1px); }
+  75% { transform: translateX(1px); }
+}
+.mascot-drip {
+  animation: mascot-drip 1.6s ease-in infinite;
+}
+@keyframes mascot-twinkle {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.3; }
+  50% { transform: scale(1) rotate(45deg); opacity: 1; }
+}
+@keyframes mascot-drip {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
 }
 @keyframes mascot-in {
   from { transform: scale(0.6) translateY(12px); opacity: 0; }
