@@ -260,7 +260,8 @@ IBM HR Analytics Employee Attrition & Performance (Kaggle Open Dataset)
 >
 > ทีมเลือกใช้ PostgreSQL ใน `docker-compose.yml` (database `attrition`, DE-04) schema อยู่ที่ [docker/postgres/init/02-app-schema.sql](docker/postgres/init/02-app-schema.sql) สร้างตารางอัตโนมัติตอน `docker compose up` ครั้งแรก (volume ใหม่) ถ้ามี volume อยู่แล้วให้รัน `docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U attrition -d attrition < docker/postgres/init/02-app-schema.sql`
 > ทุกตารางที่เป็นข้อมูลบริษัทมี `tenant_id` (SEC-02) ผลทำนายมี `model_version` กับเวลา และ `employees` มี CHECK ช่วงค่าเท่ากับ IBM dataset (ทดสอบใส่ข้อมูล IBM ครบ 1,470 คนแล้ว) เงินเดือนเก็บเป็นหน่วยของโมเดลตาม DE-01
-> ยังไม่ได้ต่อ backend เข้า database: backend ยังอ่านพนักงานจาก CSV ใน `data/raw/` และผล recalibrate เป็นไฟล์ JSON ใน `backend/calibrations/` งานถัดไปคือ `batch_score.py` และ driver (`psycopg`) ตาม DE-04
+> ต่อ backend เข้า database แล้ว (ไม่บังคับ): ตั้ง `DATABASE_URL` ใน `.env` แล้ว backend อ่านพนักงานจากตาราง `employees` (tenant `ibm_demo`) แทน CSV โหลด IBM dataset ด้วย `python src/db.py` และให้คะแนนทุกคนลง `attrition_predictions`, `shap_explanations`, `financial_impact_estimates`, `company_risk_summary` ด้วย `python backend/batch_score.py` (วิธีละเอียดใน [docs/run_guide.md](docs/run_guide.md))
+> ยังไม่ได้ย้าย: ผล recalibrate ยังเป็นไฟล์ JSON ใน `backend/calibrations/`, ปุ่มบันทึกของหน้านำเข้า Excel และให้ endpoint อ่าน cache `company_risk_summary`
 
 | Entity | หน้าที่ | Key fields (แผน) |
 | :--- | :--- | :--- |

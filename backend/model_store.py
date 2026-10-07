@@ -1,6 +1,7 @@
 """โหลดโมเดล + ข้อมูลพนักงาน + SHAP explainer ครั้งเดียว ใช้ร่วมทุก router
 
-ponytail: ข้อมูลพนักงานอ่านจาก CSV ดิบไปก่อน สลับเป็น dev database กลาง (Supabase/Neon) เมื่อทีมตั้งเสร็จ
+ข้อมูลพนักงานอ่านจาก PostgreSQL (ตาราง employees, tenant ibm_demo) เมื่อตั้ง DATABASE_URL ไม่ตั้ง = อ่าน CSV ดิบของ IBM
+ponytail: อ่านบริษัทเดียว (ibm_demo) ทั้ง backend แยกตาม tenant เมื่อมี login (SEC-02)
 โมเดลตั้งค่าด้วย env MLFLOW_TRACKING_URI / MODEL_URI (อ่านจาก .env ผ่าน src/mlflow_setup.py
 ค่าเริ่มต้น = โมเดลตัวทดลองใน mlflow.db ในเครื่อง)
 """
@@ -19,6 +20,7 @@ sys.path.append(os.path.join(ROOT, "src"))
 from clean_pipeline import NOISE_COLUMNS, RAW_FILENAME, TARGET_COLUMN, clean_data, load_raw_data  # noqa: E402
 from feature_pipeline import SELECTED_FEATURES, add_features  # noqa: E402
 import mlflow_setup  # noqa: E402  (โหลด .env)
+import db  # noqa: E402
 
 MODEL_URI = os.getenv("MODEL_URI", "models:/attrition-xgboost-P/1")
 
@@ -31,6 +33,8 @@ def model():
 
 @lru_cache
 def raw_employees() -> pd.DataFrame:
+    if db.url():
+        return db.read_employees()
     return load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
 
 

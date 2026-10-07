@@ -10,7 +10,7 @@
 | Backend (FastAPI) | API ให้คะแนน, SHAP, What-if, ต้นทุน | http://localhost:8000/docs | ต้อง |
 | หน้าเว็บ (React + Vite) | ตัวผลิตภัณฑ์ที่ HR ใช้ | http://localhost:5173 | ต้อง |
 | Streamlit | หน้าทดสอบภายในทีม ไม่ใช่ตัวผลิตภัณฑ์ | http://localhost:8501 | ไม่บังคับ |
-| PostgreSQL (docker) | database ของแอป (ยังไม่ได้ต่อกับ backend) | localhost:5432 | ไม่บังคับ ตอนนี้ |
+| PostgreSQL (docker) | database ของแอป (backend อ่านเมื่อตั้ง `DATABASE_URL`) | localhost:5432 | ไม่บังคับ |
 | MLflow (docker) | MLflow แบบ self-host (ทีมใช้ DagsHub ช่วงพัฒนา) | http://localhost:5000 | ไม่บังคับ |
 
 หน้าเว็บเรียก backend ผ่าน `/api/...` ซึ่ง Vite ส่งต่อไปที่ port 8000 ให้เอง จึงต้องเปิด backend ก่อนหน้าเว็บจะมีข้อมูล
@@ -137,10 +137,10 @@ streamlit run src/test_app.py --server.address localhost
 
 ---
 
-## Database (PostgreSQL) — ไม่บังคับตอนนี้
+## Database (PostgreSQL) — ไม่บังคับ
 
 ทีมเลือกใช้ PostgreSQL ใน `docker-compose.yml` (DE-04) schema อยู่ที่ [docker/postgres/init/02-app-schema.sql](../docker/postgres/init/02-app-schema.sql)
-**ตอนนี้ backend ยังไม่ได้ต่อ database** (ยังอ่านพนักงานจาก CSV) จึงไม่ต้องรันก็ใช้ระบบได้ครบ
+ไม่ตั้ง `DATABASE_URL` = backend อ่านพนักงานจาก CSV ของ IBM เหมือนเดิม จึงไม่รัน database ก็ใช้ระบบได้ครบ
 
 ### ก่อนใช้ Docker ครั้งแรกบน Windows
 
@@ -163,7 +163,10 @@ Docker Desktop ต้องใช้ฟีเจอร์ Virtual Machine Platfo
 
 ```ini
 POSTGRES_PASSWORD=ตั้งเองได้เลย
+DATABASE_URL=postgresql://attrition:รหัสเดียวกับบรรทัดบน@127.0.0.1:5432/attrition
 ```
+
+ใช้ `127.0.0.1` ห้ามใช้ `localhost` เพราะบน Windows จะลอง IPv6 ก่อน ต่อช้าเกือบ 2 นาที
 
 แล้วรัน (ถ้าเอาแค่ database ไม่เอา MLflow ใส่ `postgres` ท้ายคำสั่ง):
 
@@ -179,6 +182,17 @@ docker compose up -d postgres
   ```
 
 - เช็กตาราง: `docker compose exec postgres psql -U attrition -d attrition -c "\dt"`
+
+### ใส่ข้อมูลและให้คะแนน
+
+```bash
+python src/db.py               # โหลด IBM dataset 1,470 คนเข้าตาราง employees (รันซ้ำได้)
+python backend/batch_score.py  # ให้คะแนนทุกคน บันทึกผลทำนาย SHAP ต้นทุน และสรุปบริษัท/แผนก
+```
+
+- หลังตั้ง `DATABASE_URL` แล้ว backend อ่านพนักงานจากตาราง `employees` (tenant `ibm_demo`) แทน CSV ต้อง restart backend
+- `batch_score.py` รันซ้ำได้ ทุกรอบเพิ่มผลชุดใหม่ ผลล่าสุดคือ `scored_at` มากสุด (Superset อ่านจากตารางพวกนี้)
+- ถ้าตั้ง `DATABASE_URL` แล้วแต่ยังไม่ได้รัน `src/db.py` backend จะแจ้งว่าไม่มีพนักงานในฐานข้อมูล
 - ปิด: `docker compose down` (ข้อมูลยังอยู่ใน volume) ถ้าจะล้างทิ้งทั้งหมด: `docker compose down -v`
 
 ---

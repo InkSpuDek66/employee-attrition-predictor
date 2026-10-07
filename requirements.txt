@@ -13,3 +13,4 @@ python-multipart==0.0.32  # FastAPI ต้องใช้รับไฟล์�
 pydantic==2.13.5
 uvicorn==0.54.0
 python-dotenv==1.2.3
+psycopg[binary]==3.3.6  # PostgreSQL ของแอป (src/db.py) ใช้เมื่อตั้ง DATABASE_URL
