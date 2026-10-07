@@ -18,6 +18,8 @@
 
 ## Setup Guide
 
+> คู่มือรันแบบละเอียดทีละขั้น (ติดตั้งครั้งแรก, รันทุกวัน, database, แก้ปัญหาที่เจอบ่อย) อยู่ที่ [docs/run_guide.md](docs/run_guide.md)
+
 ขั้นตอนด้านล่างรันได้จริงกับโค้ดปัจจุบัน (v0.2) ส่วนที่ยังไม่มี เช่น database ของแอปและ Superset จะเพิ่มเมื่อทำเสร็จ
 
 ### โปรแกรมที่ใช้ (Prerequisites)
@@ -119,6 +121,7 @@ streamlit run src/test_app.py --server.address localhost
 | ภาพรวมบริษัท | ตัวเลขสรุป สัดส่วนระดับความเสี่ยง ปัจจัยหลักพร้อมคำแนะนำ ตารางแยกแผนก รายชื่อเสี่ยงสูงสุด (กดเลือกได้ ดาวน์โหลด CSV ได้) | `/company-summary`, `/company-summary/departments`, `/company-summary/top-employees` |
 | SHAP Viewer | คะแนนของพนักงานหนึ่งคน สรุปเป็นประโยค กราฟ/ตารางปัจจัย | `/shap/{id}` |
 | What-if Simulator | ปรับเงื่อนไขแล้วเห็นคะแนนใหม่ทันที มาตรการสำเร็จรูป บันทึกผลไว้เทียบ ต้นทุน Retain vs Replace พร้อมสูตร | `/whatif`, `/financial-impact/{id}` |
+| นำเข้าข้อมูล | ดาวน์โหลดไฟล์ Excel ตัวอย่าง อัปโหลดไฟล์พนักงานแล้วดูว่าคอลัมน์/แถวไหนผิด (ตรวจอย่างเดียว ยังไม่บันทึก ใช้ข้อมูลทดสอบเท่านั้น) | `/employees/template`, `/employees/validate` |
 
 - เงินในหน้าเว็บเป็นบาท โดยถือว่า `MonthlyIncome` ใน IBM dataset เป็นดอลลาร์ (แนวเดียวกับหน้า Streamlit) อัตราคงที่ 35 บาท/ดอลลาร์ (`THB_PER_USD` ใน `frontend/src/theme.js`) ผู้ใช้ปรับไม่ได้และไม่เห็นดอลลาร์ ส่งเข้าโมเดลเป็นดอลลาร์จำนวนเต็ม ระยะทางแสดงเป็น กม. (IBM ไม่ได้ระบุหน่วย) ตาม DE-01 ควรย้ายการแปลงไป backend/config ที่เดียวภายหลัง
 - ลิงก์แชร์ได้: แท็บ/รหัสพนักงาน/รหัสบริษัทอยู่ใน URL เช่น `http://localhost:5173/?tab=whatif&id=5` ปุ่ม back ใช้ได้
@@ -255,7 +258,9 @@ IBM HR Analytics Employee Attrition & Performance (Kaggle Open Dataset)
 
 > ระดับ High-level เท่านั้น จะลง column/type ละเอียดตอนเริ่ม Backend phase (wk6–7) เมื่อ schema นิ่งแล้ว
 >
-> ตอนนี้ (v0.2) ยังไม่ได้สร้างตารางเหล่านี้ backend อ่านข้อมูลพนักงานจาก CSV ใน `data/raw/` และผล recalibrate เก็บเป็นไฟล์ JSON ต่อบริษัทใน `backend/calibrations/` แทนตาราง `tenant_calibrations` ชั่วคราว
+> ทีมเลือกใช้ PostgreSQL ใน `docker-compose.yml` (database `attrition`, DE-04) schema อยู่ที่ [docker/postgres/init/02-app-schema.sql](docker/postgres/init/02-app-schema.sql) สร้างตารางอัตโนมัติตอน `docker compose up` ครั้งแรก (volume ใหม่) ถ้ามี volume อยู่แล้วให้รัน `docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U attrition -d attrition < docker/postgres/init/02-app-schema.sql`
+> ทุกตารางที่เป็นข้อมูลบริษัทมี `tenant_id` (SEC-02) ผลทำนายมี `model_version` กับเวลา และ `employees` มี CHECK ช่วงค่าเท่ากับ IBM dataset (ทดสอบใส่ข้อมูล IBM ครบ 1,470 คนแล้ว) เงินเดือนเก็บเป็นหน่วยของโมเดลตาม DE-01
+> ยังไม่ได้ต่อ backend เข้า database: backend ยังอ่านพนักงานจาก CSV ใน `data/raw/` และผล recalibrate เป็นไฟล์ JSON ใน `backend/calibrations/` งานถัดไปคือ `batch_score.py` และ driver (`psycopg`) ตาม DE-04
 
 | Entity | หน้าที่ | Key fields (แผน) |
 | :--- | :--- | :--- |
@@ -370,6 +375,8 @@ Deploy-time (per-tenant):
 | ทำแล้ว | POST | `/recalibrate` | อัปโหลดข้อมูลลาออกจริงของบริษัท (tenant) เพื่อปรับคะแนนให้เข้ากับพฤติกรรมจริง (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)) |
 | ทำแล้ว | GET | `/company-summary` | สรุปปัจจัยเสี่ยงเด่นทั้งบริษัท/แผนก พร้อมคำแนะนำเชิงนโยบาย (ดู [6.6](#66-company-wide-aggregate-summary)) |
 | ทำแล้ว | GET | `/company-summary/departments` | สรุปทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม |
+| ทำแล้ว | GET | `/employees/template` | ไฟล์ Excel ตัวอย่างสำหรับนำเข้าพนักงาน (หัวคอลัมน์ไทย + ชีตคำอธิบาย) |
+| ทำแล้ว | POST | `/employees/validate` | ตรวจไฟล์ Excel/CSV ที่อัปโหลด คืนคอลัมน์ที่ขาดและแถวที่ผิดเป็นภาษาไทย **ยังไม่บันทึก** (รอต่อ database + login) |
 | ทำแล้ว | GET | `/company-summary/top-employees` | พนักงานเสี่ยงสูงสุด n คน (กรองแผนกได้, ส่ง `tenant_id` = ใช้คะแนนปรับเทียบ) ให้หน้าเว็บกดเลือกโดยไม่ต้องรู้รหัส |
 | แผน | GET | `/health` | Health check |
 | แผน | POST | `/interventions` | บันทึกมาตรการที่ HR เลือกทำกับพนักงาน |

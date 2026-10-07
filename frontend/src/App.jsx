@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Mascot from './Mascot'
 import Overview from './Overview'
+import Upload from './Upload'
 import { inputClass, loadMascot, saveMascot, THB_PER_USD } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'overview', icon: 'chart', label: 'ภาพรวมบริษัท', hint: 'ใครเสี่ยงลาออก และเพราะอะไร' },
   { id: 'shap', icon: 'search', label: 'SHAP Viewer', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
   { id: 'whatif', icon: 'sliders', label: 'What-if Simulator', hint: 'ถ้าปรับเงื่อนไข ความเสี่ยงจะเปลี่ยนไหม', Component: WhatIfSimulator },
+  { id: 'import', icon: 'upload', label: 'นำเข้าข้อมูล', hint: 'อัปโหลดรายชื่อพนักงานของบริษัท' },
 ]
 const PER_EMPLOYEE = TABS.filter((t) => t.Component).map((t) => t.id)
 
@@ -84,14 +86,14 @@ export default function App() {
   function submit(e) {
     e.preventDefault()
     load(employeeId, tenantId.trim())
-    if (tab === 'overview') setTab('shap')
+    if (!PER_EMPLOYEE.includes(tab)) setTab('shap') // แท็บที่ไม่ใช่รายคน (ภาพรวม, นำเข้า) พาไปดูคนนั้น
   }
 
   // เลือกพนักงานจากรายชื่อ (ภาพรวม/หน้าว่าง) แล้วไปดูว่าทำไมถึงเสี่ยง
   function pick(id) {
     setEmployeeId(String(id))
     load(id, tenantId.trim())
-    if (tab === 'overview') setTab('shap')
+    if (!PER_EMPLOYEE.includes(tab)) setTab('shap') // แท็บที่ไม่ใช่รายคน (ภาพรวม, นำเข้า) พาไปดูคนนั้น
   }
 
   function toggleTheme() {
@@ -215,6 +217,9 @@ export default function App() {
 
         <div hidden={tab !== 'overview'}>
           <Overview rate={rate} tenant={query?.tenant ?? ''} onPick={pick} />
+        </div>
+        <div hidden={tab !== 'import'}>
+          <Upload />
         </div>
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
         <Suspense fallback={<Skeleton className="h-96" />}>
