@@ -607,11 +607,11 @@ bootstrap 95% CI ของ test AUC = 0.73 – 0.88 (10,000 รอบ ใช้�
 - [ ] DE-02 (หลัก) validate records ใน `/recalibrate` + test
 - [ ] DE-01 หน้า Streamlit `whatif_page.py` ใช้หน่วยจาก config กลาง
 - [ ] DE-03 `model_store.py` / `shap_explain.py` ใช้ alias และ feature spec
-- [ ] DE-04 schema + `batch_score.py` (ร่วมกับ Saphondanai)
+- [x] DE-04 schema + `batch_score.py` (ร่วมกับ Saphondanai) (`267e194`, `48914fe`, `bcfbb8f`) รอ Nanthamon/Yanisa รีวิว schema
 - [ ] DE-06 จัดการ `attrition_cleaned.csv`
 - [ ] DE-07 out-of-fold ใน batch scoring (ร่วมกับ Saphondanai)
-- [ ] DS-03 เขียนข้อจำกัดเรื่อง auth/storage ใน `report_backend_draft_P.md`
-- [ ] DE-09 แก้ `report_backend_draft_P.md` บรรทัด 23, 58 (0.691), 111, 119, 120
+- [x] DS-03 เขียนข้อจำกัดเรื่อง auth/storage ใน `report_backend_draft_P.md` (`bcfbb8f`)
+- [x] DE-09 แก้ `report_backend_draft_P.md` บรรทัด 23, 58 (0.691), 111, 119, 120 (`bcfbb8f`)
 - [ ] DS-04 ทดลองโมเดลที่ตัด `Gender`/`MaritalStatus` (ร่วมกับ Saphondanai)
 - [ ] H-01, H-02, H-03 (test ของ feature), H-04, H-06, H-07 (`05_shap_P`)
 

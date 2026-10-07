@@ -543,14 +543,15 @@
 - [ ] SEC-13 ล้าง path ใน output ของ notebook 04
 
 ### Puripat
-- [ ] SEC-01 ตัดค่า protected attribute ออกจาก `/shap` + auth ของ `/shap` `/recalibrate` `/company-summary` + แก้หน้า Streamlit ให้ไม่พึ่ง `result.employee`
-- [ ] SEC-02 (หลัก) เอา tenant มาจาก token, `/recalibrate` ให้เฉพาะ admin, ลบช่องใน `ShapViewer.jsx`
-- [ ] SEC-03 `max_length` + จำกัดขนาด body + rate limit
-- [ ] SEC-07 Streamlit bind localhost
-- [ ] SEC-08 ข้อความ error ใน `recalibrate.py`
+- [x] SEC-01 auth ของ `/shap` `/recalibrate` `/company-summary` (login บัญชีทดลอง ครอบทุก router ใน `main.py` รวมของ Saphondanai ด้วย ระบบผู้ใช้จริงรอทีมตกลงวิธี) (`bcfbb8f`)
+- [ ] SEC-01 ตัดค่า protected attribute ออกจาก `/shap` + แก้หน้า Streamlit ให้ไม่พึ่ง `result.employee`
+- [x] SEC-02 (หลัก) เอา tenant มาจาก token, `/recalibrate` ให้เฉพาะ admin, ลบช่องรหัสบริษัท (อยู่ที่ header ใน `App.jsx`) และส่ง `tenant_id` ของบริษัทอื่นได้ 403 ทุก endpoint (`bcfbb8f`)
+- [x] SEC-03 `max_length` (10,000 แถว) + จำกัดขนาด body 10 MB + rate limit (login, whatif, recalibrate, import) + `/company-summary` อ่าน batch (`bcfbb8f`)
+- [x] SEC-07 Streamlit bind localhost (`.streamlit/config.toml`) (`bcfbb8f`)
+- [x] SEC-08 ข้อความ error ใน `recalibrate.py` (`bcfbb8f`)
 - [ ] SEC-09 audit log (ร่วมกับ Saphondanai)
 - [ ] SEC-10 CORS และ HTTPS ตอน deploy
-- [ ] SEC-13 รัน notebook 03 ใหม่ด้วย kernel `.venv` ให้ path `c:\Users\HP\miniconda3` หายจาก output
+- [x] SEC-13 รัน notebook 03 ใหม่ด้วย kernel `.venv` ให้ path `c:\Users\HP\miniconda3` หายจาก output (`bcfbb8f`)
 
 ### Yanisa
 - [ ] รีวิว SEC-09 ในส่วนที่เกี่ยวกับ `/interventions` (ข้อมูลมาตรการเป็นข้อมูลส่วนบุคคล ต้องผ่าน auth และลง audit log เหมือนกัน)
