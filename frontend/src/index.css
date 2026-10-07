@@ -74,3 +74,60 @@ input[type='range'] {
     animation-duration: 0ms !important;
   }
 }
+
+/* ตัวการ์ตูนใน sidebar (Mascot.jsx) */
+.mascot-body {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation:
+    mascot-in 450ms cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    mascot-bob 3s ease-in-out 450ms infinite;
+}
+.mascot-shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-shadow 3s ease-in-out 450ms infinite;
+}
+.mascot-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-blink 4s ease-in-out infinite;
+}
+.mascot-wave {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: mascot-wave 1.6s ease-in-out infinite;
+}
+.mascot-pop {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: mascot-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) 200ms both;
+}
+.mascot-float {
+  animation: mascot-float 2s ease-in-out infinite;
+}
+@keyframes mascot-in {
+  from { transform: scale(0.6) translateY(12px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes mascot-bob {
+  50% { transform: translateY(-4px); }
+}
+@keyframes mascot-shadow {
+  50% { transform: scaleX(0.85); opacity: 0.7; }
+}
+@keyframes mascot-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
+}
+@keyframes mascot-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-18deg); }
+}
+@keyframes mascot-pop {
+  from { transform: rotate(40deg) scale(0.5); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes mascot-float {
+  50% { transform: translateY(-4px); }
+}

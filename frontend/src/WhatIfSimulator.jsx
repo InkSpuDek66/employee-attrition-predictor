@@ -188,7 +188,7 @@ function DeltaBadge({ delta, className = '' }) {
   )
 }
 
-export default function WhatIfSimulator({ query, rate }) {
+export default function WhatIfSimulator({ query, rate, onRisk }) {
   const money = (usd) => baht(usd * rate)
   const [loaded, setLoaded] = useState(null) // { n, id, tenant, base } หรือ { n, error } ของพนักงานที่โหลดล่าสุด
   const [changes, setChanges] = useState({})
@@ -206,13 +206,18 @@ export default function WhatIfSimulator({ query, rate }) {
         setLoaded({ n: query.n, id: query.id, tenant: query.tenant, base: res.employee })
         setChanges({})
         setResult(res)
+        onRisk({ id: query.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
         setRetention('')
         setError('')
       },
-      (err) => err.name !== 'AbortError' && setLoaded({ n: query.n, error: friendly(err) }),
+      (err) => {
+        if (err.name === 'AbortError') return
+        setLoaded({ n: query.n, error: friendly(err) })
+        onRisk(null)
+      },
     )
     return () => ctrl.abort()
-  }, [query])
+  }, [query, onRisk])
 
   // ปรับค่าแล้วคำนวณใหม่อัตโนมัติ (หน่วง 300ms ระหว่างลากแถบเลื่อน)
   useEffect(() => {
@@ -222,7 +227,9 @@ export default function WhatIfSimulator({ query, rate }) {
       try {
         // backend รับเงินเดือนเป็นจำนวนเต็ม (ดอลลาร์) ในหน้าเก็บทศนิยมไว้ ช่องจะได้โชว์บาทตรงตามที่กรอก
         const sent = 'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
-        setResult(await post({ employee_id: loaded.id, changes: sent, ...(loaded.tenant && { tenant_id: loaded.tenant }) }, ctrl.signal))
+        const res = await post({ employee_id: loaded.id, changes: sent, ...(loaded.tenant && { tenant_id: loaded.tenant }) }, ctrl.signal)
+        setResult(res)
+        onRisk({ id: loaded.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
         setError('')
       } catch (err) {
         if (err.name !== 'AbortError') setError(friendly(err))
@@ -232,7 +239,7 @@ export default function WhatIfSimulator({ query, rate }) {
       clearTimeout(timer)
       ctrl.abort()
     }
-  }, [loaded, changes])
+  }, [loaded, changes, onRisk])
 
   // ต้นทุน Retain vs Replace ของพนักงานคนนี้ (คิดจากข้อมูลเดิม ไม่ใช่ค่าที่ปรับ)
   useEffect(() => {

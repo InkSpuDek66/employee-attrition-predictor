@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import Mascot from './Mascot'
 import ShapViewer from './ShapViewer'
 import { DEFAULT_RATE, inputClass } from './theme'
 import { Field, Icon, PrimaryButton } from './ui'
@@ -6,6 +7,7 @@ import WhatIfSimulator from './WhatIfSimulator'
 
 // หน้าหลัก: แต่ละคนเพิ่ม component ของตัวเอง (Intervention Tracker, Company Summary) เป็นแท็บใหม่ใน TABS
 // component ได้ prop query = { id, tenant, n } ของพนักงานที่เลือก (n เพิ่มทุกครั้งที่กดโหลด ให้โหลดซ้ำได้)
+// onRisk({ id, band, score, label }) = แจ้งระดับความเสี่ยงล่าสุดให้ตัวการ์ตูนใน sidebar
 // rate = บาทต่อ 1 ดอลลาร์ ใช้แปลงเงินใน dataset, dark = ธีมปัจจุบัน (กราฟ recharts ต้องรู้เพื่อเลือกสี)
 const TABS = [
   { id: 'shap', icon: 'search', label: 'SHAP Viewer', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
@@ -18,6 +20,9 @@ export default function App() {
   const [tenantId, setTenantId] = useState('')
   const [query, setQuery] = useState(null)
   const [rate, setRate] = useState(DEFAULT_RATE)
+  const [risk, setRisk] = useState({}) // ความเสี่ยงล่าสุดแยกตามแท็บ
+  // handler คงที่ต่อแท็บ ใส่ใน deps ของ effect ได้โดยไม่ทำให้โหลดซ้ำ
+  const onRisk = useMemo(() => Object.fromEntries(TABS.map((t) => [t.id, (r) => setRisk((m) => ({ ...m, [t.id]: r }))])), [])
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
   const current = TABS.find((t) => t.id === tab)
 
@@ -83,7 +88,11 @@ export default function App() {
           })}
         </nav>
 
-        <div className="mt-auto hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
+        <div className="hidden flex-1 items-center justify-center lg:flex">
+          <Mascot risk={risk[tab]} />
+        </div>
+
+        <div className="hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
           โมเดล <span className="font-medium text-fg">attrition-xgboost-P</span>
           <br />
           คะแนนใช้จัดลำดับความเสี่ยง ไม่ใช่คำตัดสิน
@@ -126,7 +135,7 @@ export default function App() {
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
         {TABS.map(({ id, Component }) => (
           <div key={id} hidden={tab !== id}>
-            <Component query={query} rate={rate} dark={dark} />
+            <Component query={query} rate={rate} dark={dark} onRisk={onRisk[id]} />
           </div>
         ))}
       </main>

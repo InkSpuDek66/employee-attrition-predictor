@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { featureLabel, featureValue } from './featureLabels'
-import { api, baht, CHART, friendly } from './theme'
+import { api, baht, bandOf, CHART, friendly } from './theme'
 import { Alert, Card, EmptyState, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 const TOP_N = [5, 10, 15, 20].map((n) => [n, `${n}`])
@@ -23,7 +23,7 @@ function Driver({ tone, title, row, count }) {
   )
 }
 
-export default function ShapViewer({ query, rate, dark }) {
+export default function ShapViewer({ query, rate, dark, onRisk }) {
   const C = CHART[dark ? 'dark' : 'light']
   const [topN, setTopN] = useState(10)
   // ผลล่าสุดผูกกับ key ของคำขอ ถ้า key ไม่ตรงกับที่ขออยู่ = กำลังโหลด (ข้อมูลเก่ายังโชว์แบบจางๆ)
@@ -36,11 +36,19 @@ export default function ShapViewer({ query, rate, dark }) {
     const params = new URLSearchParams({ top_n: topN })
     if (query.tenant) params.set('tenant_id', query.tenant)
     api(`/shap/${query.id}?${params}`, { signal: ctrl.signal }).then(
-      (data) => setRes({ key, data }),
-      (err) => err.name !== 'AbortError' && setRes({ key, error: friendly(err) }),
+      (data) => {
+        setRes({ key, data })
+        const score = data.calibrated_risk_score ?? data.risk_score
+        onRisk({ id: query.id, band: bandOf(score), score, label: 'คะแนน' })
+      },
+      (err) => {
+        if (err.name === 'AbortError') return
+        setRes({ key, error: friendly(err) })
+        onRisk(null)
+      },
     )
     return () => ctrl.abort()
-  }, [query, topN, key])
+  }, [query, topN, key, onRisk])
 
   const loading = query && res.key !== key
   const { data, error } = res
