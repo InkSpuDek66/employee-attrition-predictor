@@ -1,40 +1,76 @@
-:root {
-  --bg: #f6f7f9;
-  --card: #ffffff;
-  --text: #1c2330;
-  --muted: #667085;
-  --border: #d9dde3;
-  --ok: #1f8a4c;
-  --warn: #c77700;
-  --bad: #c62828;
-  font-family: system-ui, 'Sarabun', 'Noto Sans Thai', sans-serif;
-  color: var(--text);
-  background: var(--bg);
+@import 'tailwindcss';
+
+/* โหมดมืดสลับด้วย class .dark บน <html> (index.html ตั้งค่าแรกตามเครื่อง/ที่เคยเลือก) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens: แนว Vercel / Linear / shadcn — พื้นขาว เทา zinc ปุ่มดำ น้ำเงินสีเดียวไว้ชี้จุดที่โต้ตอบ/ถูกปรับ
+   Geist ใช้กับตัวอังกฤษ/ตัวเลข ตัวไทยตกไปที่ IBM Plex Sans Thai ใช้ผ่าน class เช่น bg-primary text-muted-fg */
+@theme {
+  --font-sans: 'Geist', 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, sans-serif;
+  --color-primary: #18181b;
+  --color-primary-hover: #3f3f46;
+  --color-primary-soft: #f4f4f5;
+  --color-on-primary: #ffffff;
+  --color-secondary: #d4d4d8;
+  --color-accent: #0070f3;
+  --color-accent-soft: #eff6ff;
+  --color-ink: #09090b;
+  --color-canvas: #fafafa;
+  --color-card: #ffffff;
+  --color-fg: #09090b;
+  --color-muted: #f4f4f5;
+  --color-muted-fg: #71717a;
+  --color-line: #e4e4e7;
+  --color-risk-low: #15803d;
+  --color-risk-low-soft: #f0fdf4;
+  --color-risk-mid: #a16207;
+  --color-risk-mid-soft: #fefce8;
+  --color-risk-high: #dc2626;
+  --color-risk-high-soft: #fef2f2;
+  --color-up: #ef4444;
+  --color-down: #0070f3;
 }
 
-body { margin: 0; }
-main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
-h1 { font-size: 1.6rem; }
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
-.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
-.controls label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
-input, select { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; background: #fff; }
-input[type='range'] { padding: 0; }
-.card + .card { margin-top: 24px; }
-.whatif-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px 20px; margin-bottom: 12px; }
-.whatif-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; padding: 6px 8px; border-radius: 6px; }
-.whatif-grid label.changed { background: #eef3ff; }
-button.secondary { background: #fff; color: #2f5bd3; border: 1px solid #2f5bd3; }
-button:disabled.secondary { cursor: default; }
-button { padding: 9px 18px; border: 0; border-radius: 6px; background: #2f5bd3; color: #fff; font: inherit; cursor: pointer; }
-button:disabled { opacity: 0.6; cursor: wait; }
-.summary { display: flex; flex-wrap: wrap; gap: 16px 48px; margin-top: 20px; }
-.level { font-size: 2rem; font-weight: 700; white-space: nowrap; }
-.score { font-size: 2rem; font-weight: 600; }
-.muted { color: var(--muted); }
-.small { font-size: 0.85rem; }
-.warning { background: #fff6e5; border-left: 4px solid var(--warn); padding: 8px 12px; }
-.error { color: var(--bad); }
-.legend { font-size: 0.9rem; }
-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
-th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+/* โหมดมืด: แนวเดียวกับ Vercel dark — พื้นเกือบดำ ขอบเทาเข้ม ปุ่มขาว ตัวอักษรสถานะใช้โทนสว่าง (contrast ≥ 4.5:1 บนพื้นมืด) */
+.dark {
+  color-scheme: dark;
+  --color-primary: #fafafa;
+  --color-primary-hover: #d4d4d8;
+  --color-primary-soft: #18181b;
+  --color-on-primary: #09090b;
+  --color-secondary: #3f3f46;
+  --color-accent: #3291ff;
+  --color-accent-soft: #0b1a33;
+  --color-ink: #18181b;
+  --color-canvas: #09090b;
+  --color-card: #111113;
+  --color-fg: #fafafa;
+  --color-muted: #1c1c1f;
+  --color-muted-fg: #a1a1aa;
+  --color-line: #27272a;
+  --color-risk-low: #4ade80;
+  --color-risk-low-soft: #0c2417;
+  --color-risk-mid: #facc15;
+  --color-risk-mid-soft: #2a2306;
+  --color-risk-high: #f87171;
+  --color-risk-high-soft: #2c1215;
+  --color-up: #f87171;
+  --color-down: #3291ff;
+}
+
+body {
+  @apply bg-canvas text-fg antialiased;
+}
+
+input[type='range'] {
+  @apply h-1.5 w-full cursor-pointer accent-fg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
