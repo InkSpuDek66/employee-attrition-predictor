@@ -10,7 +10,9 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+import calibration
 import model_store as ms
+from routers.predict import load_calibration
 import business_rules  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
 import company_summary as cs  # noqa: E402
 
@@ -45,8 +47,9 @@ class DepartmentSummary(Summary):
 
 class TopEmployee(BaseModel):
     employee_id: int
-    risk_score: float  # ยังไม่ปรับเทียบ (เหมือน /company-summary) ใช้จัดลำดับว่าควรดูใครก่อน
-    risk_band: str
+    risk_score: float
+    calibrated_risk_score: Optional[float] = None  # มีเมื่อส่ง tenant_id ที่ recalibrate แล้ว (ตรงกับ /shap, /whatif)
+    risk_band: str  # คิดจาก calibrated_risk_score ถ้ามี
     risk_band_th: str
     department: str
     job_role: str
@@ -87,22 +90,30 @@ def departments_summary(top_n: int = Query(3, ge=1, le=50)):
 
 
 @router.get("/company-summary/top-employees", response_model=TopEmployeesResponse)
-def top_employees(n: int = Query(10, ge=1, le=100), department: Optional[str] = None):
-    """พนักงานที่คะแนนความเสี่ยงสูงสุด n คน (ทั้งบริษัทหรือแผนกเดียว) ให้หน้าเว็บกดเลือกได้โดยไม่ต้องรู้รหัส"""
+def top_employees(
+    n: int = Query(10, ge=1, le=100),
+    department: Optional[str] = None,
+    tenant_id: Optional[str] = Query(None, pattern=calibration.TENANT_ID_PATTERN),
+):
+    """พนักงานที่คะแนนความเสี่ยงสูงสุด n คน (ทั้งบริษัทหรือแผนกเดียว) ให้หน้าเว็บกดเลือกได้โดยไม่ต้องรู้รหัส
+    ส่ง tenant_id แล้วจัดลำดับ/แบ่งระดับด้วยคะแนนที่ปรับเทียบ ให้ตรงกับหน้า SHAP/What-if"""
+    record = load_calibration(tenant_id)
     X = ms.employee_features()
     employees = ms.raw_employees().set_index("EmployeeNumber").loc[X.index]
-    rows = employees.assign(risk_score=ms.risk_scores(X))
+    raw = ms.risk_scores(X)
+    rows = employees.assign(risk_score=raw, shown=calibration.apply(record, raw) if record else raw)
     if department:
         if department not in set(rows["Department"]):
             raise HTTPException(404, f"ไม่พบแผนก '{department}' (มี: {sorted(rows['Department'].unique())})")
         rows = rows[rows["Department"] == department]
-    top = rows.nlargest(n, "risk_score")
+    top = rows.nlargest(n, "shown")
     return TopEmployeesResponse(
         employees=[
             TopEmployee(
                 employee_id=int(emp_id),
                 risk_score=float(r.risk_score),
-                risk_band=(band := business_rules.risk_band(r.risk_score)),
+                calibrated_risk_score=float(r.shown) if record else None,
+                risk_band=(band := business_rules.risk_band(r.shown)),
                 risk_band_th=business_rules.RISK_BANDS[band],
                 department=r.Department,
                 job_role=r.JobRole,

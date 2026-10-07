@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { featureLabel } from './featureLabels'
-import { api, baht, BAND, friendly, INCOME_MIN_BAHT, INCOME_RANGE_USD, inputClass } from './theme'
+import { api, baht, BAND, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges } from './theme'
 import { NotFoundState, SorryState } from './Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
@@ -63,11 +63,9 @@ function MoneyControl({ field, base, value, rate, onChange }) {
   const outside = value < lo || value > hi
   const step = 500
   // ช่องพิมพ์ใช้ขอบเขตเดียวกับแถบเลื่อน พิมพ์เกินจะถูกดันกลับมาที่ขอบ
-  const min = INCOME_MIN_BAHT
-  const max = Math.round((20000 * rate) / step) * step
+  const [min, max] = incomeBounds(rate)
   const commit = (input) => {
-    const n = Number(input.value.replace(/[^\d.]/g, ''))
-    const v = Number.isFinite(n) && n > 0 ? Math.min(max, Math.max(min, Math.round(n))) : shown
+    const v = parseIncomeBaht(input.value, rate, shown)
     input.value = v.toLocaleString() // ถ้าค่าไม่เปลี่ยน (เช่นพิมพ์ต่ำกว่าขั้นต่ำซ้ำ) ช่องจะไม่ remount ต้องเขียนกลับเอง
     if (v !== shown) onChange(v)
   }
@@ -91,6 +89,8 @@ function MoneyControl({ field, base, value, rate, onChange }) {
         <div className="relative sm:w-64">
           <input
             id="income-input"
+            name="monthly_income_thb"
+            autoComplete="off"
             key={shown}
             type="text"
             inputMode="numeric"
@@ -232,7 +232,7 @@ function describe(changes, rate) {
     .join(' · ')
 }
 
-export default function WhatIfSimulator({ query, rate, who, onRisk, onDone, onPick }) {
+export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDone, onPick }) {
   const money = (usd) => baht(usd * rate)
   const [loaded, setLoaded] = useState(null) // { n, id, tenant, base } หรือ { n, error } ของพนักงานที่โหลดล่าสุด
   const [changes, setChanges] = useState({})
@@ -278,7 +278,7 @@ export default function WhatIfSimulator({ query, rate, who, onRisk, onDone, onPi
     const timer = setTimeout(async () => {
       try {
         // backend รับเงินเดือนเป็นจำนวนเต็ม (ดอลลาร์) ในหน้าเก็บทศนิยมไว้ ช่องจะได้โชว์บาทตรงตามที่กรอก
-        const sent = 'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
+        const sent = toApiChanges(changes)
         const res = await post({ employee_id: loaded.id, changes: sent, ...(loaded.tenant && { tenant_id: loaded.tenant }) }, ctrl.signal)
         setResult(res)
         if (lastBand.current !== 'Low' && res.after.risk_band === 'Low') setCelebrate((c) => c + 1)
@@ -338,7 +338,7 @@ export default function WhatIfSimulator({ query, rate, who, onRisk, onDone, onPi
 
   if (!query) {
     return (
-      <EmptyPicker who={who} title="มาลองจำลองกันเถอะ" onPick={onPick}>
+      <EmptyPicker who={who} tenant={tenant} title="มาลองจำลองกันเถอะ" onPick={onPick}>
         ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” จากนั้นลองปรับเงินเดือน OT หรือความพึงพอใจ เดี๋ยวเราคำนวณความเสี่ยงใหม่ให้ทันที
       </EmptyPicker>
     )
@@ -472,7 +472,9 @@ export default function WhatIfSimulator({ query, rate, who, onRisk, onDone, onPi
             <div className="space-y-5">
               <RiskGauge size="md" title="ก่อนปรับ" score={scoreOf(result.before)} band={result.before.risk_band} bandTh={result.before.risk_band_th} />
               <RiskGauge size="md" title="หลังปรับ" score={afterScore} band={result.after.risk_band} bandTh={result.after.risk_band_th} />
-              <DeltaBadge delta={delta} />
+              <div aria-live="polite">
+                <DeltaBadge delta={delta} />
+              </div>
               <button
                 type="button"
                 onClick={saveScenario}

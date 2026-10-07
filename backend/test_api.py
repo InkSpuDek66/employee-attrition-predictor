@@ -25,6 +25,9 @@ def test_recalibrate_then_shap_uses_it(tmp_path, monkeypatch):
         assert r.json()["n_samples"] == 300
         s = client.get("/shap/1", params={"tenant_id": "test_co"}).json()
         assert 0 <= s["calibrated_risk_score"] <= 1 and s["warning"] is None
+        top = client.get("/company-summary/top-employees", params={"n": 5, "tenant_id": "test_co"}).json()["employees"]
+        cal = [r["calibrated_risk_score"] for r in top]
+        assert None not in cal and cal == sorted(cal, reverse=True)
 
 
 def test_recalibrate_rejects_bad_input():
@@ -53,3 +56,5 @@ def test_top_employees_sorted_and_filtered():
     sales = client.get("/company-summary/top-employees", params={"n": 3, "department": "Sales"}).json()["employees"]
     assert {r["department"] for r in sales} == {"Sales"}
     assert client.get("/company-summary/top-employees", params={"department": "Nope"}).status_code == 404
+    assert client.get("/company-summary/top-employees", params={"tenant_id": "../x"}).status_code == 422
+    assert all(r["calibrated_risk_score"] is None for r in rows)

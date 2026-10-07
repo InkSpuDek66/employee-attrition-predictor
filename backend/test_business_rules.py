@@ -48,3 +48,14 @@ def test_summarize_marks_non_actionable():
     age, overtime = out["top_factors"]
     assert age["feature"] == "Age" and not age["actionable"]
     assert overtime["actionable"] and "OT" in overtime["recommendation"]
+
+
+def test_frontend_risk_thresholds_match_backend():
+    """หน้าเว็บแบ่งระดับเองด้วย LOW/HIGH ใน frontend/src/theme.js ต้องตรงกับ business_rules (เคยหลุดเป็น 30/60)"""
+    import re
+    from pathlib import Path
+
+    js = (Path(__file__).resolve().parents[1] / "frontend" / "src" / "theme.js").read_text(encoding="utf-8")
+    low = float(re.search(r"export const LOW = ([\d.]+)", js).group(1))
+    high = float(re.search(r"export const HIGH = ([\d.]+)", js).group(1))
+    assert (low, high) == (br.MEDIUM_RISK, br.HIGH_RISK)

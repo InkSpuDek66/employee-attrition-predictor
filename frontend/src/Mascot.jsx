@@ -24,13 +24,15 @@ const CHARACTERS = {
 const LABELS = { chibiGirl: 'พี่ HR (หญิง)', chibiBoy: 'พี่ HR (ชาย)', cat: 'น้องแมว', dog: 'น้องหมา' }
 
 // กล่องคำพูด หางชี้ไปหาตัวการ์ตูน (tail = ทิศที่ตัวการ์ตูนอยู่)
-function Bubble({ tail = 'top', className = '', children }) {
+function Bubble({ tail = 'top', className = '', live = false, children }) {
   const pos = {
     top: '-top-[7px] left-1/2 -translate-x-1/2 border-l border-t',
     left: 'top-1/2 -left-[7px] -translate-y-1/2 border-l border-b',
+    // มือถือ: ตัวการ์ตูนอยู่ด้านบน / จอใหญ่: อยู่ด้านซ้าย
+    side: '-top-[7px] left-1/2 -translate-x-1/2 border-l border-t sm:top-1/2 sm:-left-[7px] sm:-translate-y-1/2 sm:translate-x-0 sm:border-t-0 sm:border-b',
   }[tail]
   return (
-    <div className={`relative rounded-2xl border border-line bg-card px-4 py-3 ${className}`}>
+    <div className={`relative rounded-2xl border border-line bg-card px-4 py-3 ${className}`} aria-live={live ? 'polite' : undefined}>
       <span className={`absolute size-3 rotate-45 border-line bg-card ${pos}`} />
       {children}
     </div>
@@ -45,7 +47,7 @@ export function AssistantHint({ who, title, children }) {
       <div className="w-36 shrink-0">
         <Character mood="none" />
       </div>
-      <Bubble tail={window.innerWidth < 640 ? 'top' : 'left'} className="max-w-md text-left">
+      <Bubble tail="side" className="max-w-md text-left">
         <div className="font-semibold text-fg">{title}</div>
         <p className="mt-1 text-sm text-muted-fg">{children}</p>
       </Bubble>
@@ -81,7 +83,7 @@ export function NotFoundState({ who, message }) {
       <div className="w-36 shrink-0">
         <Character mood="NotFound" />
       </div>
-      <Bubble tail={window.innerWidth < 640 ? 'top' : 'left'} className="max-w-md text-left">
+      <Bubble tail="side" className="max-w-md text-left">
         <div className="font-semibold text-fg">ไม่เจอพนักงานรหัสนี้นะ</div>
         <p className="mt-1 text-sm text-muted-fg">ลองเช็กรหัสพนักงานอีกที แล้วกด “โหลด” ใหม่</p>
         <p className="mt-2 text-xs text-muted-fg/80">{message}</p>
@@ -107,7 +109,7 @@ export default function Mascot({ risk, who, onChoose }) {
         {/* key: เปลี่ยนระดับ/ตัวการ์ตูนแล้วเล่นท่าเข้าใหม่ */}
         <Character key={`${who}-${mood}`} mood={mood} />
       </button>
-      <Bubble className="mt-2">
+      <Bubble className="mt-2" live>
         <div className="text-sm font-semibold text-fg">{m.text}</div>
         <div className="text-xs text-muted-fg">{m.sub}</div>
         {risk?.band && (

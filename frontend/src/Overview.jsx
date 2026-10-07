@@ -21,9 +21,49 @@ function useApi(paths) {
   return { loading: res.key !== key, data: res.data, error: res.error }
 }
 
-// รายชื่อพนักงานเสี่ยงสูงสุด กดแถวแล้วไปดูรายละเอียดคนนั้น
-export function TopRiskList({ n = 10, department = '', onPick, compact = false }) {
-  const q = new URLSearchParams({ n, ...(department && { department }) })
+const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
+const topQuery = (n, department, tenant) => new URLSearchParams({ n, ...(department && { department }), ...(tenant && { tenant_id: tenant }) })
+
+// ดาวน์โหลดรายชื่อเสี่ยงสูงเป็น CSV (เปิดใน Excel ภาษาไทยได้ เพราะใส่ BOM) ไว้ใช้ในประชุม/ส่งหัวหน้าแผนก
+async function downloadCsv(department, tenant) {
+  const { employees } = await api(`/company-summary/top-employees?${topQuery(100, department, tenant)}`)
+  const header = ['อันดับ', 'รหัสพนักงาน', 'คะแนนความเสี่ยง', 'ระดับ', 'แผนก', 'ตำแหน่ง', 'ระดับตำแหน่ง']
+  const rows = employees.map((e, i) => [i + 1, e.employee_id, Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, e.job_level])
+  const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(',')).join('\r\n')
+  const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }))
+  const a = Object.assign(document.createElement('a'), { href: url, download: `top-risk-${department || 'all'}.csv` })
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export function CsvButton({ department, tenant }) {
+  const [state, setState] = useState('') // '' | 'busy' | ข้อความ error
+  async function go() {
+    setState('busy')
+    try {
+      await downloadCsv(department, tenant)
+      setState('')
+    } catch (err) {
+      setState(friendly(err))
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={go}
+      disabled={state === 'busy'}
+      title={state && state !== 'busy' ? state : 'พนักงานเสี่ยงสูงสุด 100 คน'}
+      className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-wait disabled:opacity-60"
+    >
+      <Icon name="down" className="size-4" />
+      {state === 'busy' ? 'กำลังเตรียม…' : state ? 'ลองใหม่' : 'CSV'}
+    </button>
+  )
+}
+
+// รายชื่อพนักงานเสี่ยงสูงสุด กดแถวแล้วไปดูรายละเอียดคนนั้น (ส่ง tenant = ใช้คะแนนปรับเทียบ ตรงกับหน้า SHAP/What-if)
+export function TopRiskList({ n = 10, department = '', tenant = '', onPick, compact = false }) {
+  const q = topQuery(n, department, tenant)
   const { loading, data, error } = useApi([`/company-summary/top-employees?${q}`])
   if (error) return <p className="text-sm text-risk-high">{error}</p>
   if (loading) return <Skeleton className={compact ? 'h-40' : 'h-80'} />
@@ -47,7 +87,7 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
                   </span>
                 )}
               </span>
-              <span className={`text-lg font-semibold tabular-nums ${b.text}`}>{Math.round(e.risk_score * 100)}</span>
+              <span className={`text-lg font-semibold tabular-nums ${b.text}`}>{Math.round(shownScore(e) * 100)}</span>
               <span className={`hidden rounded-md px-2 py-0.5 text-xs font-medium ring-1 sm:inline ${b.pill}`}>{e.risk_band_th}</span>
               <Icon name="right" className="size-4 text-muted-fg" />
             </button>
@@ -59,14 +99,14 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
 }
 
 // หน้าว่าง: ผู้ช่วยบอกวิธีใช้ + รายชื่อเสี่ยงสูงสุดให้กดเลือกได้เลย ไม่ต้องรู้รหัส
-export function EmptyPicker({ who, title, children, onPick }) {
+export function EmptyPicker({ who, title, children, onPick, tenant }) {
   return (
     <div className="space-y-4">
       <AssistantHint who={who} title={title}>
         {children}
       </AssistantHint>
       <Card icon="user" title="หรือเลือกจากพนักงานเสี่ยงสูงสุด" subtitle="กดที่แถวเพื่อเริ่มได้เลย">
-        <TopRiskList n={5} onPick={onPick} />
+        <TopRiskList n={5} tenant={tenant} onPick={onPick} />
       </Card>
     </div>
   )
@@ -108,7 +148,7 @@ function BandBar({ bands, total }) {
   )
 }
 
-export default function Overview({ rate, onPick }) {
+export default function Overview({ rate, tenant, onPick }) {
   const [department, setDepartment] = useState('')
   const q = new URLSearchParams({ top_n: 5, ...(department && { department }) })
   const { loading, data, error } = useApi([`/company-summary?${q}`, '/company-summary/departments'])
@@ -147,8 +187,13 @@ export default function Overview({ rate, onPick }) {
       </Card>
 
       <div className="grid items-start gap-4 xl:grid-cols-2">
-        <Card icon="user" title="พนักงานเสี่ยงสูงสุด 10 คน" subtitle="กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง">
-          <TopRiskList department={department} onPick={onPick} />
+        <Card
+          icon="user"
+          title="พนักงานเสี่ยงสูงสุด 10 คน"
+          subtitle={tenant ? `กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง · คะแนนปรับเทียบของ ${tenant}` : 'กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง'}
+          action={<CsvButton department={department} tenant={tenant} />}
+        >
+          <TopRiskList department={department} tenant={tenant} onPick={onPick} />
         </Card>
 
         <Card icon="list" title="ปัจจัยที่ทำให้เสี่ยงมากที่สุด" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ของทั้งกลุ่ม">
@@ -197,7 +242,16 @@ export default function Overview({ rate, onPick }) {
                   onClick={() => setDepartment(d.department)}
                   className={`cursor-pointer transition-colors duration-150 hover:bg-canvas ${d.department === department ? 'bg-accent-soft/50' : ''}`}
                 >
-                  <td className="px-5 py-2.5 font-medium text-fg sm:px-6">{d.department}</td>
+                  <td className="px-5 py-2.5 font-medium text-fg sm:px-6">
+                    <button
+                      type="button"
+                      onClick={(e) => (e.stopPropagation(), setDepartment(d.department))}
+                      aria-pressed={d.department === department}
+                      className="cursor-pointer rounded text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    >
+                      {d.department}
+                    </button>
+                  </td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{d.n_employees.toLocaleString()}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums text-risk-high">{d.risk_bands.High}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{Math.round(d.mean_risk_score * 100)}</td>

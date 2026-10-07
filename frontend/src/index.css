@@ -74,6 +74,15 @@ body {
   @apply bg-canvas text-fg antialiased;
 }
 
+/* แตะปุ่มบนมือถือไม่ต้องรอ double-tap zoom */
+button,
+a,
+input,
+select,
+label {
+  touch-action: manipulation;
+}
+
 input[type='range'] {
   @apply h-1.5 w-full cursor-pointer accent-fg;
 }

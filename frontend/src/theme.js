@@ -16,6 +16,39 @@ export const DEFAULT_RATE = 35
 export const INCOME_RANGE_USD = [1009, 19999] // ช่วง MonthlyIncome ใน data/raw (นอกช่วงนี้โมเดลไม่เคยเห็น)
 export const INCOME_MIN_BAHT = 15000 // ขั้นต่ำของช่อง/แถบเงินเดือน (ต่ำกว่าช่วง dataset ได้ แต่จะมีคำเตือน)
 export const baht = (v) => `${Math.round(v).toLocaleString()} บาท`
+const INCOME_STEP = 500 // แถบเลื่อนเงินเดือนขยับทีละ 500 บาท
+
+// ขอบเขตช่อง/แถบเงินเดือนเป็นบาท: ขั้นต่ำคงที่ ขั้นสูงคิดจาก 20,000 ดอลลาร์ × อัตรา (ปัดเป็นขั้นแถบ)
+export const incomeBounds = (rate) => [INCOME_MIN_BAHT, Math.round((20000 * rate) / INCOME_STEP) * INCOME_STEP]
+
+// แปลงข้อความที่พิมพ์ในช่องเงินเดือน ("50,000") เป็นบาทในขอบเขต พิมพ์มั่ว/ว่าง = คืนค่าเดิม
+export function parseIncomeBaht(text, rate, fallback) {
+  const [min, max] = incomeBounds(rate)
+  const n = Number(String(text).replace(/[^\d.]/g, ''))
+  return Number.isFinite(n) && n > 0 ? Math.min(max, Math.max(min, Math.round(n))) : fallback
+}
+
+// changes ที่ส่งเข้า backend: เงินเดือนเก็บเป็นดอลลาร์ทศนิยม (ให้ช่องโชว์บาทตรงที่กรอก) แต่ API รับจำนวนเต็ม
+export const toApiChanges = (changes) =>
+  'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
+
+// อัตราแลกเปลี่ยนที่ผู้ใช้ตั้งไว้ จำในเบราว์เซอร์ รีเฟรชแล้วไม่กลับเป็นค่าตั้งต้น
+export function loadRate() {
+  try {
+    const v = Number(localStorage.getItem('thbPerUsd'))
+    return v > 0 ? v : DEFAULT_RATE
+  } catch {
+    return DEFAULT_RATE
+  }
+}
+
+export function saveRate(v) {
+  try {
+    localStorage.setItem('thbPerUsd', String(v))
+  } catch {
+    // storage ปิด: ใช้ได้แต่ไม่จำ
+  }
+}
 // ช่วงสีของแถบคะแนน ต่ำ / กลาง / สูง
 export const GAUGE = ['#22c55e', '#eab308', '#ef4444']
 

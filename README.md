@@ -11,7 +11,7 @@
 
 - ประเภทโปรเจกต์: งานนักศึกษาชั้นปีที่ 4 เทอม 1 สาขาวิทยาการคอมพิวเตอร์ (Proposal Defense) ของ School of Information Technology (SIT), Sripatum University (SPU)
 - ระยะเวลาพัฒนา: ทีมทำงานหลัก 9 สัปดาห์ (22 ก.ย. – 23 พ.ย. 2026) + buffer ก่อน Final Exam จริงของรายวิชา (course week 15–16, ~24 พ.ย.–7 ธ.ค. 2026) ดูรายละเอียดที่ [10. Project Timeline](#10-project-timeline-แผนดำเนินงาน)
-- สถานะปัจจุบัน: อยู่ใน wk2–3 (Modeling) ตอนนี้มี clean/feature pipeline, โมเดลสุดท้าย `attrition-xgboost-P` v1 บน MLflow (DagsHub), FastAPI (`/predict`, `/whatif`, `/shap`, `/financial-impact`, `/recalibrate`, `/company-summary`), React What-if Simulator + SHAP Viewer และ CI แล้ว ยังไม่มี database กลาง, Superset และ authentication
+- สถานะปัจจุบัน: อยู่ใน wk2–3 (Modeling) ตอนนี้มี clean/feature pipeline, โมเดลสุดท้าย `attrition-xgboost-P` v1 บน MLflow (DagsHub), FastAPI (`/predict`, `/whatif`, `/shap`, `/financial-impact`, `/recalibrate`, `/company-summary`, `/company-summary/top-employees`), React (ภาพรวมบริษัท, SHAP Viewer, What-if Simulator) และ CI แล้ว ยังไม่มี database กลาง, Superset และ authentication
 - ขอบเขต: ระบบต้นแบบ (Prototype) บน IBM HR Analytics Employee Attrition & Performance dataset (Kaggle) ซึ่งเป็นข้อมูลจำลอง (synthetic) ไม่ใช่ข้อมูลองค์กรจริง ผลลัพธ์และสมมติฐานทางธุรกิจในเอกสารนี้จึงมีข้อจำกัดตามนั้น
 
 ---
@@ -42,7 +42,7 @@ employee-attrition-predictor/
 │                          #   shap_explain, business_rules, company_summary, mlflow_setup
 │                          #   + หน้าทดสอบ Streamlit (test_app.py, app_pages/)
 ├── backend/               # FastAPI app (main.py, routers/, schemas.py) + pytest
-├── frontend/              # React + Vite: What-if Simulator, SHAP Viewer
+├── frontend/              # React + Vite + Tailwind: ภาพรวมบริษัท, SHAP Viewer, What-if Simulator
 ├── config/                # financial_impact.json (ค่าตามกฎหมายแรงงานไทย + สมมติฐานธุรกิจ)
 ├── docker/                # Dockerfile ของ MLflow + init script ของ PostgreSQL
 ├── docs/                  # dataset card, วิธีตั้งค่า MLflow, รายงานร่าง, รายงาน review, Model Lab
@@ -112,19 +112,33 @@ npm run dev
 streamlit run src/test_app.py --server.address localhost
 ```
 
+### หน้าเว็บ (React)
+
+| แท็บ | ใช้ทำอะไร | API ที่เรียก |
+| :--- | :--- | :--- |
+| ภาพรวมบริษัท | ตัวเลขสรุป สัดส่วนระดับความเสี่ยง ปัจจัยหลักพร้อมคำแนะนำ ตารางแยกแผนก รายชื่อเสี่ยงสูงสุด (กดเลือกได้ ดาวน์โหลด CSV ได้) | `/company-summary`, `/company-summary/departments`, `/company-summary/top-employees` |
+| SHAP Viewer | คะแนนของพนักงานหนึ่งคน สรุปเป็นประโยค กราฟ/ตารางปัจจัย | `/shap/{id}` |
+| What-if Simulator | ปรับเงื่อนไขแล้วเห็นคะแนนใหม่ทันที มาตรการสำเร็จรูป บันทึกผลไว้เทียบ ต้นทุน Retain vs Replace พร้อมสูตร | `/whatif`, `/financial-impact/{id}` |
+
+- เงินในหน้าเว็บเป็นบาท โดยถือว่า `MonthlyIncome` ใน IBM dataset เป็นดอลลาร์ (แนวเดียวกับหน้า Streamlit) อัตราตั้งต้น 35 บาท/ดอลลาร์ ปรับได้ที่ช่องด้านบนและจำไว้ในเบราว์เซอร์ ส่งเข้าโมเดลเป็นดอลลาร์จำนวนเต็ม
+- ลิงก์แชร์ได้: แท็บ/รหัสพนักงาน/รหัสบริษัทอยู่ใน URL เช่น `http://localhost:5173/?tab=whatif&id=5` ปุ่ม back ใช้ได้
+- เกณฑ์ระดับความเสี่ยง (40/70) อยู่ทั้ง `src/business_rules.py` และ `frontend/src/theme.js` มี test (`backend/test_business_rules.py`) เช็กว่าตรงกัน แก้ต้องแก้คู่กัน
+- มีโหมดมืด (ปุ่มมุมบนซ้าย) และผู้ช่วยตัวการ์ตูนใน sidebar ที่เปลี่ยนท่าตามระดับความเสี่ยง (เป็นของตกแต่ง ข้อมูลจริงอยู่ที่ตัวเลขในหน้า)
+- SHAP Viewer โหลดแยกไฟล์ (recharts ก้อนใหญ่) หน้าแรกจึงเปิดเร็ว
+
 ### Test และ CI
 
 ```bash
 ruff check .
 python -m pytest backend          # โหลดโมเดลจาก MLflow ตาม .env
-cd frontend && npm run lint && npm run build
+cd frontend && npm run lint && npm test && npm run build   # npm test = node:test ไม่ต้องลง library เพิ่ม
 ```
 
 ทุก Pull Request และทุก push เข้า `main` จะรัน CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) ดังนี้
 - lint ด้วย ruff และ oxlint
 - สแกนช่องโหว่ของแพ็กเกจด้วย pip-audit และ npm audit
 - เปิด PostgreSQL + MLflow ด้วย docker compose แล้วเทรนโมเดลใหม่ (fail ถ้า test AUC < 0.75)
-- รัน backend test และ build frontend
+- รัน backend test, frontend test และ build frontend
 
 > ยังไม่มี container ของ backend/frontend และ migration ของ database แอป (แผน Backend phase wk6–7)
 
@@ -356,6 +370,7 @@ Deploy-time (per-tenant):
 | ทำแล้ว | POST | `/recalibrate` | อัปโหลดข้อมูลลาออกจริงของบริษัท (tenant) เพื่อปรับคะแนนให้เข้ากับพฤติกรรมจริง (ดู [6.5](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง)) |
 | ทำแล้ว | GET | `/company-summary` | สรุปปัจจัยเสี่ยงเด่นทั้งบริษัท/แผนก พร้อมคำแนะนำเชิงนโยบาย (ดู [6.6](#66-company-wide-aggregate-summary)) |
 | ทำแล้ว | GET | `/company-summary/departments` | สรุปทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม |
+| ทำแล้ว | GET | `/company-summary/top-employees` | พนักงานเสี่ยงสูงสุด n คน (กรองแผนกได้, ส่ง `tenant_id` = ใช้คะแนนปรับเทียบ) ให้หน้าเว็บกดเลือกโดยไม่ต้องรู้รหัส |
 | แผน | GET | `/health` | Health check |
 | แผน | POST | `/interventions` | บันทึกมาตรการที่ HR เลือกทำกับพนักงาน |
 | แผน | GET | `/interventions/{employee_id}` | ดูประวัติมาตรการของพนักงานคนนั้น |
@@ -371,7 +386,7 @@ Deploy-time (per-tenant):
 | ส่วนประกอบ | เทคโนโลยี | หน้าที่ | สถานะ |
 | :--- | :--- | :--- | :--- |
 | BI / Dashboard | Apache Superset | Dashboard สรุปเชิงบริหาร ต่อ PostgreSQL โดยตรง | แผน (wk8–9) |
-| Frontend | React 19 + Vite + Recharts | What-if Simulator, SHAP viewer, Intervention Tracker | What-if + SHAP viewer ใช้ได้แล้ว |
+| Frontend | React 19 + Vite + Tailwind CSS 4 + Recharts | ภาพรวมบริษัท, What-if Simulator, SHAP viewer, Intervention Tracker | ภาพรวมบริษัท + What-if + SHAP viewer ใช้ได้แล้ว (ดู [หน้าเว็บ](#หน้าเว็บ-react)) |
 | หน้าทดสอบ | Streamlit | หน้าทดสอบภายในทีม (`src/test_app.py`) ไม่ใช่ตัวผลิตภัณฑ์ | ใช้ได้แล้ว |
 | Backend | FastAPI + Pydantic | Serve model, API endpoints, business logic | ใช้ได้แล้ว (ดู [7](#7-api-design-fastapi)) |
 | ML / Data | pandas, Scikit-learn, XGBoost, SHAP, Optuna | Feature engineering, เทรนและจูนโมเดล, อธิบายผลลัพธ์ | ใช้ได้แล้ว |
