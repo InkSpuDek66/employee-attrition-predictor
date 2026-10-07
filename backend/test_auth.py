@@ -44,6 +44,12 @@ def test_hr_cannot_recalibrate_and_nobody_crosses_tenants():
     assert client.post("/whatif", headers=admin, json={"employee_id": 1, "tenant_id": "other_co"}).status_code == 403
     assert client.get("/financial-impact/1", headers=hr, params={"tenant_id": "other_co"}).status_code == 403
     assert client.post("/whatif", headers=hr, json={"employee_id": 1, "tenant_id": "ibm_demo"}).status_code == 200
+    # ไม่ส่ง Content-Type / ส่งเป็น text/plain: FastAPI ยัง parse JSON ได้ ต้องถูกตรวจเหมือนกัน
+    raw = b'{"employee_id": 1, "tenant_id": "other_co"}'
+    for ctype in (None, "text/plain", "application/merge-patch+json"):
+        h = hr | ({"Content-Type": ctype} if ctype else {})
+        assert client.post("/whatif", headers=h, content=raw).status_code == 403, ctype
+    assert client.get("/financial-impact/1?tenant_id=ibm_demo&tenant_id=other_co", headers=hr).status_code == 403
 
 
 def test_login_rate_limit_and_body_cap():

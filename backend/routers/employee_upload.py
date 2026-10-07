@@ -229,8 +229,8 @@ async def import_employees(
         with db.connect() as conn:
             existing = {r[0] for r in conn.execute("SELECT employee_id FROM employees WHERE tenant_id = %s", (user["tenant_id"],))}
             db.upsert_employees(conn, rows, user["tenant_id"], "upload")
-    except db.IntegrityError:  # CHECK ของตารางเข้มกว่า schemas.py บางข้อ (เช่น อายุ 15–80) ทั้งไฟล์ไม่ถูกบันทึก
-        log.exception("employees/import: ฐานข้อมูลไม่รับ")
+    except db.IntegrityError as e:  # CHECK ของตารางเข้มกว่า schemas.py บางข้อ (เช่น อายุ 15–80) ทั้งไฟล์ไม่ถูกบันทึก
+        log.warning("employees/import: ฐานข้อมูลไม่รับ constraint=%s", e)  # ชื่อ constraint เท่านั้น ไม่มีข้อมูลพนักงาน
         raise HTTPException(422, "มีค่าบางแถวเกินช่วงที่ฐานข้อมูลรับ (เช่น อายุ 15–80 ปี) ยังไม่ได้บันทึกอะไร ตรวจไฟล์แล้วลองใหม่")
     ms.raw_employees.cache_clear()  # ให้ทุกหน้าเห็นพนักงานที่เพิ่ง import
     ms.employee_features.cache_clear()

@@ -23,7 +23,8 @@ def url():
 
 
 class IntegrityError(Exception):
-    """ข้อมูลผิด CHECK/FK ของตาราง (ห่อ psycopg.IntegrityError ให้คนเรียกไม่ต้อง import psycopg)"""
+    """ข้อมูลผิด CHECK/FK ของตาราง (ห่อ psycopg.IntegrityError ให้คนเรียกไม่ต้อง import psycopg)
+    ข้อความมีแค่ชื่อ constraint ไม่มีค่าในแถว (error ของ Postgres แนบทั้งแถวมา = ข้อมูลส่วนบุคคล ห้ามลง log)"""
 
 
 def connect():
@@ -64,7 +65,7 @@ def upsert_employees(conn, df: pd.DataFrame, tenant_id: str, source: str) -> int
         with conn.cursor() as cur:
             cur.executemany(sql, rows)
     except psycopg.IntegrityError as e:
-        raise IntegrityError(str(e)) from e
+        raise IntegrityError(e.diag.constraint_name or type(e).__name__) from None
     return len(rows)
 
 

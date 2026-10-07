@@ -78,3 +78,14 @@ def test_import_needs_db(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "")
     r = client.post("/employees/import", files={"file": ("e.csv", b"x", "text/csv")})
     assert r.status_code == 503
+
+
+def test_import_db_check_rejects_whole_file_without_logging_row(real_db, caplog):
+    template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
+    template.loc[0, "รหัสพนักงาน"] = NEW_ID
+    template.loc[0, "อายุ"] = 90  # schemas.py รับได้ถึง 100 แต่ตารางรับ 15–80
+    buf = io.BytesIO()
+    template.to_excel(buf, index=False)
+    r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
+    assert r.status_code == 422 and ms.employee_record(NEW_ID) is None
+    assert "employees_age_check" in caplog.text and str(NEW_ID) not in caplog.text  # log แค่ชื่อ constraint

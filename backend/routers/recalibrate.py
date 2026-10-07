@@ -51,9 +51,9 @@ def recalibrate(req: RecalibrateRequest, user: dict = Depends(auth.require_admin
 
     try:
         scores = ms.risk_scores(ms.to_features(raw[sorted(ms.input_columns())]))
-    except (KeyError, ValueError, TypeError):
-        # SEC-08: รายละเอียด exception ลง log ฝั่ง server ไม่ส่งให้ผู้ใช้
-        log.exception("recalibrate: แปลงข้อมูลไม่ได้")
+    except (KeyError, ValueError, TypeError) as e:
+        # SEC-08: ไม่ส่งรายละเอียดให้ผู้ใช้ และ log แค่ชนิด error (ข้อความ exception อาจมีค่าข้อมูลพนักงาน)
+        log.warning("recalibrate: แปลงข้อมูลไม่ได้ (%s)", type(e).__name__)
         raise HTTPException(422, "ข้อมูลไม่ตรงรูปแบบ ตรวจว่าแต่ละคอลัมน์เป็นตัวเลข/ตัวเลือกเดียวกับไฟล์ตัวอย่าง")
 
     params = calibration.fit(scores, labels, req.method)

@@ -83,13 +83,15 @@ def require_admin(user: dict = Depends(current_user)) -> dict:
 async def same_tenant(request: Request, user: dict = Depends(current_user)) -> dict:
     """ใส่ทุก router: ถ้าส่ง tenant_id (query หรือ JSON body) ต้องเป็นบริษัทของผู้ใช้เอง
     ค่าที่ผิดรูปแบบปล่อยให้ validation ของ endpoint ตอบ 422 ตามเดิม"""
-    sent = [request.query_params.get("tenant_id")]
-    if request.headers.get("content-type", "").startswith("application/json"):
+    sent = request.query_params.getlist("tenant_id")  # ส่งซ้ำหลายตัว (?tenant_id=a&tenant_id=b) ต้องผ่านทุกตัว
+    # อ่าน body ทุกครั้งที่ไม่ใช่ form/ไฟล์ ไม่ดู Content-Type เพราะ FastAPI parse JSON ได้แม้ไม่ส่ง header นี้
+    if not request.headers.get("content-type", "").lower().startswith(("multipart/", "application/x-www-form-urlencoded")):
         try:
-            body = await request.json()  # Starlette cache body ไว้ endpoint อ่านซ้ำได้
-            sent.append(body.get("tenant_id") if isinstance(body, dict) else None)
+            body = json.loads(await request.body() or b"null")  # Starlette cache body ไว้ endpoint อ่านซ้ำได้
         except ValueError:
-            pass
+            body = None  # body ไม่ใช่ JSON: endpoint ตอบ 422 เอง
+        if isinstance(body, dict):
+            sent.append(body.get("tenant_id"))
     for t in sent:
         if isinstance(t, str) and re.match(calibration.TENANT_ID_PATTERN, t) and t != user["tenant_id"]:
             raise HTTPException(403, "เข้าถึงข้อมูลของบริษัทอื่นไม่ได้")
