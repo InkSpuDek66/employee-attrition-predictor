@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { featureLabel } from './featureLabels'
 import { api, baht, BAND, friendly, INCOME_MIN_BAHT, INCOME_RANGE_USD, inputClass } from './theme'
-import { Alert, Card, EmptyState, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
+import { AssistantHint, SorryState } from './Mascot'
+import { Alert, Card, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 // ฟีเจอร์ที่ HR ปรับได้จริงผ่านมาตรการ (ไม่ใส่ข้อมูลส่วนตัว เช่น อายุ เพศ สถานภาพ)
 const SAT = [[1, 'ต่ำ'], [2, 'กลาง'], [3, 'สูง'], [4, 'สูงมาก']]
@@ -188,7 +189,27 @@ function DeltaBadge({ delta, className = '' }) {
   )
 }
 
-export default function WhatIfSimulator({ query, rate, onRisk }) {
+// ประกายฉลองรอบกล่องผลจำลอง เล่นครั้งเดียวต่อ key (ตอนความเสี่ยงหลังปรับตกลงมาเป็นระดับต่ำ)
+const SPARKS = [[-70, -50], [70, -55], [-90, 10], [90, 5], [-50, 60], [55, 65], [0, -80], [0, 80]]
+function Celebrate() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center" aria-hidden="true">
+      {SPARKS.map(([dx, dy], i) => (
+        <svg
+          key={i}
+          viewBox="-7 -7 14 14"
+          className={`celebrate-spark absolute size-5 ${['fill-risk-low', 'fill-risk-mid', 'fill-accent'][i % 3]}`}
+          style={{ '--dx': `${dx}px`, '--dy': `${dy}px`, animationDelay: `${(i % 4) * 60}ms` }}
+        >
+          <path d="M0 -7 Q1 -1 7 0 Q1 1 0 7 Q-1 1 -7 0 Q-1 -1 0 -7Z" />
+        </svg>
+      ))}
+      <div className="celebrate-text rounded-full bg-risk-low px-3 py-1 text-sm font-semibold text-white">เยี่ยมเลย! ลดเหลือระดับต่ำ</div>
+    </div>
+  )
+}
+
+export default function WhatIfSimulator({ query, rate, who, onRisk }) {
   const money = (usd) => baht(usd * rate)
   const [loaded, setLoaded] = useState(null) // { n, id, tenant, base } หรือ { n, error } ของพนักงานที่โหลดล่าสุด
   const [changes, setChanges] = useState({})
@@ -196,6 +217,8 @@ export default function WhatIfSimulator({ query, rate, onRisk }) {
   const [impact, setImpact] = useState(null)
   const [retention, setRetention] = useState('')
   const [error, setError] = useState('')
+  const [celebrate, setCelebrate] = useState(0) // เพิ่มทุกครั้งที่ความเสี่ยงหลังปรับเพิ่งตกเป็นระดับต่ำ
+  const lastBand = useRef(null)
 
   // โหลดพนักงานใหม่เมื่อเลือกจากช่องด้านบน
   useEffect(() => {
@@ -206,6 +229,7 @@ export default function WhatIfSimulator({ query, rate, onRisk }) {
         setLoaded({ n: query.n, id: query.id, tenant: query.tenant, base: res.employee })
         setChanges({})
         setResult(res)
+        lastBand.current = res.after.risk_band
         onRisk({ id: query.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
         setRetention('')
         setError('')
@@ -213,7 +237,7 @@ export default function WhatIfSimulator({ query, rate, onRisk }) {
       (err) => {
         if (err.name === 'AbortError') return
         setLoaded({ n: query.n, error: friendly(err) })
-        onRisk(null)
+        onRisk({ error: true })
       },
     )
     return () => ctrl.abort()
@@ -229,10 +253,14 @@ export default function WhatIfSimulator({ query, rate, onRisk }) {
         const sent = 'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
         const res = await post({ employee_id: loaded.id, changes: sent, ...(loaded.tenant && { tenant_id: loaded.tenant }) }, ctrl.signal)
         setResult(res)
+        if (lastBand.current !== 'Low' && res.after.risk_band === 'Low') setCelebrate((c) => c + 1)
+        lastBand.current = res.after.risk_band
         onRisk({ id: loaded.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
         setError('')
       } catch (err) {
-        if (err.name !== 'AbortError') setError(friendly(err))
+        if (err.name === 'AbortError') return
+        setError(friendly(err))
+        onRisk({ error: true })
       }
     }, 300)
     return () => {
@@ -265,12 +293,12 @@ export default function WhatIfSimulator({ query, rate, onRisk }) {
 
   if (!query) {
     return (
-      <EmptyState icon="sliders" title="เลือกพนักงานเพื่อเริ่มจำลอง">
-        ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” จากนั้นลองปรับเงินเดือน OT หรือความพึงพอใจ ระบบจะคำนวณความเสี่ยงใหม่ทันที
-      </EmptyState>
+      <AssistantHint who={who} title="มาลองจำลองกันเถอะ">
+        ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” จากนั้นลองปรับเงินเดือน OT หรือความพึงพอใจ เดี๋ยวเราคำนวณความเสี่ยงใหม่ให้ทันที
+      </AssistantHint>
     )
   }
-  if (loaded?.n === query.n && loaded.error) return <Alert>{loaded.error}</Alert>
+  if (loaded?.n === query.n && loaded.error) return <SorryState message={loaded.error} />
   if (loaded?.n !== query.n || !result) {
     return (
       <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
@@ -355,7 +383,8 @@ export default function WhatIfSimulator({ query, rate, onRisk }) {
           )}
         </div>
 
-        <aside className="lg:sticky lg:top-6">
+        <aside className="relative lg:sticky lg:top-6">
+          {celebrate > 0 && <Celebrate key={celebrate} />}
           <Card>
             <div className="mb-5 flex items-center justify-between">
               <div>

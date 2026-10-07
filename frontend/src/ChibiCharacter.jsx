@@ -14,7 +14,8 @@ const FOLDER = '#f2c14e'
 // สีสูทเป็น class เต็ม (Tailwind หาเจอ) ค่าสีอยู่ที่ token ใน index.css
 const SUIT_BOY = { fill: 'fill-suit', stroke: 'stroke-suit', line: 'stroke-suit-line', button: 'fill-suit-line' }
 const SUIT_GIRL = { fill: 'fill-blazer', stroke: 'stroke-blazer', line: 'stroke-blazer-line', button: 'fill-blazer-line' }
-const TIE = { none: 'fill-accent', Low: 'fill-risk-low', Medium: 'fill-risk-mid', High: 'fill-risk-high' }
+const TIE = {
+  Sorry: 'fill-muted-fg', none: 'fill-accent', Low: 'fill-risk-low', Medium: 'fill-risk-mid', High: 'fill-risk-high' }
 const o = { stroke: LINE, strokeWidth: 2, strokeLinejoin: 'round', strokeLinecap: 'round' }
 
 function Arm({ d, suit }) {
@@ -75,7 +76,13 @@ function SharpEye({ cx, cy, look = 0 }) {
 
 function Face({ mood, girl }) {
   const eyes =
-    mood === 'Low' ? (
+    mood === 'Sorry' ? (
+      // หลับตาลงแบบสำนึกผิด
+      <>
+        <path d="M46 81 Q53 87 60 81" fill="none" {...o} strokeWidth="2.8" />
+        <path d="M80 81 Q87 87 94 81" fill="none" {...o} strokeWidth="2.8" />
+      </>
+    ) : mood === 'Low' ? (
       // ตายิ้ม ^ ^
       <>
         <path d={girl ? 'M45 82 Q53 72 61 82' : 'M45 83 Q53 76 61 83'} fill="none" {...o} strokeWidth="3" />
@@ -117,6 +124,7 @@ function Face({ mood, girl }) {
     ),
     Medium: <path d="M65 98 q2.5 -2 5 0 t5 0" fill="none" {...o} strokeWidth="1.8" />,
     High: <path d="M62 99 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" {...o} strokeWidth="1.8" />,
+    Sorry: <path d="M65 98 Q70 95 75 98" fill="none" {...o} strokeWidth="1.8" />,
   }[mood]
   const brows = girl
     ? {
@@ -125,6 +133,7 @@ function Face({ mood, girl }) {
         Low: ['M47 64 Q52 60.5 58 63', 'M82 63 Q88 60.5 93 64'],
         Medium: ['M47 63 Q52 61 57 63', 'M83 65 Q88 64 93 66'],
         High: ['M47 66 Q52 64 57 61', 'M83 61 Q88 64 93 66'],
+        Sorry: ['M47 65 Q52 64 57 61.5', 'M83 61.5 Q88 64 93 65'],
       }[mood]
     : {
         // ผู้ชาย: คิ้วชัดกว่าผู้หญิง แต่บางและโค้งนิดๆ (หนาตรงเกินไปทำให้ดูแก่)
@@ -132,6 +141,7 @@ function Face({ mood, girl }) {
         Low: ['M45 67 Q52 63 60 65.5', 'M80 65.5 Q88 63 95 67'],
         Medium: ['M45 68 Q52 65.5 60 67', 'M80 65 Q88 62.5 95 65'],
         High: ['M46 70 Q53 68 60 64', 'M80 64 Q87 68 94 70'],
+        Sorry: ['M46 69 Q53 68 60 65', 'M80 65 Q87 68 94 69'],
       }[mood]
   return (
     <>
@@ -154,6 +164,18 @@ function Face({ mood, girl }) {
 }
 
 function Pose({ mood, suit }) {
+  if (mood === 'Sorry') {
+    // มือประสานไว้หน้าตัว + เหงื่อหยด (หัวก้มด้วย mascot-bow)
+    return (
+      <>
+        <Arm suit={suit} d="M52 118 Q48 130 63 136" />
+        <Arm suit={suit} d="M88 118 Q92 130 77 136" />
+        <Hand cx={66} cy={136} />
+        <Hand cx={74} cy={136} />
+        <path d="M101 56 Q104 61 102 64 Q99 65 98 62 Q98 59 101 56Z" fill="#7cc4f5" stroke="#3b82c4" strokeWidth="1.1" className="mascot-drip" />
+      </>
+    )
+  }
   if (mood === 'High') {
     // สองมือกุมหัว + เส้นยุ่งเหนือหัว
     return (
@@ -290,6 +312,8 @@ export default function ChibiCharacter({ mood, girl = false, mini = false }) {
         <circle cx="70" cy="141" r="1.6" className={suit.button} />
         <rect x="79" y="128" width="9" height="6" rx="1.5" className="fill-card" {...o} strokeWidth="1.1" />
         <rect x="79" y="128" width="9" height="2" rx="0.8" className="fill-accent" />
+        {/* หัว + ผม + หน้า: ท่าขอโทษจะก้มลง (mascot-bow) */}
+        <g className={mood === 'Sorry' ? 'mascot-bow' : undefined}>
         {girl ? (
           <>
             <ellipse cx="70" cy="76" rx="42" ry="37" fill={SKIN} {...o} />
@@ -325,6 +349,7 @@ export default function ChibiCharacter({ mood, girl = false, mini = false }) {
           </>
         )}
         <Face mood={mood} girl={girl} />
+        </g>
         {/* แขน/มือวาดทับหัว (หัวโต มือจะได้ไม่หายไปหลังหัว) */}
         {!mini && <Pose mood={mood} suit={suit} />}
       </g>

@@ -6,7 +6,7 @@ const FUR = { cat: '#f4b06a', dog: '#d29a5e' }
 const FUR_DARK = { cat: '#d9853a', dog: '#b07a44' }
 const CREAM = '#fff3e3'
 const PINK = '#f7a1b0'
-const COLLAR = { none: 'stroke-accent', Low: 'stroke-risk-low', Medium: 'stroke-risk-mid', High: 'stroke-risk-high' }
+const COLLAR = { Sorry: 'stroke-muted-fg', none: 'stroke-accent', Low: 'stroke-risk-low', Medium: 'stroke-risk-mid', High: 'stroke-risk-high' }
 const o = { stroke: LINE, strokeWidth: 2, strokeLinejoin: 'round', strokeLinecap: 'round' }
 
 // ขาหน้า: เส้นขอบหนา + ไส้สีขน + อุ้งเท้ากลมมีรอยนิ้ว
@@ -56,7 +56,12 @@ function Ears({ kind }) {
 
 function Face({ mood, kind }) {
   const eyes =
-    mood === 'Low' ? (
+    mood === 'Sorry' ? (
+      <>
+        <path d="M46 81 Q53 87 60 81" fill="none" {...o} strokeWidth="2.8" />
+        <path d="M80 81 Q87 87 94 81" fill="none" {...o} strokeWidth="2.8" />
+      </>
+    ) : mood === 'Low' ? (
       <>
         <path d="M46 82 Q53 73 60 82" fill="none" {...o} strokeWidth="3" />
         <path d="M80 82 Q87 73 94 82" fill="none" {...o} strokeWidth="3" />
@@ -85,6 +90,7 @@ function Face({ mood, kind }) {
     Low: null,
     Medium: 'M64 98 q3 -2 6 0 t6 0',
     High: 'M62 99 q2 -3 4 0 t4 0 t4 0 t4 0',
+    Sorry: 'M65 99 Q70 96 75 99',
   }[mood]
 
   return (
@@ -129,6 +135,16 @@ function Face({ mood, kind }) {
 }
 
 function Pose({ mood, kind }) {
+  if (mood === 'Sorry') {
+    // อุ้งเท้าประสานไว้หน้าอก + เหงื่อหยด (หัวก้มด้วย mascot-bow)
+    return (
+      <>
+        <Paw kind={kind} d="M54 120 Q54 130 64 132" end={[65, 132]} />
+        <Paw kind={kind} d="M86 120 Q86 130 76 132" end={[75, 132]} />
+        <path d="M101 56 Q104 61 102 64 Q99 65 98 62 Q98 59 101 56Z" fill="#7cc4f5" stroke="#3b82c4" strokeWidth="1.1" className="mascot-drip" />
+      </>
+    )
+  }
   if (mood === 'High') {
     return (
       <>
@@ -215,7 +231,8 @@ export default function PetCharacter({ mood, kind = 'cat', mini = false }) {
             <path d={`M${x - 3} 149 v3 M${x + 3} 149 v3`} stroke={LINE} strokeWidth="1.2" strokeLinecap="round" />
           </g>
         ))}
-        {/* หัว + หู */}
+        {/* หัว + หู + ปลอกคอ + หน้า: ท่าขอโทษจะก้มลง (mascot-bow) */}
+        <g className={mood === 'Sorry' ? 'mascot-bow' : undefined}>
         <Ears kind={kind} />
         <ellipse cx="70" cy="80" rx="41" ry="35" fill={FUR[kind]} {...o} />
         {/* ปลอกคอสีตามระดับความเสี่ยง + กระดิ่ง */}
@@ -223,6 +240,7 @@ export default function PetCharacter({ mood, kind = 'cat', mini = false }) {
         <circle cx="70" cy="119" r="4.2" fill="#f2c14e" {...o} strokeWidth="1.4" />
         <path d="M67 119.5 H73" stroke={LINE} strokeWidth="1" />
         <Face mood={mood} kind={kind} />
+        </g>
         {/* ขาหน้าวาดทับหัว (หัวโต อุ้งเท้าจะได้ไม่หายไปหลังหัว) */}
         {!mini && <Pose mood={mood} kind={kind} />}
       </g>

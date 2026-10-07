@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import Mascot from './Mascot'
 import ShapViewer from './ShapViewer'
-import { DEFAULT_RATE, inputClass } from './theme'
+import { DEFAULT_RATE, inputClass, loadMascot, saveMascot } from './theme'
 import { Field, Icon, PrimaryButton } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
@@ -21,6 +21,7 @@ export default function App() {
   const [query, setQuery] = useState(null)
   const [rate, setRate] = useState(DEFAULT_RATE)
   const [risk, setRisk] = useState({}) // ความเสี่ยงล่าสุดแยกตามแท็บ
+  const [who, setWho] = useState(loadMascot) // ผู้ช่วยที่เลือก ใช้ทั้ง sidebar และหน้าว่าง
   // handler คงที่ต่อแท็บ ใส่ใน deps ของ effect ได้โดยไม่ทำให้โหลดซ้ำ
   const onRisk = useMemo(() => Object.fromEntries(TABS.map((t) => [t.id, (r) => setRisk((m) => ({ ...m, [t.id]: r }))])), [])
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
@@ -89,7 +90,7 @@ export default function App() {
         </nav>
 
         <div className="hidden flex-1 items-center justify-center lg:flex">
-          <Mascot risk={risk[tab]} />
+          <Mascot risk={risk[tab]} who={who} onChoose={(v) => (setWho(v), saveMascot(v))} />
         </div>
 
         <div className="hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
@@ -135,7 +136,7 @@ export default function App() {
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
         {TABS.map(({ id, Component }) => (
           <div key={id} hidden={tab !== id}>
-            <Component query={query} rate={rate} dark={dark} onRisk={onRisk[id]} />
+            <Component query={query} rate={rate} dark={dark} who={who} onRisk={onRisk[id]} />
           </div>
         ))}
       </main>

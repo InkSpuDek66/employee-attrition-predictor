@@ -104,18 +104,6 @@ export function Alert({ tone = 'error', children }) {
   )
 }
 
-export function EmptyState({ icon, title, children }) {
-  return (
-    <div className="rounded-xl border border-dashed border-secondary/40 bg-card px-6 py-16 text-center">
-      <div className="mx-auto grid size-14 place-items-center rounded-xl bg-primary/10 text-primary">
-        <Icon name={icon} className="size-7" />
-      </div>
-      <h3 className="mt-4 font-semibold text-fg">{title}</h3>
-      <p className="mx-auto mt-1 max-w-md text-sm text-muted-fg">{children}</p>
-    </div>
-  )
-}
-
 // โครงสีเทากะพริบระหว่างโหลด กันหน้ากระโดด (CLS)
 export function Skeleton({ className = '' }) {
   return <div className={`animate-pulse rounded-xl bg-muted ${className}`} />

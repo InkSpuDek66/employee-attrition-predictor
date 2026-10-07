@@ -30,6 +30,26 @@ export const BAND = {
 
 export const bandOf = (score) => (score < LOW ? 'Low' : score < HIGH ? 'Medium' : 'High')
 
+// ผู้ช่วยในหน้า (Mascot.jsx) ลำดับนี้ใช้ทั้งปุ่มเลือกและหน้าขอโทษ ตัวที่เลือกจำใน localStorage
+export const MASCOTS = ['chibiGirl', 'chibiBoy', 'cat', 'dog']
+
+export function loadMascot() {
+  try {
+    const v = localStorage.getItem('mascot')
+    return MASCOTS.includes(v) ? v : MASCOTS[0]
+  } catch {
+    return MASCOTS[0]
+  }
+}
+
+export function saveMascot(v) {
+  try {
+    localStorage.setItem('mascot', v)
+  } catch {
+    // storage ปิด: เลือกได้แต่ไม่จำ
+  }
+}
+
 export function friendly(err) {
   return err.message === 'Failed to fetch' ? 'ติดต่อ backend ไม่ได้ — เปิด uvicorn ที่ port 8000 หรือยัง' : err.message
 }

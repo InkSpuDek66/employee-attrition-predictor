@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { featureLabel, featureValue } from './featureLabels'
 import { api, baht, bandOf, CHART, friendly } from './theme'
-import { Alert, Card, EmptyState, Icon, RiskGauge, Segmented, Skeleton } from './ui'
+import { AssistantHint, SorryState } from './Mascot'
+import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 const TOP_N = [5, 10, 15, 20].map((n) => [n, `${n}`])
 
@@ -23,7 +24,7 @@ function Driver({ tone, title, row, count }) {
   )
 }
 
-export default function ShapViewer({ query, rate, dark, onRisk }) {
+export default function ShapViewer({ query, rate, dark, who, onRisk }) {
   const C = CHART[dark ? 'dark' : 'light']
   const [topN, setTopN] = useState(10)
   // ผลล่าสุดผูกกับ key ของคำขอ ถ้า key ไม่ตรงกับที่ขออยู่ = กำลังโหลด (ข้อมูลเก่ายังโชว์แบบจางๆ)
@@ -44,7 +45,7 @@ export default function ShapViewer({ query, rate, dark, onRisk }) {
       (err) => {
         if (err.name === 'AbortError') return
         setRes({ key, error: friendly(err) })
-        onRisk(null)
+        onRisk({ error: true })
       },
     )
     return () => ctrl.abort()
@@ -55,12 +56,12 @@ export default function ShapViewer({ query, rate, dark, onRisk }) {
 
   if (!query) {
     return (
-      <EmptyState icon="search" title="เลือกพนักงานเพื่อเริ่ม">
-        ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” ระบบจะแสดงคะแนนความเสี่ยงและปัจจัยที่ทำให้คนนี้เสี่ยงลาออก
-      </EmptyState>
+      <AssistantHint who={who} title="เลือกพนักงานเพื่อเริ่มได้เลย">
+        ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” เดี๋ยวเราบอกคะแนนความเสี่ยงและปัจจัยที่ทำให้คนนี้เสี่ยงลาออกให้
+      </AssistantHint>
     )
   }
-  if (error && !loading) return <Alert>{error}</Alert>
+  if (error && !loading) return <SorryState message={error} />
   if (!data) {
     return (
       <div className="grid gap-4 lg:grid-cols-3">
