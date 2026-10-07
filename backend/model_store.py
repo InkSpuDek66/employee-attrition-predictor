@@ -23,6 +23,7 @@ import mlflow_setup  # noqa: E402  (โหลด .env)
 import db  # noqa: E402
 
 MODEL_URI = os.getenv("MODEL_URI", "models:/attrition-xgboost-P/1")
+MODEL_VERSION = MODEL_URI.removeprefix("models:/")  # ชื่อที่บันทึกใน model_runs เช่น 'attrition-xgboost-P/1'
 
 
 @lru_cache
@@ -56,7 +57,8 @@ def to_features(raw: pd.DataFrame) -> pd.DataFrame:
 
     ต่อข้อมูลอ้างอิงเข้าไปก่อน clean เพื่อให้ one-hot ได้คอลัมน์ครบเหมือนตอนเทรน แม้ข้อมูลใหม่จะมีหมวดไม่ครบ
     """
-    both = pd.concat([raw.assign(**{TARGET_COLUMN: "No"}), raw_employees()], ignore_index=True)
+    # Attrition ไม่ใช้ทำนาย (ตัดทิ้งก่อนเข้าโมเดล) แต่ clean_data ต้องมีครบ พนักงานที่ import มายังไม่มีผลจริง จึงใส่ค่าแทน
+    both = pd.concat([raw, raw_employees()], ignore_index=True).assign(**{TARGET_COLUMN: "No"})
     X = add_features(clean_data(both), only=SELECTED_FEATURES).drop(columns=TARGET_COLUMN)
     return X.iloc[: len(raw)][model().feature_names_in_]
 

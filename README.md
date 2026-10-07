@@ -11,7 +11,7 @@
 
 - ประเภทโปรเจกต์: งานนักศึกษาชั้นปีที่ 4 เทอม 1 สาขาวิทยาการคอมพิวเตอร์ (Proposal Defense) ของ School of Information Technology (SIT), Sripatum University (SPU)
 - ระยะเวลาพัฒนา: ทีมทำงานหลัก 9 สัปดาห์ (22 ก.ย. – 23 พ.ย. 2026) + buffer ก่อน Final Exam จริงของรายวิชา (course week 15–16, ~24 พ.ย.–7 ธ.ค. 2026) ดูรายละเอียดที่ [10. Project Timeline](#10-project-timeline-แผนดำเนินงาน)
-- สถานะปัจจุบัน: อยู่ใน wk2–3 (Modeling) ตอนนี้มี clean/feature pipeline, โมเดลสุดท้าย `attrition-xgboost-P` v1 บน MLflow (DagsHub), FastAPI (`/predict`, `/whatif`, `/shap`, `/financial-impact`, `/recalibrate`, `/company-summary`, `/company-summary/top-employees`), React (ภาพรวมบริษัท, SHAP Viewer, What-if Simulator) และ CI แล้ว ยังไม่มี database กลาง, Superset และ authentication
+- สถานะปัจจุบัน: อยู่ใน wk2–3 (Modeling) ตอนนี้มี clean/feature pipeline, โมเดลสุดท้าย `attrition-xgboost-P` v1 บน MLflow (DagsHub), FastAPI (`/predict`, `/whatif`, `/shap`, `/financial-impact`, `/recalibrate`, `/company-summary`, `/company-summary/top-employees`), React (ภาพรวมบริษัท, SHAP Viewer, What-if Simulator, นำเข้าข้อมูล), PostgreSQL ของแอป (ไม่บังคับ), login แบบบัญชีทดลอง และ CI แล้ว ยังไม่มี Superset และระบบผู้ใช้จริง
 - ขอบเขต: ระบบต้นแบบ (Prototype) บน IBM HR Analytics Employee Attrition & Performance dataset (Kaggle) ซึ่งเป็นข้อมูลจำลอง (synthetic) ไม่ใช่ข้อมูลองค์กรจริง ผลลัพธ์และสมมติฐานทางธุรกิจในเอกสารนี้จึงมีข้อจำกัดตามนั้น
 
 ---
@@ -121,10 +121,11 @@ streamlit run src/test_app.py --server.address localhost
 | ภาพรวมบริษัท | ตัวเลขสรุป สัดส่วนระดับความเสี่ยง ปัจจัยหลักพร้อมคำแนะนำ ตารางแยกแผนก รายชื่อเสี่ยงสูงสุด (กดเลือกได้ ดาวน์โหลด CSV ได้) | `/company-summary`, `/company-summary/departments`, `/company-summary/top-employees` |
 | SHAP Viewer | คะแนนของพนักงานหนึ่งคน สรุปเป็นประโยค กราฟ/ตารางปัจจัย | `/shap/{id}` |
 | What-if Simulator | ปรับเงื่อนไขแล้วเห็นคะแนนใหม่ทันที มาตรการสำเร็จรูป บันทึกผลไว้เทียบ ต้นทุน Retain vs Replace พร้อมสูตร | `/whatif`, `/financial-impact/{id}` |
-| นำเข้าข้อมูล | ดาวน์โหลดไฟล์ Excel ตัวอย่าง อัปโหลดไฟล์พนักงานแล้วดูว่าคอลัมน์/แถวไหนผิด (ตรวจอย่างเดียว ยังไม่บันทึก ใช้ข้อมูลทดสอบเท่านั้น) | `/employees/template`, `/employees/validate` |
+| นำเข้าข้อมูล | ดาวน์โหลดไฟล์ Excel ตัวอย่าง อัปโหลดไฟล์พนักงานแล้วดูว่าคอลัมน์/แถวไหนผิด ผู้ดูแลระบบกดบันทึกลง database ได้เมื่อไฟล์ผ่านทุกแถว (ใช้ข้อมูลทดสอบเท่านั้น) | `/employees/template`, `/employees/validate`, `/employees/import` |
 
 - เงินในหน้าเว็บเป็นบาท โดยถือว่า `MonthlyIncome` ใน IBM dataset เป็นดอลลาร์ (แนวเดียวกับหน้า Streamlit) อัตราคงที่ 35 บาท/ดอลลาร์ (`THB_PER_USD` ใน `frontend/src/theme.js`) ผู้ใช้ปรับไม่ได้และไม่เห็นดอลลาร์ ส่งเข้าโมเดลเป็นดอลลาร์จำนวนเต็ม ระยะทางแสดงเป็น กม. (IBM ไม่ได้ระบุหน่วย) ตาม DE-01 ควรย้ายการแปลงไป backend/config ที่เดียวภายหลัง
-- ลิงก์แชร์ได้: แท็บ/รหัสพนักงาน/รหัสบริษัทอยู่ใน URL เช่น `http://localhost:5173/?tab=whatif&id=5` ปุ่ม back ใช้ได้
+- ต้องเข้าสู่ระบบก่อน ตอนนี้เป็นบัญชีทดลองชั่วคราว (แสดงบนหน้า login): `hr_demo` / `hr-demo-1234` (ฝ่ายบุคคล) และ `admin_demo` / `admin-demo-1234` (ผู้ดูแลระบบ: บันทึกไฟล์นำเข้า + ปรับเทียบโมเดลได้) บริษัทมาจากบัญชีที่ login ไม่มีช่องให้พิมพ์รหัสบริษัทแล้ว (SEC-02)
+- ลิงก์แชร์ได้: แท็บ/รหัสพนักงานอยู่ใน URL เช่น `http://localhost:5173/?tab=whatif&id=5` ปุ่ม back ใช้ได้
 - เกณฑ์ระดับความเสี่ยง (40/70) อยู่ทั้ง `src/business_rules.py` และ `frontend/src/theme.js` มี test (`backend/test_business_rules.py`) เช็กว่าตรงกัน แก้ต้องแก้คู่กัน
 - มีโหมดมืด (ปุ่มมุมบนซ้าย) และผู้ช่วยตัวการ์ตูนใน sidebar ที่เปลี่ยนท่าตามระดับความเสี่ยง (เป็นของตกแต่ง ข้อมูลจริงอยู่ที่ตัวเลขในหน้า)
 - SHAP Viewer โหลดแยกไฟล์ (recharts ก้อนใหญ่) หน้าแรกจึงเปิดเร็ว
@@ -343,7 +344,7 @@ Deploy-time (per-tenant):
 ```
 > ตราบใดที่บริษัทยังไม่ได้ recalibrate ระบบต้องแสดงคำเตือนกำกับ risk_score ว่า "ยังไม่ได้ปรับเทียบกับข้อมูลจริงของบริษัท — ใช้ SHAP (ทิศทางของปัจจัย) ประกอบการตัดสินใจมากกว่าเชื่อตัวเลขตรงๆ" เพื่อความโปร่งใส
 >
-> ที่ implement จริง: `POST /recalibrate` รองรับ Platt scaling และ isotonic regression ส่วน endpoint ที่คืนคะแนนรับ `tenant_id` และแนบคำเตือนข้างบนเมื่อบริษัทยังไม่ได้ปรับเทียบ ผลการปรับเทียบเก็บเป็นไฟล์ JSON จนกว่าจะมีตาราง `tenant_calibrations` ยังไม่มีระบบยืนยันตัวตน จึงห้ามใช้กับข้อมูลจริง (ดู [review Security](docs/review_security_S.md))
+> ที่ implement จริง: `POST /recalibrate` รองรับ Platt scaling และ isotonic regression เรียกได้เฉพาะผู้ดูแลระบบและปรับได้เฉพาะบริษัทของตัวเอง endpoint ที่คืนคะแนนใช้บริษัทของผู้ login และแนบคำเตือนข้างบนเมื่อบริษัทยังไม่ได้ปรับเทียบ ผลการปรับเทียบเก็บในตาราง `tenant_calibrations` (ไม่ต่อ DB = ไฟล์ JSON) login ตอนนี้เป็นบัญชีทดลอง จึงห้ามใช้กับข้อมูลจริง (ดู [review Security](docs/review_security_S.md))
 
 ### 6.6 Company-wide Aggregate Summary
 ```
@@ -369,6 +370,7 @@ Deploy-time (per-tenant):
 
 | สถานะ | Method | Endpoint | หน้าที่ |
 | :---: | :--- | :--- | :--- |
+| ทำแล้ว | POST | `/auth/login` | เข้าสู่ระบบ คืน token (แนบ `Authorization: Bearer` ทุก request) ตอนนี้เป็นบัญชีทดลอง |
 | ทำแล้ว | POST | `/predict` | รับ `employee_id` (มีในระบบ) หรือข้อมูลพนักงานทั้งก้อน → คืน risk_score และ risk band |
 | ทำแล้ว | GET | `/shap/{employee_id}` | คืน SHAP explanation ของพนักงานคนนั้น |
 | ทำแล้ว | POST | `/whatif` | จำลองการเปลี่ยนฟีเจอร์ → คืน risk_score ใหม่ (ไม่บันทึกลง DB) |
@@ -377,15 +379,16 @@ Deploy-time (per-tenant):
 | ทำแล้ว | GET | `/company-summary` | สรุปปัจจัยเสี่ยงเด่นทั้งบริษัท/แผนก พร้อมคำแนะนำเชิงนโยบาย (ดู [6.6](#66-company-wide-aggregate-summary)) |
 | ทำแล้ว | GET | `/company-summary/departments` | สรุปทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม |
 | ทำแล้ว | GET | `/employees/template` | ไฟล์ Excel ตัวอย่างสำหรับนำเข้าพนักงาน (หัวคอลัมน์ไทย + ชีตคำอธิบาย) |
-| ทำแล้ว | POST | `/employees/validate` | ตรวจไฟล์ Excel/CSV ที่อัปโหลด คืนคอลัมน์ที่ขาดและแถวที่ผิดเป็นภาษาไทย **ยังไม่บันทึก** (รอต่อ database + login) |
-| ทำแล้ว | GET | `/company-summary/top-employees` | พนักงานเสี่ยงสูงสุด n คน (กรองแผนกได้, ส่ง `tenant_id` = ใช้คะแนนปรับเทียบ) ให้หน้าเว็บกดเลือกโดยไม่ต้องรู้รหัส |
+| ทำแล้ว | POST | `/employees/validate` | ตรวจไฟล์ Excel/CSV ที่อัปโหลด คืนคอลัมน์ที่ขาดและแถวที่ผิดเป็นภาษาไทย (ยังไม่บันทึก) |
+| ทำแล้ว | POST | `/employees/import` | ตรวจแล้วบันทึกลงตาราง `employees` (เฉพาะผู้ดูแลระบบ ต้องต่อ database และไฟล์ต้องผ่านทุกแถว) |
+| ทำแล้ว | GET | `/company-summary/top-employees` | พนักงานเสี่ยงสูงสุด n คน (กรองแผนกได้, บริษัทที่ปรับเทียบแล้วใช้คะแนนปรับเทียบ) ให้หน้าเว็บกดเลือกโดยไม่ต้องรู้รหัส |
 | แผน | GET | `/health` | Health check |
 | แผน | POST | `/interventions` | บันทึกมาตรการที่ HR เลือกทำกับพนักงาน |
 | แผน | GET | `/interventions/{employee_id}` | ดูประวัติมาตรการของพนักงานคนนั้น |
 | แผน | GET | `/dashboard/summary` | ข้อมูลสรุปสำหรับ Superset/React dashboard |
 | แผน | GET | `/calibration-status/{tenant_id}` | ตรวจสอบว่าบริษัทนี้ recalibrate โมเดลแล้วหรือยัง |
 
-> ยังไม่มีระบบยืนยันตัวตน (authentication) ทุก endpoint เรียกได้โดยไม่ต้อง login จึงรันได้เฉพาะในเครื่องกับข้อมูลสมมติเท่านั้น ต้องทำก่อน deploy (SEC-01 ใน [review Security](docs/review_security_S.md))
+> ทุก endpoint ต้อง login (`backend/auth.py` ครอบทุก router ใน `main.py`) ไม่มี token ได้ 401 ส่ง `tenant_id` ของบริษัทอื่นได้ 403 มี rate limit และเพดานขนาด body (SEC-01/02/03) แต่บัญชียังเป็นบัญชีทดลองที่เขียนไว้ในโค้ด จึงรันได้เฉพาะในเครื่องกับข้อมูลสมมติ ก่อน deploy ต้องมีระบบผู้ใช้จริง (ตาราง users + hash รหัสผ่าน) ตามที่ทีมตกลงใน SEC-01 ([review Security](docs/review_security_S.md))
 
 ---
 

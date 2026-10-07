@@ -125,7 +125,7 @@ Course Milestones ที่ต้องเจอระหว่างทาง: 
 - [x] FastAPI endpoint หลัก: `/shap`, `/recalibrate`, `/company-summary` (ตัวหลัก) ร่วมกับ Saphondanai
   - วิธีทำ: สร้าง `routers/shap.py`, `routers/recalibrate.py`, `routers/company_summary.py` ต่อกับ SHAP module (จาก wk4–5) และ company summary module (จาก Saphondanai)
   - ผลลัพธ์ที่ต้องส่ง: 3 endpoint ทำงานได้จริง
-  - สถานะ: 3 endpoint ทำงานพร้อม test (`backend/test_api.py`) `/company-summary` ใช้ module ของ Saphondanai แล้ว ต่อ PostgreSQL แล้ว (DE-04, 7 ต.ค.): ตั้ง `DATABASE_URL` แล้ว backend อ่านพนักงานจากตาราง `employees` (`src/db.py`) และ `backend/batch_score.py` เขียนผลทำนาย/SHAP/ต้นทุน/สรุปลง DB ส่วนผล recalibrate ยังเป็นไฟล์ JSON และ router ของ Saphondanai (`/predict`, `/whatif`, `/financial-impact`) ยังไม่ได้แก้ แค่ได้ข้อมูลจาก DB ผ่าน model_store
+  - สถานะ: 3 endpoint ทำงานพร้อม test (`backend/test_api.py`) `/company-summary` ใช้ module ของ Saphondanai แล้ว ต่อ PostgreSQL แล้ว (DE-04, 7 ต.ค.): ตั้ง `DATABASE_URL` แล้ว backend อ่านพนักงานจากตาราง `employees` (`src/db.py`) และ `backend/batch_score.py` เขียนผลทำนาย/SHAP/ต้นทุน/สรุปลง DB ผล recalibrate เก็บในตาราง `tenant_calibrations`, `/company-summary` อ่าน cache จาก batch และนำเข้า Excel บันทึกลง DB ได้ (8 ต.ค.) / login บัญชีทดลอง (`backend/auth.py`) ครอบทุก router ใน `main.py` รวม router ของ Saphondanai โดยไม่ได้แก้ไฟล์ router ของเขา (บริษัทมาจาก token, ส่งบริษัทอื่นได้ 403)
 - [ ] ช่วย review Survival Analysis / Fairness check ของ Yanisa+Nanthamon หลังทำ endpoint หลักเสร็จ (ถ้ามีเวลาเหลือ)
 
 ### wk8–9 (10–23 พ.ย.): BI & Frontend + Closing (Model Gate ใน wk8 และ Product Gate ช่วง buffer)

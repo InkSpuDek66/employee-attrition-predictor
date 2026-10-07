@@ -20,12 +20,12 @@ def test_recalibrate_then_shap_uses_it(tmp_path, monkeypatch):
     monkeypatch.setattr(calibration, "STORE", str(tmp_path))
     records = ms.raw_employees().sample(300, random_state=0).to_dict("records")
     for method in ("platt", "isotonic"):
-        r = client.post("/recalibrate", json={"tenant_id": "test_co", "method": method, "records": records})
+        r = client.post("/recalibrate", json={"method": method, "records": records})  # บริษัทมาจากผู้ login ("co")
         assert r.status_code == 200, r.text
         assert r.json()["n_samples"] == 300
-        s = client.get("/shap/1", params={"tenant_id": "test_co"}).json()
+        s = client.get("/shap/1").json()
         assert 0 <= s["calibrated_risk_score"] <= 1 and s["warning"] is None
-        top = client.get("/company-summary/top-employees", params={"n": 5, "tenant_id": "test_co"}).json()["employees"]
+        top = client.get("/company-summary/top-employees", params={"n": 5}).json()["employees"]
         cal = [r["calibrated_risk_score"] for r in top]
         assert None not in cal and cal == sorted(cal, reverse=True)
 
@@ -33,12 +33,16 @@ def test_recalibrate_then_shap_uses_it(tmp_path, monkeypatch):
 def test_recalibrate_rejects_bad_input():
     good = ms.raw_employees().head(60).to_dict("records")
     assert client.post("/recalibrate", json={"tenant_id": "../x", "records": good}).status_code == 422
-    assert client.post("/recalibrate", json={"tenant_id": "a", "records": good[:5]}).status_code == 422
+    assert client.post("/recalibrate", json={"records": good[:5]}).status_code == 422
+    assert client.post("/recalibrate", json={"records": good * 200}).status_code == 422  # เกิน 10,000 แถว (SEC-03)
     no_leavers = [dict(r, Attrition="No") for r in good]
-    assert client.post("/recalibrate", json={"tenant_id": "a", "records": no_leavers}).status_code == 422
+    assert client.post("/recalibrate", json={"records": no_leavers}).status_code == 422
     missing_col = [{k: v for k, v in r.items() if k != "Age"} for r in good]
-    assert client.post("/recalibrate", json={"tenant_id": "a", "records": missing_col}).status_code == 422
-    assert client.get("/shap/1", params={"tenant_id": "../x"}).status_code == 422
+    assert client.post("/recalibrate", json={"records": missing_col}).status_code == 422
+    # SEC-08: ไม่ส่งข้อความ exception ภายในของ Python กลับไป
+    bad = [dict(r, MonthlyIncome="abc") for r in good]
+    r = client.post("/recalibrate", json={"records": bad})
+    assert r.status_code == 422 and "operand" not in r.text and "ข้อมูลไม่ตรงรูปแบบ" in r.text
 
 
 def test_company_summary():
@@ -56,5 +60,4 @@ def test_top_employees_sorted_and_filtered():
     sales = client.get("/company-summary/top-employees", params={"n": 3, "department": "Sales"}).json()["employees"]
     assert {r["department"] for r in sales} == {"Sales"}
     assert client.get("/company-summary/top-employees", params={"department": "Nope"}).status_code == 404
-    assert client.get("/company-summary/top-employees", params={"tenant_id": "../x"}).status_code == 422
     assert all(r["calibrated_risk_score"] is None for r in rows)

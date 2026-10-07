@@ -1,29 +1,35 @@
-"""นำเข้าข้อมูลพนักงานจากไฟล์ Excel/CSV ของบริษัท (ขั้นตรวจไฟล์ ยังไม่บันทึก)
+"""นำเข้าข้อมูลพนักงานจากไฟล์ Excel/CSV ของบริษัท
 
 GET  /employees/template  ไฟล์ Excel ตัวอย่าง หัวคอลัมน์ภาษาไทย + ชีตคำอธิบาย
-POST /employees/validate  ตรวจไฟล์ที่อัปโหลด บอกคอลัมน์ที่ขาด/แถวที่ผิดเป็นภาษาไทย
+POST /employees/validate  ตรวจไฟล์ที่อัปโหลด บอกคอลัมน์ที่ขาด/แถวที่ผิดเป็นภาษาไทย (ยังไม่บันทึก)
+POST /employees/import    ตรวจแล้วบันทึกลงตาราง employees (เฉพาะผู้ดูแลระบบ ต้องตั้ง DATABASE_URL และไฟล์ต้องไม่มีแถวผิด)
 
 ตรวจด้วย schemas.EmployeeInput ตัวเดียวกับ /predict, /whatif จึงตรงกับที่โมเดลรับได้จริง
-ponytail: ยังไม่บันทึกลง database (รอ backend ต่อ DB ตาม DE-04) และยังไม่มี login (SEC-01/02)
-ห้ามใช้กับข้อมูลพนักงานจริงจนกว่าจะมีทั้งสองอย่าง เงินเดือนรับเป็นบาท การแปลงเป็นหน่วยโมเดลทำตอนบันทึก (DE-01)
+ห้ามใช้กับข้อมูลพนักงานจริง: login ตอนนี้เป็นบัญชีทดลอง (auth.py) และ MLflow ของทีมเป็นสาธารณะ
+เงินเดือนรับเป็นบาท แปลงเป็นหน่วยโมเดล (USD) ตอนบันทึก ด้วย THB_PER_USD (DE-01 ย้ายไป config กลางภายหลัง)
 """
 
 import io
+import logging
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
+import auth
 import model_store as ms
 from schemas import EmployeeInput
+import db  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
 
 router = APIRouter(tags=["employees"])
+log = logging.getLogger(__name__)
 
 MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 10_000
 MAX_ERRORS = 200  # ส่งกลับไม่เกินนี้ ที่เหลือบอกแค่จำนวน
+THB_PER_USD = 35  # ต้องตรงกับ frontend/src/theme.js
 
 # (ฟิลด์ของโมเดล, หัวคอลัมน์ภาษาไทยใน template, คำอธิบาย/ตัวเลือก)
 COLUMNS = [
@@ -130,8 +136,8 @@ def _clean(value):
     return value
 
 
-@router.post("/employees/validate", response_model=ValidateResponse)
-async def validate_upload(file: UploadFile = File(...)):
+async def _check(file: UploadFile):
+    """ตรวจไฟล์ คืน (ผลตรวจ, แถวที่ถูกต้องเป็นชื่อคอลัมน์ IBM เงินเดือนยังเป็นบาท)"""
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
         raise HTTPException(413, "ไฟล์ใหญ่เกิน 5 MB")
@@ -148,7 +154,7 @@ async def validate_upload(file: UploadFile = File(...)):
 
     errors: list[RowError] = []
     seen_ids: dict = {}
-    preview, n_valid = [], 0
+    preview, valid, n_valid = [], [], 0
     for i, raw in enumerate(df.to_dict("records")):
         excel_row = i + 2
         row = {mapped[h]: _clean(v) for h, v in raw.items() if h in mapped}
@@ -170,8 +176,9 @@ async def validate_upload(file: UploadFile = File(...)):
         except (TypeError, ValueError):
             row_errors.append(RowError(row=excel_row, column=THAI["EmployeeNumber"], message="ต้องเป็นตัวเลขจำนวนเต็มบวก"))
 
+        checked = None
         try:
-            EmployeeInput(**{k: v for k, v in row.items() if v is not None})
+            checked = EmployeeInput(**{k: v for k, v in row.items() if v is not None})
         except ValidationError as e:
             for err in e.errors():
                 field = str(err["loc"][0]) if err["loc"] else ""
@@ -182,11 +189,13 @@ async def validate_upload(file: UploadFile = File(...)):
             errors.extend(row_errors)
         else:
             n_valid += 1
+            if checked:  # None = ผ่านแต่ขาดทั้งคอลัมน์ (บอกใน missing_columns) บันทึกไม่ได้
+                valid.append(checked.model_dump() | {"EmployeeNumber": emp_id})  # ค่าที่แปลงชนิดแล้ว ("41" -> 41)
             if len(preview) < 5:
                 preview.append({THAI["EmployeeNumber"]: emp_id} | {THAI[f]: row.get(f) for f, _, _ in COLUMNS[1:9]})
 
     n_rows = n_valid + len({e.row for e in errors})
-    return ValidateResponse(
+    return valid, ValidateResponse(
         filename=file.filename or "",
         n_rows=n_rows,
         n_valid=n_valid,
@@ -196,6 +205,38 @@ async def validate_upload(file: UploadFile = File(...)):
         errors=errors[:MAX_ERRORS],
         errors_truncated=max(0, len(errors) - MAX_ERRORS),
         preview=preview,
+    )
+
+
+@router.post("/employees/validate", response_model=ValidateResponse)
+async def validate_upload(file: UploadFile = File(...)):
+    return (await _check(file))[1]
+
+
+@router.post("/employees/import", response_model=ValidateResponse)
+async def import_employees(
+    file: UploadFile = File(...), user: dict = Depends(auth.require_admin), _=Depends(auth.LIMITS["import"].per_user)
+):
+    """บันทึกทั้งไฟล์ (ทุกแถวต้องถูกต้อง) รหัสพนักงานที่มีอยู่แล้ว = อัปเดตเป็นข้อมูลใหม่"""
+    if not db.url():
+        raise HTTPException(503, "ระบบยังไม่ได้ต่อฐานข้อมูล บันทึกไม่ได้ (ผู้ดูแลต้องตั้ง DATABASE_URL)")
+    valid, result = await _check(file)
+    if result.missing_columns or result.n_invalid or not valid:
+        raise HTTPException(422, "ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด กด \"ตรวจไฟล์\" แล้วแก้ให้ครบก่อนบันทึก")
+    rows = pd.DataFrame(valid)
+    rows["MonthlyIncome"] = (rows["MonthlyIncome"].astype(float) / THB_PER_USD).round().clip(lower=1).astype(int)
+    try:
+        with db.connect() as conn:
+            existing = {r[0] for r in conn.execute("SELECT employee_id FROM employees WHERE tenant_id = %s", (user["tenant_id"],))}
+            db.upsert_employees(conn, rows, user["tenant_id"], "upload")
+    except db.IntegrityError:  # CHECK ของตารางเข้มกว่า schemas.py บางข้อ (เช่น อายุ 15–80) ทั้งไฟล์ไม่ถูกบันทึก
+        log.exception("employees/import: ฐานข้อมูลไม่รับ")
+        raise HTTPException(422, "มีค่าบางแถวเกินช่วงที่ฐานข้อมูลรับ (เช่น อายุ 15–80 ปี) ยังไม่ได้บันทึกอะไร ตรวจไฟล์แล้วลองใหม่")
+    ms.raw_employees.cache_clear()  # ให้ทุกหน้าเห็นพนักงานที่เพิ่ง import
+    ms.employee_features.cache_clear()
+    n_updated = len(existing & set(rows["EmployeeNumber"]))
+    return result.model_copy(
+        update={"saved": True, "note": f"บันทึกแล้ว: เพิ่มใหม่ {len(rows) - n_updated:,} คน อัปเดต {n_updated:,} คน"}
     )
 
 
@@ -213,7 +254,7 @@ def _example_rows(n: int = 2) -> list[dict]:
         out = {}
         for field, th, _ in COLUMNS:
             v = rec[field]
-            out[th] = round(v * 35 / 100) * 100 if field == "MonthlyIncome" else back.get(field, {}).get(v, v)
+            out[th] = round(v * THB_PER_USD / 100) * 100 if field == "MonthlyIncome" else back.get(field, {}).get(v, v)
         rows.append(out)
     return rows
 

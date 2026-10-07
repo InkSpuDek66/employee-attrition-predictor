@@ -22,11 +22,12 @@ function useApi(paths) {
 }
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
-const topQuery = (n, department, tenant) => new URLSearchParams({ n, ...(department && { department }), ...(tenant && { tenant_id: tenant }) })
+// บริษัทมาจากผู้ใช้ที่ login (backend อ่านจาก token) บริษัทที่ปรับเทียบแล้วได้คะแนนปรับเทียบอัตโนมัติ
+const topQuery = (n, department) => new URLSearchParams({ n, ...(department && { department }) })
 
 // ดาวน์โหลดรายชื่อเสี่ยงสูงเป็น CSV (เปิดใน Excel ภาษาไทยได้ เพราะใส่ BOM) ไว้ใช้ในประชุม/ส่งหัวหน้าแผนก
-async function downloadCsv(department, tenant) {
-  const { employees } = await api(`/company-summary/top-employees?${topQuery(100, department, tenant)}`)
+async function downloadCsv(department) {
+  const { employees } = await api(`/company-summary/top-employees?${topQuery(100, department)}`)
   const header = ['อันดับ', 'รหัสพนักงาน', 'คะแนนความเสี่ยง', 'ระดับ', 'แผนก', 'ตำแหน่ง', 'ระดับตำแหน่ง']
   const rows = employees.map((e, i) => [i + 1, e.employee_id, Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, e.job_level])
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(',')).join('\r\n')
@@ -36,12 +37,12 @@ async function downloadCsv(department, tenant) {
   URL.revokeObjectURL(url)
 }
 
-export function CsvButton({ department, tenant }) {
+export function CsvButton({ department }) {
   const [state, setState] = useState('') // '' | 'busy' | ข้อความ error
   async function go() {
     setState('busy')
     try {
-      await downloadCsv(department, tenant)
+      await downloadCsv(department)
       setState('')
     } catch (err) {
       setState(friendly(err))
@@ -61,9 +62,9 @@ export function CsvButton({ department, tenant }) {
   )
 }
 
-// รายชื่อพนักงานเสี่ยงสูงสุด กดแถวแล้วไปดูรายละเอียดคนนั้น (ส่ง tenant = ใช้คะแนนปรับเทียบ ตรงกับหน้า SHAP/What-if)
-export function TopRiskList({ n = 10, department = '', tenant = '', onPick, compact = false }) {
-  const q = topQuery(n, department, tenant)
+// รายชื่อพนักงานเสี่ยงสูงสุด กดแถวแล้วไปดูรายละเอียดคนนั้น (คะแนนปรับเทียบถ้ามี ตรงกับหน้า SHAP/What-if)
+export function TopRiskList({ n = 10, department = '', onPick, compact = false }) {
+  const q = topQuery(n, department)
   const { loading, data, error } = useApi([`/company-summary/top-employees?${q}`])
   if (error) return <p className="text-sm text-risk-high">{error}</p>
   if (loading) return <Skeleton className={compact ? 'h-40' : 'h-80'} />
@@ -99,14 +100,14 @@ export function TopRiskList({ n = 10, department = '', tenant = '', onPick, comp
 }
 
 // หน้าว่าง: ผู้ช่วยบอกวิธีใช้ + รายชื่อเสี่ยงสูงสุดให้กดเลือกได้เลย ไม่ต้องรู้รหัส
-export function EmptyPicker({ who, title, children, onPick, tenant }) {
+export function EmptyPicker({ who, title, children, onPick }) {
   return (
     <div className="space-y-4">
       <AssistantHint who={who} title={title}>
         {children}
       </AssistantHint>
       <Card icon="user" title="หรือเลือกจากพนักงานเสี่ยงสูงสุด" subtitle="กดที่แถวเพื่อเริ่มได้เลย">
-        <TopRiskList n={5} tenant={tenant} onPick={onPick} />
+        <TopRiskList n={5} onPick={onPick} />
       </Card>
     </div>
   )
@@ -148,7 +149,7 @@ function BandBar({ bands, total }) {
   )
 }
 
-export default function Overview({ rate, tenant, onPick }) {
+export default function Overview({ rate, onPick }) {
   const [department, setDepartment] = useState('')
   const q = new URLSearchParams({ top_n: 5, ...(department && { department }) })
   const { loading, data, error } = useApi([`/company-summary?${q}`, '/company-summary/departments'])
@@ -190,10 +191,10 @@ export default function Overview({ rate, tenant, onPick }) {
         <Card
           icon="user"
           title="พนักงานเสี่ยงสูงสุด 10 คน"
-          subtitle={tenant ? `กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง · คะแนนปรับเทียบของ ${tenant}` : 'กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง'}
-          action={<CsvButton department={department} tenant={tenant} />}
+          subtitle="กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง"
+          action={<CsvButton department={department} />}
         >
-          <TopRiskList department={department} tenant={tenant} onPick={onPick} />
+          <TopRiskList department={department} onPick={onPick} />
         </Card>
 
         <Card icon="list" title="ปัจจัยที่ทำให้เสี่ยงมากที่สุด" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ของทั้งกลุ่ม">

@@ -1,7 +1,7 @@
-// นำเข้าข้อมูลพนักงานจาก Excel/CSV (ขั้นตรวจไฟล์ ยังไม่บันทึก) ใช้ GET /employees/template, POST /employees/validate
-// ponytail: ปุ่ม "บันทึกเข้าระบบ" ปิดไว้จนกว่า backend จะต่อ database (DE-04) และมี login (SEC-01/02)
+// นำเข้าข้อมูลพนักงานจาก Excel/CSV: GET /employees/template, POST /employees/validate (ตรวจ), POST /employees/import (บันทึก)
+// บันทึกได้เฉพาะผู้ดูแลระบบ (canSave) และ backend ต้องต่อ database (ไม่งั้นได้ข้อความ 503 จาก backend)
 import { useState } from 'react'
-import { api, friendly } from './theme'
+import { api, download, friendly } from './theme'
 import { Alert, Card, Icon } from './ui'
 
 function Count({ label, value, tone = 'text-fg' }) {
@@ -13,12 +13,31 @@ function Count({ label, value, tone = 'text-fg' }) {
   )
 }
 
-export default function Upload() {
+export default function Upload({ canSave }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  function post(path, f) {
+    const form = new FormData()
+    form.append('file', f)
+    return api(path, { method: 'POST', body: form })
+  }
+
+  async function save() {
+    setSaving(true)
+    setError('')
+    try {
+      setResult(await post('/employees/import', file))
+    } catch (err) {
+      setError(friendly(err))
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function check(f) {
     if (!f) return
@@ -26,10 +45,8 @@ export default function Upload() {
     setBusy(true)
     setError('')
     setResult(null)
-    const form = new FormData()
-    form.append('file', f)
     try {
-      setResult(await api('/employees/validate', { method: 'POST', body: form }))
+      setResult(await post('/employees/validate', f))
     } catch (err) {
       setError(friendly(err))
     } finally {
@@ -42,19 +59,19 @@ export default function Upload() {
   return (
     <div className="space-y-4">
       <Alert tone="warning">
-        ตอนนี้ระบบ <b>ตรวจไฟล์อย่างเดียว ยังไม่บันทึก</b> และยังไม่มีการเข้าสู่ระบบ ใช้กับข้อมูลทดสอบเท่านั้น ห้ามอัปโหลดข้อมูลพนักงานจริง (PDPA)
+        ตอนนี้ใช้ <b>บัญชีทดลอง</b> ใช้กับข้อมูลทดสอบเท่านั้น ห้ามอัปโหลดข้อมูลพนักงานจริง (PDPA)
       </Alert>
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Card icon="list" title="1. ดาวน์โหลดไฟล์ตัวอย่าง" subtitle="Excel ที่มีหัวคอลัมน์ครบ + แถวตัวอย่าง + ชีตคำอธิบายค่าที่รับ">
-          <a
-            href="/api/employees/template"
-            download="employee_template.xlsx"
+          <button
+            type="button"
+            onClick={() => download('/employees/template', 'employee_template.xlsx').catch((err) => setError(friendly(err)))}
             className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-line px-4 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
             <Icon name="download" className="size-5" />
             ดาวน์โหลด employee_template.xlsx
-          </a>
+          </button>
           <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-muted-fg">
             <li>กรอกหนึ่งแถวต่อพนักงานหนึ่งคน รหัสพนักงานห้ามซ้ำ</li>
             <li>เงินเดือนกรอกเป็นบาท ระยะทางเป็นกิโลเมตร</li>
@@ -171,14 +188,31 @@ export default function Upload() {
           )}
 
           <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
-            <button
-              type="button"
-              disabled
-              className="inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary opacity-40"
-            >
-              บันทึกเข้าระบบ
-            </button>
-            <span className="text-sm text-muted-fg">เปิดใช้ได้เมื่อระบบเชื่อม database และมีการเข้าสู่ระบบแล้ว</span>
+            {result.saved ? (
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-risk-low">
+                <Icon name="check" className="size-5" />
+                {result.note}
+              </span>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={!ok || !canSave || saving}
+                  className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {saving && <span className="size-4 animate-spin rounded-full border-2 border-on-primary/40 border-t-on-primary" />}
+                  {saving ? 'กำลังบันทึก…' : `บันทึกเข้าระบบ ${result.n_valid.toLocaleString()} คน`}
+                </button>
+                <span className="text-sm text-muted-fg">
+                  {!canSave
+                    ? 'บันทึกได้เฉพาะผู้ดูแลระบบ (admin_demo)'
+                    : ok
+                      ? 'รหัสพนักงานที่มีอยู่แล้วจะถูกอัปเดตเป็นข้อมูลในไฟล์'
+                      : 'แก้ไฟล์ให้ผ่านทุกแถวก่อน แล้วอัปโหลดใหม่'}
+                </span>
+              </>
+            )}
           </div>
         </Card>
       )}

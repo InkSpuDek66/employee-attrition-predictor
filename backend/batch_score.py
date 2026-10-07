@@ -18,10 +18,6 @@ import db  # noqa: E402
 TENANT = db.DEMO_TENANT
 
 
-def model_version() -> str:
-    return ms.MODEL_URI.removeprefix("models:/")  # 'models:/attrition-xgboost-P/1' -> 'attrition-xgboost-P/1'
-
-
 def run(conn) -> int:
     X = ms.employee_features()
     employees = ms.raw_employees().set_index("EmployeeNumber").loc[X.index]
@@ -29,7 +25,7 @@ def run(conn) -> int:
     record = calibration.load(TENANT)
     shown = calibration.apply(record, raw) if record else raw
     shap_values = ms.explainer()(X).values
-    version = model_version()
+    version = ms.MODEL_VERSION
 
     with conn.cursor() as cur:
         cur.execute("UPDATE model_runs SET is_active = false WHERE is_active AND model_version <> %s", (version,))
@@ -71,8 +67,9 @@ def run(conn) -> int:
                     copy.write_row((p, option, m.replacement_cost, m.retain_cost, severance, m.expected_loss))
 
         names = list(X.columns)
-        summaries = [{"department": None, **cs.summarize(shap_values, names, shown, employees)}]
-        summaries += cs.by_department(shap_values, names, shown, employees, top_n=5)
+        # คะแนนดิบ (ไม่ปรับเทียบ) ให้ตรงกับ /company-summary ที่อ่าน cache นี้
+        summaries = [{"department": None, **cs.summarize(shap_values, names, raw, employees)}]
+        summaries += cs.by_department(shap_values, names, raw, employees, top_n=5)
         cur.executemany(
             "INSERT INTO company_risk_summary (tenant_id, department, model_version, n_employees, mean_risk_score, "
             "risk_bands, expected_loss_total, high_risk_replacement_cost, top_factors) "
@@ -91,4 +88,4 @@ if __name__ == "__main__":
         raise SystemExit("ตั้ง DATABASE_URL ใน .env ก่อน (ดู .env.example)")
     with db.connect() as conn:
         n = run(conn)
-    print(f"ให้คะแนนพนักงาน {n} คน ด้วยโมเดล {model_version()} บันทึกลงฐานข้อมูลแล้ว")
+    print(f"ให้คะแนนพนักงาน {n} คน ด้วยโมเดล {ms.MODEL_VERSION} บันทึกลงฐานข้อมูลแล้ว")

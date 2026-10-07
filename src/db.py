@@ -22,6 +22,10 @@ def url():
     return os.getenv("DATABASE_URL")
 
 
+class IntegrityError(Exception):
+    """ข้อมูลผิด CHECK/FK ของตาราง (ห่อ psycopg.IntegrityError ให้คนเรียกไม่ต้อง import psycopg)"""
+
+
 def connect():
     import psycopg  # import ตอนใช้ ให้เครื่องที่ไม่ใช้ DB ไม่ต้องลง psycopg
 
@@ -54,8 +58,13 @@ def upsert_employees(conn, df: pd.DataFrame, tenant_id: str, source: str) -> int
         f"ON CONFLICT (tenant_id, employee_id) DO UPDATE SET {update}, source = EXCLUDED.source, updated_at = now()"
     )
     rows = [(tenant_id, source, *r) for r in df.astype(object).where(df.notna(), None).itertuples(index=False)]
-    with conn.cursor() as cur:
-        cur.executemany(sql, rows)
+    import psycopg
+
+    try:
+        with conn.cursor() as cur:
+            cur.executemany(sql, rows)
+    except psycopg.IntegrityError as e:
+        raise IntegrityError(str(e)) from e
     return len(rows)
 
 

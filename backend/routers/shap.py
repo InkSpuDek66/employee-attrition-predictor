@@ -1,8 +1,9 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
+import auth
 import calibration
 import model_store as ms
 
@@ -30,14 +31,12 @@ class ShapResponse(BaseModel):
 
 
 @router.get("/shap/{employee_id}", response_model=ShapResponse)
-def get_shap(employee_id: int, top_n: int = Query(10, ge=1, le=100), tenant_id: Optional[str] = None):
+def get_shap(employee_id: int, top_n: int = Query(10, ge=1, le=100), user: dict = Depends(auth.current_user)):
+    """คะแนนปรับเทียบใช้ของบริษัทผู้ใช้ที่ login (SEC-02)"""
     X = ms.employee_features()
     if employee_id not in X.index:
         raise HTTPException(404, f"ไม่พบพนักงาน employee_id={employee_id}")
-    try:
-        record = calibration.load(tenant_id) if tenant_id else None
-    except ValueError as e:
-        raise HTTPException(422, str(e))
+    record = calibration.load(user["tenant_id"])
 
     row = X.loc[[employee_id]]
     exp = ms.explainer()(row)

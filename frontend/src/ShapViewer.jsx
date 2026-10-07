@@ -53,7 +53,7 @@ function Summary({ ups, downs, band }) {
   )
 }
 
-export default function ShapViewer({ query, rate, dark, who, tenant, onRisk, onDone, onPick }) {
+export default function ShapViewer({ query, rate, dark, who, onRisk, onDone, onPick }) {
   const C = CHART[dark ? 'dark' : 'light']
   const [topN, setTopN] = useState(10)
   // ผลล่าสุดผูกกับ key ของคำขอ ถ้า key ไม่ตรงกับที่ขออยู่ = กำลังโหลด (ข้อมูลเก่ายังโชว์แบบจางๆ)
@@ -64,7 +64,6 @@ export default function ShapViewer({ query, rate, dark, who, tenant, onRisk, onD
     if (!query) return
     const ctrl = new AbortController()
     const params = new URLSearchParams({ top_n: topN })
-    if (query.tenant) params.set('tenant_id', query.tenant)
     api(`/shap/${query.id}?${params}`, { signal: ctrl.signal }).then(
       (data) => {
         setRes({ key, data })
@@ -88,7 +87,7 @@ export default function ShapViewer({ query, rate, dark, who, tenant, onRisk, onD
 
   if (!query) {
     return (
-      <EmptyPicker who={who} tenant={tenant} title="เลือกพนักงานเพื่อเริ่มได้เลย" onPick={onPick}>
+      <EmptyPicker who={who} title="เลือกพนักงานเพื่อเริ่มได้เลย" onPick={onPick}>
         ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” เดี๋ยวเราบอกคะแนนความเสี่ยงและปัจจัยที่ทำให้คนนี้เสี่ยงลาออกให้
       </EmptyPicker>
     )

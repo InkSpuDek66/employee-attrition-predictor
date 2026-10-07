@@ -2,17 +2,19 @@
 
 คำนวณด้วย src/company_summary.py (module ของ Saphondanai + Nanthamon): จัดอันดับปัจจัยด้วย mean |SHAP|
 โดยรวม one-hot กลับเป็นฟีเจอร์เดิม, คำแนะนำ rule-based และ financial impact จาก src/business_rules.py
-ponytail: ยังไม่ได้ cache ลง company_risk_summary (รอ dev database กลาง) คำนวณสดทุกครั้ง
+ตั้ง DATABASE_URL แล้วอ่านผลจาก backend/batch_score.py (ตาราง company_risk_summary) ถ้าใหม่กว่าข้อมูลพนักงาน
+และเป็นโมเดลตัวเดียวกัน ไม่งั้นคำนวณสด (SEC-03 ข้อ 3) ผลเหมือนกันทั้งสองทาง
 """
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
+import auth
 import calibration
 import model_store as ms
-from routers.predict import load_calibration
+import db  # noqa: E402
 import business_rules  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
 import company_summary as cs  # noqa: E402
 
@@ -48,7 +50,7 @@ class DepartmentSummary(Summary):
 class TopEmployee(BaseModel):
     employee_id: int
     risk_score: float
-    calibrated_risk_score: Optional[float] = None  # มีเมื่อส่ง tenant_id ที่ recalibrate แล้ว (ตรงกับ /shap, /whatif)
+    calibrated_risk_score: Optional[float] = None  # มีเมื่อบริษัทของผู้ใช้ recalibrate แล้ว (ตรงกับ /shap, /whatif)
     risk_band: str  # คิดจาก calibrated_risk_score ถ้ามี
     risk_band_th: str
     department: str
@@ -71,8 +73,33 @@ def _inputs():
     return ms.explainer()(X).values, list(X.columns), ms.risk_scores(X), ms.raw_employees()
 
 
+CACHE_SQL = """
+SELECT department, n_employees, mean_risk_score, risk_bands, expected_loss_total, high_risk_replacement_cost, top_factors
+FROM company_risk_summary
+WHERE tenant_id = %(t)s AND model_version = %(v)s
+  AND generated_at = (SELECT max(generated_at) FROM company_risk_summary WHERE tenant_id = %(t)s AND model_version = %(v)s)
+  AND generated_at > (SELECT max(updated_at) FROM employees WHERE tenant_id = %(t)s)
+"""
+CACHE_KEYS = ("n_employees", "mean_risk_score", "risk_bands", "expected_loss_total", "high_risk_replacement_cost", "top_factors")
+
+
+def _cached(top_n: int):
+    """{department หรือ None (ทั้งบริษัท): สรุป} จากรอบ batch ล่าสุด หรือ None ถ้าต้องคำนวณสด"""
+    if not db.url():
+        return None
+    with db.connect() as conn:
+        rows = conn.execute(CACHE_SQL, {"t": db.DEMO_TENANT, "v": ms.MODEL_VERSION}).fetchall()
+    cache = {r[0]: dict(zip(CACHE_KEYS, r[1:])) for r in rows}
+    if not cache or any(len(s["top_factors"]) < top_n for s in cache.values()):
+        return None
+    return {d: s | {"top_factors": s["top_factors"][:top_n]} for d, s in cache.items()}
+
+
 @router.get("/company-summary", response_model=CompanySummary)
 def company_summary(department: Optional[str] = None, top_n: int = Query(5, ge=1, le=50)):
+    cache = _cached(top_n)
+    if cache and department in cache:
+        return CompanySummary(department=department, **cache[department])
     shap_values, names, risk, employees = _inputs()
     if department:
         departments = employees["Department"]
@@ -86,6 +113,10 @@ def company_summary(department: Optional[str] = None, top_n: int = Query(5, ge=1
 @router.get("/company-summary/departments", response_model=DepartmentsResponse)
 def departments_summary(top_n: int = Query(3, ge=1, le=50)):
     """ทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม สำหรับหน้า Company Summary / Superset"""
+    cache = _cached(top_n)
+    if cache:
+        rows = [{"department": d, **s} for d, s in cache.items() if d is not None]
+        return DepartmentsResponse(departments=sorted(rows, key=lambda r: r["expected_loss_total"], reverse=True))
     return DepartmentsResponse(departments=cs.by_department(*_inputs(), top_n=top_n))
 
 
@@ -93,11 +124,11 @@ def departments_summary(top_n: int = Query(3, ge=1, le=50)):
 def top_employees(
     n: int = Query(10, ge=1, le=100),
     department: Optional[str] = None,
-    tenant_id: Optional[str] = Query(None, pattern=calibration.TENANT_ID_PATTERN),
+    user: dict = Depends(auth.current_user),
 ):
     """พนักงานที่คะแนนความเสี่ยงสูงสุด n คน (ทั้งบริษัทหรือแผนกเดียว) ให้หน้าเว็บกดเลือกได้โดยไม่ต้องรู้รหัส
-    ส่ง tenant_id แล้วจัดลำดับ/แบ่งระดับด้วยคะแนนที่ปรับเทียบ ให้ตรงกับหน้า SHAP/What-if"""
-    record = load_calibration(tenant_id)
+    บริษัทที่ recalibrate แล้ว (ของผู้ใช้ที่ login) จัดลำดับ/แบ่งระดับด้วยคะแนนที่ปรับเทียบ ให้ตรงกับหน้า SHAP/What-if"""
+    record = calibration.load(user["tenant_id"])
     X = ms.employee_features()
     employees = ms.raw_employees().set_index("EmployeeNumber").loc[X.index]
     raw = ms.risk_scores(X)

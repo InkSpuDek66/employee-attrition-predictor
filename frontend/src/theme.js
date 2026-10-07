@@ -70,13 +70,52 @@ export function friendly(err) {
   return err.message === 'Failed to fetch' ? 'ติดต่อ backend ไม่ได้ — เปิด uvicorn ที่ port 8000 หรือยัง' : err.message
 }
 
-export async function api(path, options) {
-  const res = await fetch(`/api${path}`, options)
-  const body = await res.json().catch(() => null)
-  if (!res.ok) {
-    const err = new Error(typeof body?.detail === 'string' ? body.detail : `เรียก API ไม่สำเร็จ (${res.status})`)
-    err.status = res.status // 404 = ไม่พบพนักงาน (กรอกผิด) แยกจากระบบพัง
-    throw err
+// ผู้ใช้ที่ login: { access_token, user: { username, name, role, tenant_id } } เก็บใน sessionStorage (ปิดแท็บ = ออกจากระบบ)
+const SESSION_KEY = 'session'
+export function loadSession() {
+  try {
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY))
+  } catch {
+    return null
   }
-  return body
+}
+export function saveSession(session) {
+  try {
+    if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    else sessionStorage.removeItem(SESSION_KEY)
+  } catch {
+    // storage ปิด: ใช้ได้จนรีเฟรชหน้า
+  }
+}
+
+// ทุกคำขอแนบ token ถ้า backend ตอบ 401 (token หมดอายุ/backend restart) แจ้ง App ให้กลับไปหน้า login
+async function call(path, options = {}) {
+  const token = loadSession()?.access_token
+  const headers = { ...options.headers, ...(token && { Authorization: `Bearer ${token}` }) }
+  const res = await fetch(`/api${path}`, { ...options, headers })
+  if (res.status === 401 && token) dispatchEvent(new Event('session-expired'))
+  return res
+}
+
+async function fail(res) {
+  const body = await res.json().catch(() => null)
+  const err = new Error(typeof body?.detail === 'string' ? body.detail : `เรียก API ไม่สำเร็จ (${res.status})`)
+  err.status = res.status // 404 = ไม่พบพนักงาน (กรอกผิด) แยกจากระบบพัง, 403 = ไม่มีสิทธิ์
+  return err
+}
+
+// ดาวน์โหลดไฟล์จาก API (ลิงก์ <a href> ธรรมดาแนบ token ไม่ได้)
+export async function download(path, filename) {
+  const res = await call(path)
+  if (!res.ok) throw await fail(res)
+  const url = URL.createObjectURL(await res.blob())
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename })
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export async function api(path, options) {
+  const res = await call(path, options)
+  if (!res.ok) throw await fail(res)
+  return res.json().catch(() => null)
 }

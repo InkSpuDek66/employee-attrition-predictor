@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import Login from './Login'
 import Mascot from './Mascot'
 import Overview from './Overview'
 import Upload from './Upload'
-import { inputClass, loadMascot, saveMascot, THB_PER_USD } from './theme'
+import { inputClass, loadMascot, loadSession, saveMascot, saveSession, THB_PER_USD } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
@@ -11,11 +12,12 @@ const ShapViewer = lazy(() => import('./ShapViewer'))
 
 // หน้าหลัก: แต่ละคนเพิ่ม component ของตัวเอง (เช่น Intervention Tracker) เป็นแท็บใหม่ใน TABS
 // component ของเครื่องมือรายคนได้ prop:
-//   query = { id, tenant, n } ของพนักงานที่เลือก (n เพิ่มทุกครั้งที่กดโหลด ให้โหลดซ้ำได้)
+//   query = { id, tenant, n } ของพนักงานที่เลือก (n เพิ่มทุกครั้งที่กดโหลด ให้โหลดซ้ำได้, tenant = บริษัทของผู้ login)
 //   onRisk({ id, band, score, label } | { error, notFound }) = แจ้งตัวการ์ตูนใน sidebar
 //   onDone() = โหลดเสร็จ (สำเร็จหรือพัง) ให้ปุ่ม "โหลด" เลิกหมุน
 //   rate = บาทต่อ 1 ดอลลาร์ (ค่าคงที่ THB_PER_USD ใน theme.js), dark = ธีม (กราฟ recharts ต้องรู้เพื่อเลือกสี), who = ผู้ช่วยที่เลือก
-// แท็บ/รหัสพนักงาน/รหัสบริษัทเก็บใน URL (?tab=whatif&id=5) แชร์ลิงก์ได้ และปุ่ม back ใช้ได้
+// แท็บ/รหัสพนักงานเก็บใน URL (?tab=whatif&id=5) แชร์ลิงก์ได้ และปุ่ม back ใช้ได้
+// ต้อง login ก่อน (Login.jsx) บริษัทมาจากผู้ใช้ ไม่ให้พิมพ์เอง (SEC-02)
 const TABS = [
   { id: 'overview', icon: 'chart', label: 'ภาพรวมบริษัท', hint: 'ใครเสี่ยงลาออก และเพราะอะไร' },
   { id: 'shap', icon: 'search', label: 'SHAP Viewer', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
@@ -28,15 +30,27 @@ function fromUrl() {
   const p = new URLSearchParams(location.search)
   const tab = TABS.some((t) => t.id === p.get('tab')) ? p.get('tab') : 'overview'
   const id = Number(p.get('id')) > 0 ? p.get('id') : ''
-  return { tab, id, tenant: p.get('tenant') ?? '' }
+  return { tab, id }
 }
 
 export default function App() {
+  const [session, setSession] = useState(loadSession)
+  // backend ตอบ 401 (token หมดอายุ / backend restart) = กลับไปหน้า login
+  useEffect(() => {
+    const expire = () => (saveSession(null), setSession(null))
+    addEventListener('session-expired', expire)
+    return () => removeEventListener('session-expired', expire)
+  }, [])
+  if (!session) return <Login onLogin={(s) => (saveSession(s), setSession(s))} />
+  return <Workspace user={session.user} onLogout={() => (saveSession(null), setSession(null))} />
+}
+
+function Workspace({ user, onLogout }) {
+  const tenant = user.tenant_id
   const [initial] = useState(fromUrl) // อ่าน URL ครั้งเดียวตอนเปิดหน้า
   const [tab, setTab] = useState(initial.tab)
   const [employeeId, setEmployeeId] = useState(initial.id || '1')
-  const [tenantId, setTenantId] = useState(initial.tenant)
-  const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant: initial.tenant, n: 1 } : null)
+  const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant, n: 1 } : null)
   const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
   const rate = THB_PER_USD // คงที่ ผู้ใช้ไม่ต้องรู้ว่าโมเดลใช้ดอลลาร์เบื้องหลัง
   const [risk, setRisk] = useState({}) // ความเสี่ยงล่าสุดแยกตามแท็บ
@@ -53,7 +67,6 @@ export default function App() {
   useEffect(() => {
     const p = new URLSearchParams({ tab })
     if (query) p.set('id', query.id)
-    if (query?.tenant) p.set('tenant', query.tenant)
     const next = `?${p}`
     if (firstUrlWrite.current) history.replaceState(null, '', next)
     else if (next !== location.search) history.pushState(null, '', next)
@@ -66,33 +79,32 @@ export default function App() {
       const u = fromUrl()
       setTab(u.tab)
       setEmployeeId(u.id || '1')
-      setTenantId(u.tenant)
       if (!u.id) return setQuery(null)
       setQuery((q) => {
-        if (q?.id === Number(u.id) && q.tenant === u.tenant) return q // คนเดิม ไม่ต้องโหลดใหม่
+        if (q?.id === Number(u.id)) return q // คนเดิม ไม่ต้องโหลดใหม่
         setPending(Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])))
-        return { id: Number(u.id), tenant: u.tenant, n: (q?.n ?? 0) + 1 }
+        return { id: Number(u.id), tenant, n: (q?.n ?? 0) + 1 }
       })
     }
     addEventListener('popstate', onPop)
     return () => removeEventListener('popstate', onPop)
-  }, [])
+  }, [tenant])
 
-  function load(id, tenant) {
+  function load(id) {
     setQuery((q) => ({ id: Number(id), tenant, n: (q?.n ?? 0) + 1 }))
     setPending(Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])))
   }
 
   function submit(e) {
     e.preventDefault()
-    load(employeeId, tenantId.trim())
+    load(employeeId)
     if (!PER_EMPLOYEE.includes(tab)) setTab('shap') // แท็บที่ไม่ใช่รายคน (ภาพรวม, นำเข้า) พาไปดูคนนั้น
   }
 
   // เลือกพนักงานจากรายชื่อ (ภาพรวม/หน้าว่าง) แล้วไปดูว่าทำไมถึงเสี่ยง
   function pick(id) {
     setEmployeeId(String(id))
-    load(id, tenantId.trim())
+    load(id)
     if (!PER_EMPLOYEE.includes(tab)) setTab('shap') // แท็บที่ไม่ใช่รายคน (ภาพรวม, นำเข้า) พาไปดูคนนั้น
   }
 
@@ -165,6 +177,27 @@ export default function App() {
           <Mascot risk={risk[tab]} who={who} onChoose={(v) => (setWho(v), saveMascot(v))} />
         </div>
 
+        <div className="flex items-center gap-3 border-t border-line px-4 py-3 lg:px-5">
+          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-fg">
+            <Icon name="user" className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="truncate text-sm font-medium text-fg">{user.name}</div>
+            <div className="truncate text-xs text-muted-fg" translate="no">
+              {user.username} · {user.tenant_id}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            aria-label="ออกจากระบบ"
+            title="ออกจากระบบ"
+            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            <Icon name="logout" className="size-5" />
+          </button>
+        </div>
+
         <div className="hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
           โมเดล{' '}
           <span className="font-medium text-fg" translate="no">
@@ -183,7 +216,7 @@ export default function App() {
           </div>
           <form
             onSubmit={submit}
-            className="grid gap-3 rounded-xl border border-line bg-card p-3 sm:grid-cols-[8rem_1fr_auto] sm:items-end 2xl:w-[36rem]"
+            className="grid gap-3 rounded-xl border border-line bg-card p-3 sm:grid-cols-[1fr_auto] sm:items-end 2xl:w-[22rem]"
           >
             <Field label="รหัสพนักงาน" icon="user">
               <input
@@ -198,17 +231,6 @@ export default function App() {
                 onChange={(e) => setEmployeeId(e.target.value)}
               />
             </Field>
-            <Field label="รหัสบริษัท (ถ้าปรับเทียบแล้ว)">
-              <input
-                className={inputClass}
-                name="tenant_id"
-                autoComplete="off"
-                spellCheck={false}
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-                placeholder="ไม่ระบุก็ได้ เช่น acme_th…"
-              />
-            </Field>
             <PrimaryButton loading={!!pending[tab]}>
               โหลด <Icon name="right" className="size-4" />
             </PrimaryButton>
@@ -216,16 +238,16 @@ export default function App() {
         </header>
 
         <div hidden={tab !== 'overview'}>
-          <Overview rate={rate} tenant={query?.tenant ?? ''} onPick={pick} />
+          <Overview rate={rate} onPick={pick} />
         </div>
         <div hidden={tab !== 'import'}>
-          <Upload />
+          <Upload canSave={user.role === 'admin'} />
         </div>
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
         <Suspense fallback={<Skeleton className="h-96" />}>
           {TABS.filter((t) => t.Component).map(({ id, Component }) => (
             <div key={id} hidden={tab !== id}>
-              <Component query={query} rate={rate} dark={dark} who={who} tenant={query?.tenant ?? ''} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
+              <Component query={query} rate={rate} dark={dark} who={who} tenant={tenant} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
             </div>
           ))}
         </Suspense>
