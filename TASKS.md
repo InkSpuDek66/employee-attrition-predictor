@@ -110,10 +110,10 @@ Course Milestones ที่ต้องเจอระหว่างทาง: 
 - [x] Feature engineering ร่วมกับ Saphondanai (ต่อเนื่องจาก Data cleaning)
   - ผลลัพธ์ที่ต้องส่ง: `feature_pipeline.py` (ทำงานร่วมกับ Saphondanai)
   - สถานะ: `src/feature_pipeline.py` คัดเหลือ `SELECTED_FEATURES` 3 ตัวด้วย CV AUC บน train (`notebooks/04_tuning_P.ipynb`) Saphondanai ยืนยันชุดนี้แล้ว
-- [ ] Train + tune model หลัก (XGBoost) (ตัวหลัก) ร่วมกับ Saphondanai
+- [x] Train + tune model หลัก (XGBoost) (ตัวหลัก) ร่วมกับ Saphondanai
   - วิธีทำ: ลอง config/feature subset คนละชุดกับ Saphondanai เพื่อกระจายการค้นหา (parallel search) log เข้า MLflow เดียวกัน
   - ผลลัพธ์ที่ต้องส่ง: ร่วมตัดสินใจเลือก run สุดท้ายกับ Saphondanai
-  - สถานะ: tune ด้วย Optuna เสร็จ (CV AUC 0.827, test AUC 0.81) register เป็น `attrition-xgboost-P` v1 บน MLflow กลาง (DagsHub) แล้ว เหลือตัดสินใจร่วมกันว่าใช้ตัวนี้หรือ Ensemble จาก Model Lab (Ensemble F1 ดีกว่าเล็กน้อย แต่ใช้ SHAP TreeExplainer ไม่ได้เพราะมี SVM)
+  - สถานะ: tune ด้วย Optuna เสร็จ (CV AUC 0.827, test AUC 0.81) register เป็น `attrition-xgboost-P` v1 บน MLflow กลาง (DagsHub) ทีมตัดสินใจใช้ตัวนี้แล้ว (ไม่ใช้ Ensemble จาก Model Lab แม้ F1 ดีกว่าเล็กน้อย เพราะมี SVM ใช้ SHAP TreeExplainer ไม่ได้)
 
 ### wk4–5 (13–26 ต.ค.): SHAP + Progress Check (Data Gate ใน wk4)
 - [x] SHAP integration รายบุคคล ร่วมกับ Yanisa
@@ -132,11 +132,12 @@ Course Milestones ที่ต้องเจอระหว่างทาง: 
 - [x] React: SHAP Viewer (ตัวหลัก) ร่วมกับ Saphondanai
   - วิธีทำ: render SHAP values (ข้อมูลซ้อน/nested) เป็น waterfall chart หรือ bar chart รายพนักงาน
   - ผลลัพธ์ที่ต้องส่ง: component ใช้งานได้จริง เชื่อม `/shap` แล้ว
-  - สถานะ: `frontend/src/ShapViewer.jsx` (bar chart + ตาราง ภาษาไทย) เชื่อม `/shap` แล้ว
+  - สถานะ: `frontend/src/ShapViewer.jsx` เชื่อม `/shap` แล้ว (bar chart + ตาราง + สรุปเป็นประโยค ภาษาไทย) ปรับ UI ทั้งเว็บใหม่ด้วย Tailwind (sidebar, โหมดมืด, เงินเป็นบาท, ลิงก์แชร์ได้ `?tab=&id=`, ผู้ช่วยตัวการ์ตูน) ดู README หัวข้อ "หน้าเว็บ (React)"
+  - ทำเพิ่ม: แท็บ "ภาพรวมบริษัท" (`frontend/src/Overview.jsx`) + `GET /company-summary/top-employees` + ปุ่ม CSV ซึ่งทับกับ "React: Company Summary panel" ของ Nanthamon + Yanisa ต้องคุยกันว่าจะใช้ต่อ/ปรับ/แทน ก่อนใครเริ่มทำส่วนนั้น
 - [ ] ช่วย review Superset dashboard ของ Nanthamon หลังทำ SHAP viewer เสร็จ
 - [ ] Integration testing ร่วมกับทั้งทีม
 - [ ] เขียนรายงานส่วน System Architecture / Backend (API Design) สำหรับรายงานจบ
-  - สถานะ: ร่างแล้วที่ `docs/report_backend_draft_P.md` ต้องอัปเดตตาม endpoint ของทีมที่ merge เข้ามาและโมเดลสุดท้ายก่อนส่ง
+  - สถานะ: ร่างแล้วที่ `docs/report_backend_draft_P.md` อัปเดตถึง 7 ต.ค. (โมเดลสุดท้าย, endpoint ที่มีตอนนี้, top-employees, การตัดสินใจฝั่ง frontend) ต้องอัปเดตอีกครั้งเมื่อมี database และ endpoint รองของทีม
 - [ ] ซ้อม demo ส่วน SHAP Viewer + เตรียมตอบ Technical Defense เรื่อง API design
 
 ---
