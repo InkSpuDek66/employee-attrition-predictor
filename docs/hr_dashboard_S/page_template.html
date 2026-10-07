@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HR Attrition Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --tile: #ffffff; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --tint: #eef4fc; --warn-bg: #fdf3e1;
+  --s1: #2a78d6; --s2: #eb6834; --pos: #e34948;
+  --heat-0: #cde2fb; --heat-1: #86b6ef; --heat-2: #3987e5; --heat-3: #1c5cab; --heat-4: #0d366b;
+  --sans: "IBM Plex Sans Thai", "Leelawadee UI", Tahoma, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --tile: #1f1f1e; --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --tint: #16233a; --warn-bg: #2e2412;
+    --s1: #3987e5; --s2: #d95926; --pos: #e66767;
+    --heat-0: #1f3350; --heat-1: #184f95; --heat-2: #2a78d6; --heat-3: #6da7ec; --heat-4: #cde2fb;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --tile: #1f1f1e; --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --tint: #16233a; --warn-bg: #2e2412;
+  --s1: #3987e5; --s2: #d95926; --pos: #e66767;
+  --heat-0: #1f3350; --heat-1: #184f95; --heat-2: #2a78d6; --heat-3: #6da7ec; --heat-4: #cde2fb;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.6 var(--sans); padding-inline: 16px; padding-block: 24px 40px; }
+.wrap { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.3; }
+h1 { font-size: 1.9rem; font-weight: 600; }
+h2 { font-size: 1.08rem; font-weight: 600; }
+h3 { font-size: 0.95rem; font-weight: 600; }
+p { margin: 0; color: var(--ink2); }
+button, select { font: inherit; color: var(--ink); }
+button:focus-visible, select:focus-visible, .hit:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+.eyebrow { font-size: 0.72rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: start; }
+header .intro { display: grid; gap: 8px; }
+header p { max-width: 82ch; }
+.ghost { background: transparent; border: 1px solid var(--axis); border-radius: 6px; padding: 5px 12px; font-size: 0.82rem; color: var(--ink2); cursor: pointer; }
+.ghost:hover { background: var(--tint); }
+
+.kpis { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(5, minmax(0, 1fr)); gap: 12px; }
+.kpi { background: var(--tile); border: 1px solid var(--ring); border-radius: 10px; padding: 14px 16px; display: grid; gap: 2px; align-content: start; min-width: 0; }
+.kpi .l { font-size: 0.85rem; color: var(--ink2); }
+.kpi .en { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.kpi .v { font-size: 1.85rem; font-weight: 600; line-height: 1.2; margin-top: 4px; }
+.kpi.hero .v { font-size: 3.1rem; line-height: 1.1; }
+.kpi .note { font-size: 0.8rem; color: var(--muted); }
+.kpi .note b { color: var(--ink2); font-weight: 500; }
+
+.filterbar { position: sticky; top: 0; z-index: 10; background: var(--page); border-bottom: 1px solid var(--grid); margin-inline: -16px; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.filterbar .lbl { font-size: 0.82rem; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--tint); border: 1px solid var(--ring); border-radius: 999px; padding: 3px 10px 3px 12px; font-size: 0.82rem; cursor: pointer; }
+.chip span[aria-hidden] { color: var(--muted); font-size: 1rem; line-height: 1; }
+.chip:hover span[aria-hidden] { color: var(--ink); }
+.filterbar .empty { font-size: 0.82rem; color: var(--muted); }
+.filterbar .count { margin-left: auto; font-size: 0.82rem; color: var(--ink2); }
+
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 1180px) { .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .grid3, .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi.hero { grid-column: span 2; }
+  header { grid-template-columns: minmax(0, 1fr); }
+  h1 { font-size: 1.5rem; }
+}
+.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card .sub { font-size: 0.82rem; }
+.card .insight { margin-top: auto; padding-top: 6px; font-size: 0.85rem; color: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.8rem; color: var(--ink2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.sw.line { width: 16px; height: 2px; border-radius: 1px; }
+.ramp { display: inline-block; width: 120px; height: 10px; border-radius: 2px; }
+
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--ink2); font: 12px var(--sans); }
+.chart .tick text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart text.val { fill: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.chart text.val tspan.m { fill: var(--muted); font-weight: 400; }
+.chart text.ghead { fill: var(--ink); font-weight: 600; font-size: 11.5px; }
+.chart text.avg { fill: var(--ink2); font-size: 11px; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.chart .hit { cursor: pointer; outline: none; }
+.chart .hit:focus-visible { stroke: var(--s1); stroke-width: 2px; }
+.chart .msg { font-size: 0.85rem; color: var(--muted); padding: 24px 0; }
+.tip { position: absolute; pointer-events: none; background: var(--tile); border: 1px solid var(--ring); box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+  border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; line-height: 1.5; color: var(--ink); min-width: 170px; max-width: 260px; z-index: 20; }
+.tip .k { color: var(--muted); font-size: 0.74rem; }
+.tip .hint { color: var(--muted); font-size: 0.74rem; margin-top: 4px; }
+.tip .warn { font-size: 0.74rem; color: var(--ink2); background: var(--warn-bg); border-radius: 4px; padding: 1px 6px; margin-top: 4px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+label.ctl { display: grid; gap: 4px; font-size: 0.82rem; color: var(--ink2); }
+select { background: var(--page); border: 1px solid var(--axis); border-radius: 6px; padding: 6px 8px; min-width: 0; max-width: 100%; }
+
+.uses { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 960px) { .uses { grid-template-columns: minmax(0, 1fr); } }
+.uses > div { display: grid; gap: 6px; align-content: start; }
+.uses p { font-size: 0.88rem; }
+.caveat { background: var(--warn-bg); border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; color: var(--ink); }
+.compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 4px; }
+.compare ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 0.82rem; }
+.compare li { display: grid; grid-template-columns: 1.4em minmax(0, 1fr) auto; gap: 6px; align-items: baseline; padding: 2px 6px; border-radius: 4px; color: var(--ink2); }
+.compare li.both { background: var(--tint); color: var(--ink); }
+.compare li .r { color: var(--muted); font-variant-numeric: tabular-nums; }
+.compare li .v { font-variant-numeric: tabular-nums; }
+.compare .cap { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; min-width: 560px; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--grid); text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 500; font-size: 0.78rem; }
+td { font-variant-numeric: tabular-nums; }
+tr.sel td { background: var(--tint); }
+tfoot td { font-weight: 600; border-bottom: 0; }
+
+footer { font-size: 0.78rem; color: var(--muted); display: grid; gap: 4px; }
+footer a { color: var(--ink2); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="intro">
+      <div class="eyebrow">employee-attrition-predictor · HR attrition dashboard</div>
+      <h1>ใครลาออก และอะไรมาพร้อมกับการลาออก</h1>
+      <p id="intro"></p>
+    </div>
+    <button type="button" class="ghost" id="theme">สลับธีม สว่าง/มืด</button>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="filterbar" role="region" aria-label="ตัวกรอง">
+    <span class="lbl">ตัวกรอง</span>
+    <div class="chips" id="chips"></div>
+    <span class="count" id="count"></span>
+    <button type="button" class="ghost" id="reset">ล้างตัวกรอง</button>
+  </div>
+
+  <div class="grid3">
+    <section class="card" aria-labelledby="h-role">
+      <div class="eyebrow">1 · Attrition rate by job role</div>
+      <h2 id="h-role">อัตราลาออกตามตำแหน่งงาน</h2>
+      <p class="sub">ตัวเลขข้างแท่ง = อัตราลาออก และ ลาออก/ทั้งหมด</p>
+      <div class="chart" id="c-role"></div>
+      <p class="insight" id="n-role"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-factors">
+      <div class="eyebrow">2 · Work and personal factors</div>
+      <h2 id="h-factors">อัตราลาออกตามปัจจัยด้านงานและส่วนตัว</h2>
+      <p class="sub">OT การเดินทาง สถานภาพสมรส แผนก และเพศ เส้นตั้งของแต่ละกลุ่มคือค่าเฉลี่ยของกลุ่มนั้น</p>
+      <div class="chart" id="c-factors"></div>
+      <p class="insight" id="n-factors"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-heat">
+      <div class="eyebrow">3 · Attrition rate by survey score</div>
+      <h2 id="h-heat">อัตราลาออกตามคะแนนความพึงพอใจ</h2>
+      <p class="sub">คะแนนแบบสำรวจที่พนักงานให้เอง 1 = ต่ำสุด 4 = สูงสุด</p>
+      <div class="legend" id="l-heat"></div>
+      <div class="chart" id="c-heat"></div>
+      <p class="insight" id="n-heat"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-age">
+      <div class="eyebrow">4 · Attrition rate by age</div>
+      <h2 id="h-age">อัตราลาออกตามอายุ</h2>
+      <p class="sub">ช่วงอายุ (ปี) ตัวเลขใต้แกนคือจำนวนคนในช่วงนั้น</p>
+      <div class="chart" id="c-age"></div>
+      <p class="insight" id="n-age"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-tenure">
+      <div class="eyebrow">5 · Attrition rate by tenure</div>
+      <h2 id="h-tenure">อัตราลาออกตามอายุงาน</h2>
+      <p class="sub">จำนวนปีที่ทำงานกับบริษัทนี้</p>
+      <div class="chart" id="c-tenure"></div>
+      <p class="insight" id="n-tenure"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-income">
+      <div class="eyebrow">6 · Attrition rate by monthly income</div>
+      <h2 id="h-income">อัตราลาออกตามรายได้ต่อเดือน</h2>
+      <p class="sub">รายได้ต่อเดือน หน่วยดอลลาร์สหรัฐ (USD)</p>
+      <div class="chart" id="c-income"></div>
+      <p class="insight" id="n-income"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-dist">
+      <div class="eyebrow">7 · Monthly income: stayed vs left</div>
+      <h2 id="h-dist">การกระจายรายได้ของคนที่อยู่ต่อเทียบกับคนที่ลาออก</h2>
+      <p class="sub">แต่ละเส้นรวมกันได้ 100% ของกลุ่มตัวเอง แบ่งช่วงละ $1K</p>
+      <div class="legend" id="l-dist"></div>
+      <div class="chart" id="c-dist"></div>
+      <p class="insight" id="n-dist"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-level">
+      <div class="eyebrow">8 · Headcount by job level</div>
+      <h2 id="h-level">จำนวนพนักงานตามระดับงาน</h2>
+      <p class="sub">ความยาวแท่ง = จำนวนคน ส่วนสีส้ม = คนที่ลาออก</p>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--s1)"></i>อยู่ต่อ</span>
+        <span><i class="sw" style="background:var(--s2)"></i>ลาออก</span>
+      </div>
+      <div class="chart" id="c-level"></div>
+      <p class="insight" id="n-level"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-corr">
+      <div class="eyebrow">9 · What moves with attrition</div>
+      <h2 id="h-corr">10 ตัวแปรตัวเลขที่สัมพันธ์กับการลาออกมากที่สุด</h2>
+      <p class="sub">ค่าสหสัมพันธ์กับการลาออก (−1 ถึง +1) การทำ OT แปลงเป็น ใช่ = 1</p>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--pos)"></i>ค่ายิ่งสูง ยิ่งลาออกมาก</span>
+        <span><i class="sw" style="background:var(--s1)"></i>ค่ายิ่งสูง ยิ่งลาออกน้อย</span>
+      </div>
+      <div class="chart" id="c-corr"></div>
+      <p class="insight" id="n-corr"></p>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="h-explore">
+    <div class="eyebrow">Explore</div>
+    <h2 id="h-explore">ลองดูตัวแปรอื่น</h2>
+    <p class="sub">เลือกตัวแปรไหนก็ได้ในข้อมูล แล้วดูอัตราลาออกแยกตามกลุ่ม ใช้ตัวกรองชุดเดียวกับทั้งหน้า คลิกแท่งเพื่อกรองต่อได้</p>
+    <div class="row">
+      <label class="ctl" for="ex-field">ตัวแปร
+        <select id="ex-field"></select>
+      </label>
+    </div>
+    <div class="chart" id="c-explore"></div>
+    <p class="insight" id="n-explore"></p>
+  </section>
+
+  <section class="card" aria-labelledby="h-uses">
+    <div class="eyebrow">How this feeds the project</div>
+    <h2 id="h-uses">ใช้กับโปรเจกต์ employee-attrition-predictor ยังไง</h2>
+    <div class="uses">
+      <div>
+        <h3>EDA ก่อนทำโมเดล</h3>
+        <p>ดูว่าตัวแปรไหนน่าจะสำคัญก่อนเทรน ในข้อมูลชุดนี้กลุ่มที่ลาออกสูงกว่าค่าเฉลี่ยชัด ๆ คือคนทำ OT อายุงานไม่เกิน 1 ปี รายได้ต่ำ ระดับงาน 1 และคนโสด</p>
+      </div>
+      <div>
+        <h3>คุยกับฝั่ง HR</h3>
+        <p>HR เห็นกลุ่มเสี่ยงเป็นอัตราลาออกและจำนวนคน ไม่ต้องอธิบายโมเดลก่อน กดกรองดูกลุ่มที่สนใจระหว่างประชุมได้เลย</p>
+      </div>
+      <div>
+        <h3>เทียบกับผล SHAP</h3>
+        <p>เช็กว่าตัวแปรที่โมเดลให้น้ำหนักมาก ตรงกับสิ่งที่เห็นในข้อมูลดิบหรือไม่ แถวที่ไฮไลต์คือตัวที่ติด 10 อันดับทั้งสองฝั่ง</p>
+        <div class="compare" id="compare"></div>
+        <p class="sub" id="compare-note"></p>
+      </div>
+    </div>
+    <p class="caveat"><b>ข้อควรระวัง:</b> dashboard นี้แสดงความสัมพันธ์ ไม่ใช่เหตุและผล เช่น คนทำ OT ลาออกมากกว่าคนไม่ทำ OT แต่ข้อมูลชุดนี้พิสูจน์ไม่ได้ว่า OT เป็นสาเหตุให้ลาออก กลุ่มที่มีคนน้อย (ต่ำกว่า 30 คน) ตัวเลขแกว่งได้มาก</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-table">
+    <div class="eyebrow">Data table</div>
+    <h2 id="h-table">ตัวเลขเบื้องหลังกราฟ</h2>
+    <p class="sub">ตัวเลขชุดเดียวกับที่ใช้วาดกราฟ ตามตัวกรองที่เลือกอยู่ ดาวน์โหลดเป็น CSV เอาไปใช้ต่อได้ (ไฟล์มีทุกตัวแปร)</p>
+    <div class="row">
+      <label class="ctl" for="tb-field">ตาราง
+        <select id="tb-field"></select>
+      </label>
+      <button type="button" class="ghost" id="csv">ดาวน์โหลด CSV</button>
+    </div>
+    <div class="tablewrap"><table id="table"></table></div>
+  </section>
+
+  <footer>
+    <div id="meta"></div>
+    <div>ที่มาของข้อมูล: IBM HR Analytics Employee Attrition &amp; Performance (<a href="https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset">Kaggle</a>) ข้อมูลสมมติที่สร้างโดย IBM data scientists ใช้ภายใต้ <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL v1.0</a> / <a href="https://opendatacommons.org/licenses/dbcl/1-0/">DbCL v1.0</a></div>
+  </footer>
+</div>
+
+<script>
+const D = __DATA__;
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+
+/* ---------- format ---------- */
+const fmtInt = v => Math.round(v).toLocaleString("en-US");
+const fmtPct = (v, d = 1) => v == null ? "–" : v.toFixed(d) + "%";
+const fmtUsd = v => "$" + fmtInt(v);
+const fmtR = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2);
+const fmtPP = v => Math.abs(v) < 0.05 ? "0.0" : (v > 0 ? "+" : "-") + Math.abs(v).toFixed(1);
+const fmtNum = v => Number.isInteger(v) ? String(v) : v.toFixed(1);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- rows ---------- */
+function cut(v, edges, labels) {
+  for (let i = 0; i < labels.length; i++) if (v > edges[i] && v <= edges[i + 1]) return labels[i];
+  return null;
+}
+// ช่วงอายุ/อายุงาน/รายได้ ตรงกับ pd.cut ใน docs/hr_attrition_dashboard.ipynb (ขอบขวารวม)
+const BANDS = [
+  { key: "AgeBand", src: "Age", th: "ช่วงอายุ (ปี)", edges: [17, 24, 29, 34, 39, 44, 49, 60], labels: ["18–24", "25–29", "30–34", "35–39", "40–44", "45–49", "50–60"] },
+  { key: "TenureBand", src: "YearsAtCompany", th: "อายุงานที่บริษัทนี้ (ปี)", edges: [-1, 1, 3, 5, 10, 20, 40], labels: ["0–1", "2–3", "4–5", "6–10", "11–20", "21+"] },
+  { key: "IncomeBand", src: "MonthlyIncome", th: "รายได้ต่อเดือน (USD)", edges: [0, 2500, 5000, 7500, 10000, 15000, 20000], labels: ["≤2.5K", "2.5–5K", "5–7.5K", "7.5–10K", "10–15K", "15–20K"] },
+  { key: "DistanceBand", src: "DistanceFromHome", th: "ระยะทางจากบ้าน", edges: [0, 2, 5, 10, 20, 29], labels: ["1–2", "3–5", "6–10", "11–20", "21–29"] },
+  { key: "TotalYearsBand", src: "TotalWorkingYears", th: "อายุงานรวมทุกที่ (ปี)", edges: [-1, 2, 5, 10, 20, 40], labels: ["0–2", "3–5", "6–10", "11–20", "21+"] },
+  { key: "RoleYearsBand", src: "YearsInCurrentRole", th: "ปีในตำแหน่งปัจจุบัน", edges: [-1, 1, 3, 6, 18], labels: ["0–1", "2–3", "4–6", "7+"] },
+  { key: "ManagerYearsBand", src: "YearsWithCurrManager", th: "ปีกับหัวหน้าคนปัจจุบัน", edges: [-1, 1, 3, 6, 17], labels: ["0–1", "2–3", "4–6", "7+"] },
+  { key: "PromoBand", src: "YearsSinceLastPromotion", th: "ปีตั้งแต่เลื่อนตำแหน่งล่าสุด", edges: [-1, 0, 2, 5, 15], labels: ["0", "1–2", "3–5", "6+"] },
+  { key: "CompaniesBand", src: "NumCompaniesWorked", th: "จำนวนบริษัทที่เคยทำงาน", edges: [-1, 0, 1, 3, 5, 9], labels: ["0", "1", "2–3", "4–5", "6–9"] },
+  { key: "HikeBand", src: "PercentSalaryHike", th: "ขึ้นเงินเดือนล่าสุด", edges: [10, 13, 16, 19, 25], labels: ["11–13%", "14–16%", "17–19%", "20–25%"] },
+];
+
+const COLS = { ...D.num };
+for (const [c, { levels, codes }] of Object.entries(D.cat)) COLS[c] = codes.map(i => levels[i]);
+const rows = [];
+for (let i = 0; i < D.n; i++) {
+  const r = {};
+  for (const c in COLS) r[c] = COLS[c][i];
+  r.Left = r.Attrition === "Yes" ? 1 : 0;
+  r.OverTimeFlag = r.OverTime === "Yes" ? 1 : 0;
+  for (const b of BANDS) r[b.key] = cut(r[b.src], b.edges, b.labels);
+  rows.push(r);
+}
+const N_ALL = rows.length;
+const RATE_ALL = rows.reduce((s, r) => s + r.Left, 0) / N_ALL * 100;
+
+/* ---------- fields ---------- */
+const SAT = { 1: "ต่ำ", 2: "ปานกลาง", 3: "สูง", 4: "สูงมาก" };
+const byRate = col => [...new Set(rows.map(r => r[col]))].map(v => {
+  const g = rows.filter(r => r[col] === v);
+  return [v, g.reduce((s, r) => s + r.Left, 0) / g.length];
+}).sort((a, b) => b[1] - a[1]).map(([v]) => v);
+
+const F = {
+  JobRole: { th: "ตำแหน่งงาน", values: byRate("JobRole") },
+  OverTime: { th: "ทำ OT", short: "OT", values: ["Yes", "No"], label: { Yes: "ทำ", No: "ไม่ทำ" } },
+  BusinessTravel: { th: "การเดินทางไปทำงาน", short: "การเดินทาง", values: ["Travel_Frequently", "Travel_Rarely", "Non-Travel"], label: { Travel_Frequently: "บ่อย", Travel_Rarely: "นาน ๆ ครั้ง", "Non-Travel": "ไม่เดินทาง" } },
+  MaritalStatus: { th: "สถานภาพสมรส", short: "สถานภาพ", values: ["Single", "Married", "Divorced"], label: { Single: "โสด", Married: "สมรส", Divorced: "หย่า" } },
+  Department: { th: "แผนก", values: ["Sales", "Human Resources", "Research & Development"], label: { Sales: "Sales", "Human Resources": "HR", "Research & Development": "R&D" } },
+  Gender: { th: "เพศ", values: ["Male", "Female"], label: { Male: "ชาย", Female: "หญิง" } },
+  JobLevel: { th: "ระดับงาน", values: [1, 2, 3, 4, 5], label: v => "ระดับ " + v, ordered: true },
+  JobInvolvement: { th: "ความทุ่มเทให้งาน", values: [1, 2, 3, 4], label: SAT, ordered: true },
+  JobSatisfaction: { th: "พอใจในงาน", values: [1, 2, 3, 4], label: SAT, ordered: true },
+  EnvironmentSatisfaction: { th: "พอใจสภาพแวดล้อม", values: [1, 2, 3, 4], label: SAT, ordered: true },
+  WorkLifeBalance: { th: "สมดุลงานกับชีวิต", values: [1, 2, 3, 4], label: { 1: "แย่", 2: "พอใช้", 3: "ดี", 4: "ดีมาก" }, ordered: true },
+  RelationshipSatisfaction: { th: "พอใจเพื่อนร่วมงาน", values: [1, 2, 3, 4], label: SAT, ordered: true },
+  EducationField: { th: "สาขาที่เรียน", values: byRate("EducationField") },
+  Education: { th: "ระดับการศึกษา", values: [1, 2, 3, 4, 5], label: { 1: "ต่ำกว่าอนุปริญญา", 2: "อนุปริญญา", 3: "ป.ตรี", 4: "ป.โท", 5: "ป.เอก" }, ordered: true },
+  StockOptionLevel: { th: "สิทธิ์ซื้อหุ้นพนักงาน", values: [0, 1, 2, 3], label: { 0: "ไม่มี", 1: "ระดับ 1", 2: "ระดับ 2", 3: "ระดับ 3" }, ordered: true },
+  PerformanceRating: { th: "ผลประเมินการทำงาน", values: [3, 4], label: { 3: "3 ดีเยี่ยม", 4: "4 โดดเด่น" }, ordered: true },
+  TrainingTimesLastYear: { th: "จำนวนครั้งที่อบรมปีที่แล้ว", values: [0, 1, 2, 3, 4, 5, 6], ordered: true },
+};
+for (const b of BANDS) F[b.key] = { th: b.th, values: b.labels, ordered: true };
+const SAT_FIELDS = ["JobInvolvement", "JobSatisfaction", "EnvironmentSatisfaction", "WorkLifeBalance", "RelationshipSatisfaction"];
+const FACTOR_FIELDS = ["OverTime", "BusinessTravel", "MaritalStatus", "Department", "Gender"];
+const MAIN_FIELDS = ["JobRole", ...FACTOR_FIELDS, ...SAT_FIELDS, "AgeBand", "TenureBand", "IncomeBand", "JobLevel"];
+const OTHER_FIELDS = Object.keys(F).filter(f => !MAIN_FIELDS.includes(f));
+
+function lab(field, v) {
+  const L = F[field].label;
+  if (typeof L === "function") return L(v);
+  return L && L[v] != null ? L[v] : String(v);
+}
+
+// ชื่อสั้นของคอลัมน์ตัวเลข ใช้ในกราฟสหสัมพันธ์และตารางเทียบ SHAP
+const NUM_LABEL = {
+  OverTimeFlag: "ทำ OT (ใช่ = 1)", Age: "อายุ", DailyRate: "ค่าจ้างรายวัน", DistanceFromHome: "ระยะทางจากบ้าน",
+  Education: "ระดับการศึกษา", EnvironmentSatisfaction: "พอใจสภาพแวดล้อม", HourlyRate: "ค่าจ้างรายชั่วโมง",
+  JobInvolvement: "ความทุ่มเทให้งาน", JobLevel: "ระดับงาน", JobSatisfaction: "พอใจในงาน", MonthlyIncome: "รายได้ต่อเดือน",
+  MonthlyRate: "อัตรารายเดือน", NumCompaniesWorked: "จำนวนบริษัทที่เคยทำ", PercentSalaryHike: "ขึ้นเงินเดือน (%)",
+  PerformanceRating: "ผลประเมินการทำงาน", RelationshipSatisfaction: "พอใจเพื่อนร่วมงาน", StockOptionLevel: "สิทธิ์ซื้อหุ้น",
+  TotalWorkingYears: "อายุงานรวมทุกที่", TrainingTimesLastYear: "จำนวนครั้งที่อบรม", WorkLifeBalance: "สมดุลงานกับชีวิต",
+  YearsAtCompany: "อายุงานที่บริษัทนี้", YearsInCurrentRole: "ปีในตำแหน่งปัจจุบัน", YearsSinceLastPromotion: "ปีตั้งแต่เลื่อนตำแหน่ง",
+  YearsWithCurrManager: "ปีกับหัวหน้าคนปัจจุบัน",
+  AvgSatisfaction: "ความพึงพอใจเฉลี่ย", OverTimeXDistance: "OT × ระยะทางจากบ้าน", BusinessTravel: "การเดินทางไปทำงาน",
+};
+const CORR_COLS = [...Object.keys(D.num), "OverTimeFlag"];
+
+/* ---------- filters ---------- */
+const filters = new Map();
+function pass(r, except) {
+  for (const [f, v] of filters) if (f !== except && r[f] !== v) return false;
+  return true;
+}
+const subset = except => rows.filter(r => pass(r, except));
+function toggle(field, value) {
+  if (filters.get(field) === value) filters.delete(field); else filters.set(field, value);
+  renderAll();
+}
+
+// กราฟของตัวแปรไหนก็คำนวณโดยไม่ใช้ตัวกรองของตัวแปรนั้นเอง จึงยังเห็นทุกกลุ่มและรู้ว่ากลุ่มที่เลือกอยู่ตรงไหน
+function groupStats(field) {
+  const rs = subset(field);
+  const m = new Map(F[field].values.map(v => [v, { value: v, n: 0, left: 0 }]));
+  let left = 0;
+  for (const r of rs) { left += r.Left; const s = m.get(r[field]); if (s) { s.n++; s.left += r.Left; } }
+  const items = [...m.values()].map(s => ({ ...s, rate: s.n ? s.left / s.n * 100 : null }));
+  return { items, n: rs.length, left, base: rs.length ? left / rs.length * 100 : null };
+}
+
+function median(a) {
+  if (!a.length) return null;
+  const s = [...a].sort((x, y) => x - y), h = s.length >> 1;
+  return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2;
+}
+
+function corrs(rs) {
+  const n = rs.length;
+  if (n < 3) return [];
+  const my = rs.reduce((s, r) => s + r.Left, 0) / n;
+  const syy = rs.reduce((s, r) => s + (r.Left - my) ** 2, 0);
+  if (!syy) return [];
+  const out = [];
+  for (const c of CORR_COLS) {
+    const mx = rs.reduce((s, r) => s + r[c], 0) / n;
+    let sxy = 0, sxx = 0;
+    for (const r of rs) { const dx = r[c] - mx; sxy += dx * (r.Left - my); sxx += dx * dx; }
+    if (sxx) out.push({ key: c, r: sxy / Math.sqrt(sxx * syy) });
+  }
+  return out.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+}
+
+/* ---------- svg helpers ---------- */
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function text(parent, x, y, s, attrs = {}) {
+  const t = el("text", { x, y, ...attrs }, parent);
+  t.textContent = s;
+  return t;
+}
+function svgFor(box, W, H, label) {
+  box.innerHTML = "";
+  return el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": label }, box);
+}
+const ctx = document.createElement("canvas").getContext("2d");
+function textW(s, size = 12, weight = 400) {
+  ctx.font = `${weight} ${size}px ${getComputedStyle(document.body).fontFamily}`;
+  return ctx.measureText(s).width;
+}
+function fit(s, maxW, size = 12) {
+  if (textW(s, size) <= maxW) return s;
+  while (s.length > 1 && textW(s + "…", size) > maxW) s = s.slice(0, -1);
+  return s + "…";
+}
+function niceStep(raw) {
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => s >= raw - 1e-12);
+}
+function niceTicks(lo, hi, n = 4) {
+  const step = niceStep((hi - lo) / n), out = [];
+  for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+function niceMax(v, n = 4) {
+  if (!(v > 0)) return 1;
+  const step = niceStep(v / n);
+  return Math.ceil(v / step - 1e-9) * step;
+}
+// แท่งมุมมน 4px เฉพาะปลายด้านข้อมูล ฝั่งฐานเป็นมุมฉาก
+function hbarPath(x0, y, w, h, r = 4) {
+  if (w <= 0) return "";
+  r = Math.min(r, w, h / 2);
+  return `M${x0},${y}H${x0 + w - r}A${r},${r} 0 0 1 ${x0 + w},${y + r}V${y + h - r}A${r},${r} 0 0 1 ${x0 + w - r},${y + h}H${x0}Z`;
+}
+function hbarPathLeft(x0, y, w, h, r = 4) {
+  if (w <= 0) return "";
+  r = Math.min(r, w, h / 2);
+  return `M${x0},${y}H${x0 - w + r}A${r},${r} 0 0 0 ${x0 - w},${y + r}V${y + h - r}A${r},${r} 0 0 0 ${x0 - w + r},${y + h}H${x0}Z`;
+}
+function colPath(cx, w, yTop, yBase, r = 4) {
+  const x0 = cx - w / 2, h = yBase - yTop;
+  if (h <= 0) return "";
+  r = Math.min(r, h, w / 2);
+  return `M${x0},${yBase}V${yTop + r}A${r},${r} 0 0 1 ${x0 + r},${yTop}H${x0 + w - r}A${r},${r} 0 0 1 ${x0 + w},${yTop + r}V${yBase}Z`;
+}
+
+/* ---------- tooltip + clickable marks ---------- */
+function showTip(box, html, x, y) {
+  let t = box.querySelector(":scope > .tip");
+  if (!t) { t = document.createElement("div"); t.className = "tip"; box.appendChild(t); }
+  t.innerHTML = html;
+  t.hidden = false;
+  const bw = box.clientWidth, tw = t.offsetWidth;
+  let left = x + 14;
+  if (left + tw > bw) left = x - tw - 14;
+  t.style.left = Math.max(0, Math.min(left, bw - tw)) + "px";
+  t.style.top = (y + 14) + "px";
+}
+function hideTip(box) { const t = box.querySelector(":scope > .tip"); if (t) t.hidden = true; }
+
+let focusKey = null;
+function hit(parent, box, rect, { key, label, html, onClick, pressed, onShow, onHide }) {
+  const h = el("rect", { ...rect, fill: "transparent", class: "hit", tabindex: 0, "aria-label": label, "data-key": key }, parent);
+  if (onClick) { h.setAttribute("role", "button"); h.setAttribute("aria-pressed", pressed ? "true" : "false"); }
+  const show = ev => {
+    const r = box.getBoundingClientRect(), b = h.getBoundingClientRect();
+    const mouse = ev && ev.type === "mousemove";
+    showTip(box, html(), mouse ? ev.clientX - r.left : b.left - r.left + b.width / 2, mouse ? ev.clientY - r.top : b.top - r.top + b.height / 2);
+    if (onShow) onShow();
+  };
+  const hide = () => { hideTip(box); if (onHide) onHide(); };
+  h.addEventListener("mousemove", show);
+  h.addEventListener("focus", show);
+  h.addEventListener("mouseleave", hide);
+  h.addEventListener("blur", hide);
+  if (onClick) {
+    h.addEventListener("click", () => { focusKey = null; onClick(); });
+    h.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); focusKey = key; onClick(); }
+    });
+  }
+  return h;
+}
+
+function rateTip(field, it, base) {
+  const diff = it.rate - base;
+  const sel = filters.get(field) === it.value;
+  return `<b>${esc(lab(field, it.value))}</b> <span class="k">${esc(F[field].th)}</span>` +
+    `<div>ลาออก <span class="num">${fmtInt(it.left)}</span> จาก <span class="num">${fmtInt(it.n)}</span> คน</div>` +
+    `<div>อัตราลาออก <b class="num">${fmtPct(it.rate)}</b></div>` +
+    `<div class="k">${diff >= 0 ? "สูงกว่า" : "ต่ำกว่า"}ค่าเฉลี่ย ${Math.abs(diff).toFixed(1)} จุด (เฉลี่ย ${fmtPct(base)})</div>` +
+    (it.n < 30 ? `<div class="warn">มีแค่ ${it.n} คน ตัวเลขแกว่งได้มาก</div>` : "") +
+    `<div class="hint">${sel ? "คลิกเพื่อยกเลิกตัวกรองนี้" : "คลิกเพื่อกรองทั้งหน้า"}</div>`;
+}
+
+// กลุ่มที่ลาออกสูงสุด/ต่ำสุด ข้ามกลุ่มที่มีคนน้อยกว่า 20 คน (ถ้าทุกกลุ่มน้อยหมดก็ใช้ทั้งหมด)
+function extremes(items) {
+  const ok = items.filter(i => i.rate != null);
+  const big = ok.filter(i => i.n >= 20);
+  const pool = big.length >= 2 ? big : ok;
+  if (pool.length < 2) return null;
+  const s = [...pool].sort((a, b) => b.rate - a.rate);
+  return { hi: s[0], lo: s[s.length - 1] };
+}
+function noData(box, msg = "ไม่มีพนักงานที่ตรงกับตัวกรองนี้") { box.innerHTML = `<div class="msg">${msg}</div>`; }
+
+/* ---------- horizontal rate bars (มีเส้นค่าเฉลี่ย) ---------- */
+function drawHBar(box, chartId, groups, aria, rowH = 26, barH = 16) {
+  const data = groups.map(g => ({ ...g, ...groupStats(g.field) }));
+  if (!data.some(g => g.n)) { noData(box); return data; }
+  const W = Math.max(box.clientWidth, 260);
+  const labels = data.flatMap(g => g.items.map(it => lab(g.field, it.value)));
+  const labelW = Math.min(Math.max(...labels.map(s => textW(s))) + 14, W * 0.42);
+  const valueW = 92, headH = 20, gapG = 10, top = 24, bottom = 26;
+  const maxRate = Math.max(...data.flatMap(g => g.items.map(i => i.rate ?? 0)), ...data.map(g => g.base ?? 0));
+  const xmax = niceMax(maxRate * 1.04, 4);
+  const x = v => labelW + v / xmax * (W - labelW - valueW);
+  let y = top;
+  data.forEach((g, gi) => {
+    if (gi) y += gapG;
+    if (g.head) { g.headY = y + 14; y += headH; }
+    g.y0 = y;
+    g.items.forEach(it => { it.y = y; y += rowH; });
+    g.y1 = y;
+  });
+  const H = y + bottom;
+  const svg = svgFor(box, W, H, aria);
+  for (const t of niceTicks(0, xmax, W < 360 ? 3 : 4)) {
+    const g = el("g", { class: "tick" }, svg);
+    el("line", { x1: x(t), x2: x(t), y1: top - 4, y2: H - bottom, stroke: "var(--grid)" }, g);
+    text(g, x(t), H - bottom + 16, t + "%", { "text-anchor": "middle" });
+  }
+  const marks = el("g", {}, svg), avgG = el("g", {}, svg), over = el("g", {}, svg), hits = el("g", {}, svg);
+  data.forEach((g, gi) => {
+    if (g.head) text(marks, 0, g.headY, g.head, { class: "ghead" });
+    const sel = filters.get(g.field);
+    g.items.forEach(it => {
+      const cy = it.y + rowH / 2, isSel = sel === it.value, dim = sel !== undefined && !isSel;
+      if (isSel) el("rect", { x: 0, y: it.y + 1, width: W, height: rowH - 2, rx: 6, fill: "var(--tint)" }, marks);
+      text(marks, labelW - 10, cy + 4, fit(lab(g.field, it.value), labelW - 14), { "text-anchor": "end", style: isSel ? "fill:var(--ink);font-weight:600" : null });
+      if (it.rate == null) { text(marks, labelW + 2, cy + 4, "ไม่มีคนในกลุ่มนี้", { style: "fill:var(--muted);font-size:11px" }); }
+      else {
+        el("path", { d: hbarPath(labelW, cy - barH / 2, x(it.rate) - labelW, barH), fill: "var(--s1)", opacity: dim ? 0.35 : 1 }, marks);
+        const t = el("text", { x: x(it.rate) + 6, y: cy + 4, class: "val" }, over);
+        el("tspan", {}, t).textContent = it.rate.toFixed(1) + "%";
+        el("tspan", { class: "m" }, t).textContent = ` ${it.left}/${it.n}`;
+        hit(hits, box, { x: 0, y: it.y, width: W, height: rowH }, {
+          key: `${chartId}|${g.field}|${it.value}`, label: `${lab(g.field, it.value)} ลาออก ${it.rate.toFixed(1)}%`,
+          html: () => rateTip(g.field, it, g.base), onClick: () => toggle(g.field, it.value), pressed: isSel,
+        });
+      }
+    });
+    if (g.base != null) {
+      const bx = x(g.base);
+      el("line", { x1: bx, x2: bx, y1: g.y0 - 2, y2: g.y1 + 2, stroke: "var(--ink2)", "stroke-width": 1.25 }, avgG);
+      if (gi === 0 || Math.abs(g.base - data[0].base) > 0.05) {
+        const s = `เฉลี่ย ${fmtPct(g.base)}`, right = bx + 4 + textW(s, 11) < W;
+        text(over, right ? bx + 4 : bx - 4, gi === 0 && !g.head ? top - 8 : g.y0 - 5, s, { class: "avg", "text-anchor": right ? "start" : "end" });
+      }
+    }
+  });
+  return data;
+}
+
+/* ---------- columns by ordered band (มีเส้นค่าเฉลี่ย) ---------- */
+function drawCols(box, chartId, field) {
+  const st = groupStats(field);
+  if (!st.n) { noData(box); return st; }
+  const W = Math.max(box.clientWidth, 260), H = W < 360 ? 230 : 250;
+  const left = 36, right = 52, top = 20, bottom = 44;
+  const ymax = niceMax(Math.max(...st.items.map(i => i.rate ?? 0), st.base) * 1.12, 4);
+  const slot = (W - left - right) / st.items.length, cw = Math.min(26, slot * 0.6);
+  const y = v => top + (1 - v / ymax) * (H - top - bottom);
+  const svg = svgFor(box, W, H, F[field].th);
+  for (const t of niceTicks(0, ymax, 4)) {
+    const g = el("g", { class: "tick" }, svg);
+    if (t > 0) el("line", { x1: left, x2: W - right, y1: y(t), y2: y(t), stroke: "var(--grid)" }, g);
+    text(g, left - 6, y(t) + 4, t + "%", { "text-anchor": "end" });
+  }
+  el("line", { x1: left, x2: W - right, y1: y(0), y2: y(0), stroke: "var(--axis)" }, svg);
+  const marks = el("g", {}, svg), avgG = el("g", {}, svg), over = el("g", {}, svg), hits = el("g", {}, svg);
+  const sel = filters.get(field), small = slot < 40;
+  st.items.forEach((it, i) => {
+    const cx = left + slot * (i + 0.5), isSel = sel === it.value, dim = sel !== undefined && !isSel;
+    if (isSel) el("rect", { x: cx - slot / 2 + 1, y: top - 14, width: slot - 2, height: H - top - bottom + 14, rx: 6, fill: "var(--tint)" }, marks);
+    text(marks, cx, H - bottom + 16, lab(field, it.value), { "text-anchor": "middle", style: (small ? "font-size:10.5px;" : "") + (isSel ? "fill:var(--ink);font-weight:600" : "") });
+    text(marks, cx, H - bottom + 31, `n=${it.n}`, { "text-anchor": "middle", style: "fill:var(--muted);font-size:10.5px" });
+    if (it.rate == null) return;
+    el("path", { d: colPath(cx, cw, y(it.rate), y(0)), fill: "var(--s1)", opacity: dim ? 0.35 : 1 }, marks);
+    text(over, cx, y(it.rate) - 6, it.rate.toFixed(1) + "%", { "text-anchor": "middle", class: "val", style: small ? "font-size:10.5px" : null });
+    hit(hits, box, { x: cx - slot / 2, y: top - 14, width: slot, height: H - top + 14 }, {
+      key: `${chartId}|${field}|${it.value}`, label: `${lab(field, it.value)} ลาออก ${it.rate.toFixed(1)}%`,
+      html: () => rateTip(field, it, st.base), onClick: () => toggle(field, it.value), pressed: isSel,
+    });
+  });
+  const by = y(st.base);
+  el("line", { x1: left, x2: W - right + 2, y1: by, y2: by, stroke: "var(--ink2)", "stroke-width": 1.25 }, avgG);
+  text(over, W - right + 6, by - 3, "เฉลี่ย", { class: "avg" });
+  text(over, W - right + 6, by + 11, fmtPct(st.base), { class: "avg" });
+  return st;
+}
+
+/* ---------- heatmap ---------- */
+function heatRamp() {
+  const cs = getComputedStyle(document.documentElement);
+  return [0, 1, 2, 3, 4].map(i => cs.getPropertyValue(`--heat-${i}`).trim());
+}
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+function rampAt(ramp, t) {
+  t = Math.max(0, Math.min(1, t)) * (ramp.length - 1);
+  const i = Math.min(Math.floor(t), ramp.length - 2), f = t - i;
+  const a = hexRgb(ramp[i]), b = hexRgb(ramp[i + 1]);
+  return a.map((v, k) => Math.round(v + (b[k] - v) * f));
+}
+function lum(rgb) {
+  const [r, g, b] = rgb.map(c => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function drawHeat(box) {
+  const stats = SAT_FIELDS.map(f => ({ field: f, ...groupStats(f) }));
+  if (!stats.some(s => s.n)) { noData(box); $("l-heat").innerHTML = ""; return stats; }
+  const ramp = heatRamp();
+  const vmax = Math.max(5, Math.ceil(Math.max(...stats.flatMap(s => s.items.map(i => i.rate ?? 0))) / 5) * 5);
+  $("l-heat").innerHTML = `<span>0%</span><span class="ramp" style="background:linear-gradient(to right, ${ramp.join(",")})"></span><span>${vmax}% (ยิ่งไปทางขวา ยิ่งลาออกมาก)</span>`;
+  const W = Math.max(box.clientWidth, 260);
+  const labelW = Math.min(Math.max(...SAT_FIELDS.map(f => textW(F[f].th))) + 12, W * 0.36);
+  const top = 22, cellH = 46, gap = 3, cw = (W - labelW) / 4, H = top + cellH * stats.length + 4;
+  const svg = svgFor(box, W, H, "อัตราลาออกตามคะแนนความพึงพอใจ");
+  ["1 ต่ำสุด", "2", "3", "4 สูงสุด"].forEach((s, j) => text(svg, labelW + cw * (j + 0.5), top - 8, s, { "text-anchor": "middle", style: "fill:var(--muted);font-size:11px" }));
+  const hits = el("g", {}, svg);
+  stats.forEach((s, i) => {
+    const y0 = top + i * cellH;
+    text(svg, labelW - 10, y0 + cellH / 2 + 4, fit(F[s.field].th, labelW - 12), { "text-anchor": "end" });
+    const sel = filters.get(s.field);
+    s.items.forEach((it, j) => {
+      const x0 = labelW + j * cw + gap / 2, w = cw - gap, h = cellH - gap;
+      if (it.rate == null) {
+        el("rect", { x: x0, y: y0 + gap / 2, width: w, height: h, rx: 4, fill: "var(--grid)" }, svg);
+        text(svg, x0 + w / 2, y0 + cellH / 2 + 4, "–", { "text-anchor": "middle" });
+        return;
+      }
+      const rgb = rampAt(ramp, it.rate / vmax), L = lum(rgb);
+      const ink = 1.05 / (L + 0.05) > (L + 0.05) / 0.05 ? "#ffffff" : "#0b0b0b";
+      el("rect", { x: x0, y: y0 + gap / 2, width: w, height: h, rx: 4, fill: `rgb(${rgb})` }, svg);
+      if (sel === it.value) el("rect", { x: x0 + 1, y: y0 + gap / 2 + 1, width: w - 2, height: h - 2, rx: 4, fill: "none", stroke: "var(--ink)", "stroke-width": 2 }, svg);
+      text(svg, x0 + w / 2, y0 + cellH / 2 + 1, it.rate.toFixed(1) + "%", { "text-anchor": "middle", style: `fill:${ink};font-weight:600;font-size:${cw < 60 ? 11.5 : 13}px` });
+      text(svg, x0 + w / 2, y0 + cellH / 2 + 15, `n=${it.n}`, { "text-anchor": "middle", style: `fill:${ink};font-size:10px;opacity:0.85` });
+      hit(hits, box, { x: x0, y: y0 + gap / 2, width: w, height: h, rx: 4 }, {
+        key: `heat|${s.field}|${it.value}`, label: `${F[s.field].th} คะแนน ${it.value} ลาออก ${it.rate.toFixed(1)}%`,
+        html: () => rateTip(s.field, it, s.base).replace("</b>", ` (คะแนน ${it.value})</b>`), onClick: () => toggle(s.field, it.value), pressed: sel === it.value,
+      });
+    });
+  });
+  return stats;
+}
+
+/* ---------- income distribution: stayed vs left ---------- */
+function drawIncome(box) {
+  const rs = subset("IncomeBand");
+  const edges = []; for (let v = 1000; v <= 20000; v += 1000) edges.push(v);
+  const series = [
+    { key: 0, name: "อยู่ต่อ", color: "var(--s1)" },
+    { key: 1, name: "ลาออก", color: "var(--s2)" },
+  ].map(s => {
+    const vals = rs.filter(r => r.Left === s.key).map(r => r.MonthlyIncome);
+    const counts = edges.slice(0, -1).map((e, i) => vals.filter(v => v >= e && (v < edges[i + 1] || (i === edges.length - 2 && v <= edges[i + 1]))).length);
+    return { ...s, n: vals.length, med: median(vals), counts, share: counts.map(c => vals.length ? c / vals.length * 100 : 0) };
+  });
+  $("l-dist").innerHTML = series.map(s => `<span><i class="sw line" style="background:${s.color}"></i>${s.name} ${fmtInt(s.n)} คน · มัธยฐาน ${s.med == null ? "–" : fmtUsd(s.med)}</span>`).join("");
+  if (!rs.length) { noData(box); return series; }
+  const W = Math.max(box.clientWidth, 260), H = W < 360 ? 220 : 240, left = 36, right = 12, top = 12, bottom = 30;
+  const x = v => left + (v - 1000) / 19000 * (W - left - right);
+  const ymax = niceMax(Math.max(...series.flatMap(s => s.share)) * 1.08, 4);
+  const y = v => top + (1 - v / ymax) * (H - top - bottom);
+  const svg = svgFor(box, W, H, "การกระจายรายได้ อยู่ต่อเทียบกับลาออก");
+  const ib = filters.get("IncomeBand");
+  if (ib) {
+    const b = BANDS.find(b => b.key === "IncomeBand"), i = b.labels.indexOf(ib);
+    const x0 = x(Math.max(1000, b.edges[i])), x1 = x(Math.min(20000, b.edges[i + 1]));
+    el("rect", { x: x0, y: top, width: x1 - x0, height: H - top - bottom, fill: "var(--tint)" }, svg);
+  }
+  for (const t of niceTicks(0, ymax, 4)) {
+    const g = el("g", { class: "tick" }, svg);
+    if (t > 0) el("line", { x1: left, x2: W - right, y1: y(t), y2: y(t), stroke: "var(--grid)" }, g);
+    text(g, left - 6, y(t) + 4, t + "%", { "text-anchor": "end" });
+  }
+  for (const t of [5000, 10000, 15000, 20000]) text(el("g", { class: "tick" }, svg), x(t), H - bottom + 16, `$${t / 1000}K`, { "text-anchor": "middle" });
+  el("line", { x1: left, x2: W - right, y1: y(0), y2: y(0), stroke: "var(--axis)" }, svg);
+  const cross = el("rect", { x: 0, y: top, width: 0, height: H - top - bottom, fill: "var(--ink)", opacity: 0.06, visibility: "hidden" }, svg);
+  for (const s of series) {
+    if (!s.n) continue;
+    const steps = s.share.map((v, i) => `V${y(v)}H${x(edges[i + 1])}`).join("");
+    el("path", { d: `M${x(edges[0])},${y(0)}${steps}V${y(0)}Z`, fill: s.color, opacity: 0.1 }, svg);
+    el("path", { d: `M${x(edges[0])},${y(s.share[0])}${steps}`, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+  }
+  const hits = el("g", {}, svg);
+  edges.slice(0, -1).forEach((e, i) => {
+    const x0 = x(e), w = x(edges[i + 1]) - x0;
+    hit(hits, box, { x: x0, y: top, width: w, height: H - top - bottom }, {
+      key: `dist|${i}`, label: `รายได้ $${e / 1000}K ถึง $${e / 1000 + 1}K`,
+      html: () => `<b>$${fmtInt(e)}–$${fmtInt(edges[i + 1])}</b>` + series.map(s =>
+        `<div><i class="sw" style="background:${s.color}"></i> ${s.name} <b class="num">${s.share[i].toFixed(1)}%</b> <span class="k">(${s.counts[i]} จาก ${fmtInt(s.n)} คน)</span></div>`).join(""),
+      onShow: () => { cross.setAttribute("x", x0); cross.setAttribute("width", w); cross.setAttribute("visibility", "visible"); },
+      onHide: () => cross.setAttribute("visibility", "hidden"),
+    });
+  });
+  return series;
+}
+
+/* ---------- headcount by job level (stacked) ---------- */
+function drawLevels(box) {
+  const st = groupStats("JobLevel");
+  if (!st.n) { noData(box); return st; }
+  const W = Math.max(box.clientWidth, 260), labelW = textW("ระดับ 5") + 16, valueW = 118;
+  const rowH = 34, barH = 18, top = 6, bottom = 26, H = top + rowH * st.items.length + bottom;
+  const xmax = niceMax(Math.max(...st.items.map(i => i.n)), 4);
+  const x = v => labelW + v / xmax * (W - labelW - valueW);
+  const svg = svgFor(box, W, H, "จำนวนพนักงานตามระดับงาน");
+  for (const t of niceTicks(0, xmax, W < 360 ? 3 : 4)) {
+    const g = el("g", { class: "tick" }, svg);
+    el("line", { x1: x(t), x2: x(t), y1: top, y2: H - bottom, stroke: "var(--grid)" }, g);
+    text(g, x(t), H - bottom + 16, fmtInt(t), { "text-anchor": "middle" });
+  }
+  const marks = el("g", {}, svg), hits = el("g", {}, svg), sel = filters.get("JobLevel");
+  st.items.forEach((it, i) => {
+    const y0 = top + i * rowH, cy = y0 + rowH / 2, isSel = sel === it.value, op = sel !== undefined && !isSel ? 0.35 : 1;
+    if (isSel) el("rect", { x: 0, y: y0 + 2, width: W, height: rowH - 4, rx: 6, fill: "var(--tint)" }, marks);
+    text(marks, labelW - 10, cy + 4, lab("JobLevel", it.value), { "text-anchor": "end", style: isSel ? "fill:var(--ink);font-weight:600" : null });
+    if (!it.n) { text(marks, labelW + 2, cy + 4, "ไม่มีคนในกลุ่มนี้", { style: "fill:var(--muted);font-size:11px" }); return; }
+    const stayed = it.n - it.left, xs = x(stayed), gap = it.left && stayed ? 1 : 0;
+    if (stayed) {
+      const w = xs - labelW - gap;
+      el("path", { d: it.left ? `M${labelW},${cy - barH / 2}h${w}v${barH}h${-w}Z` : hbarPath(labelW, cy - barH / 2, w, barH), fill: "var(--s1)", opacity: op }, marks);
+    }
+    if (it.left) el("path", { d: hbarPath(xs + gap, cy - barH / 2, x(it.n) - xs - gap, barH), fill: "var(--s2)", opacity: op }, marks);
+    const t = el("text", { x: x(it.n) + 6, y: cy + 4, class: "val" }, marks);
+    el("tspan", {}, t).textContent = fmtInt(it.n);
+    el("tspan", { class: "m" }, t).textContent = ` · ลาออก ${it.rate.toFixed(1)}%`;
+    hit(hits, box, { x: 0, y: y0, width: W, height: rowH }, {
+      key: `level|${it.value}`, label: `${lab("JobLevel", it.value)} ${it.n} คน ลาออก ${it.rate.toFixed(1)}%`,
+      html: () => rateTip("JobLevel", it, st.base).replace("<div>อัตรา", `<div>อยู่ต่อ <span class="num">${fmtInt(it.n - it.left)}</span> คน</div><div>อัตรา`),
+      onClick: () => toggle("JobLevel", it.value), pressed: isSel,
+    });
+  });
+  return st;
+}
+
+/* ---------- correlations ---------- */
+function drawCorr(box) {
+  const rs = subset(null), all = corrs(rs), top10 = all.slice(0, 10).sort((a, b) => b.r - a.r);
+  if (!top10.length) { noData(box, rs.length ? "กลุ่มที่เลือกไม่มีคนลาออก (หรือลาออกทุกคน) จึงคำนวณค่าสหสัมพันธ์ไม่ได้" : undefined); return { rs, top10 }; }
+  const W = Math.max(box.clientWidth, 260);
+  const labelW = Math.min(Math.max(...top10.map(c => textW(NUM_LABEL[c.key] || c.key))) + 14, W * 0.42);
+  const rowH = 24, barH = 14, top = 6, bottom = 26, H = top + rowH * top10.length + bottom;
+  const lim = Math.max(...top10.map(c => Math.abs(c.r))) * 1.5;
+  const half = (W - labelW - 4) / 2, x0 = labelW + half;
+  const x = v => x0 + v / lim * half;
+  const svg = svgFor(box, W, H, "ตัวแปรที่สัมพันธ์กับการลาออก");
+  for (const t of niceTicks(-lim, lim, 4)) {
+    const g = el("g", { class: "tick" }, svg);
+    el("line", { x1: x(t), x2: x(t), y1: top, y2: H - bottom, stroke: t === 0 ? "var(--axis)" : "var(--grid)" }, g);
+    text(g, x(t), H - bottom + 16, t === 0 ? "0" : fmtR(t).replace(/0+$/, "").replace(/\.$/, ""), { "text-anchor": "middle" });
+  }
+  const hits = el("g", {}, svg);
+  top10.forEach((c, i) => {
+    const y0 = top + i * rowH, cy = y0 + rowH / 2, w = Math.abs(x(c.r) - x0);
+    text(svg, labelW - 10, cy + 4, fit(NUM_LABEL[c.key] || c.key, labelW - 14), { "text-anchor": "end" });
+    el("path", { d: c.r >= 0 ? hbarPath(x0, cy - barH / 2, w, barH) : hbarPathLeft(x0, cy - barH / 2, w, barH), fill: c.r >= 0 ? "var(--pos)" : "var(--s1)" }, svg);
+    text(svg, c.r >= 0 ? x(c.r) + 5 : x(c.r) - 5, cy + 4, fmtR(c.r), { class: "val", "text-anchor": c.r >= 0 ? "start" : "end" });
+    hit(hits, box, { x: 0, y: y0, width: W, height: rowH }, {
+      key: `corr|${c.key}`, label: `${NUM_LABEL[c.key] || c.key} ${fmtR(c.r)}`,
+      html: () => `<b>${esc(NUM_LABEL[c.key] || c.key)}</b> <span class="k">${c.key === "OverTimeFlag" ? "OverTime" : c.key}</span>` +
+        `<div>ค่าสหสัมพันธ์ <b class="num">${fmtR(c.r)}</b></div>` +
+        `<div class="k">ค่ายิ่งสูง ${c.r >= 0 ? "ยิ่งลาออกมาก" : "ยิ่งลาออกน้อย"} · คำนวณจาก ${fmtInt(rs.length)} คน</div>`,
+    });
+  });
+  return { rs, top10 };
+}
+
+/* ---------- KPI ---------- */
+function drawKpis() {
+  const rs = subset(null), n = rs.length, left = rs.reduce((s, r) => s + r.Left, 0);
+  const rate = n ? left / n * 100 : null, filtered = filters.size > 0;
+  const med = (col, grp) => median(rs.filter(r => grp == null || r.Left === grp).map(r => r[col]));
+  const split = (col, f) => `ลาออก <b>${med(col, 1) == null ? "–" : f(med(col, 1))}</b> · อยู่ต่อ <b>${med(col, 0) == null ? "–" : f(med(col, 0))}</b>`;
+  const ot = rs.filter(r => r.OverTimeFlag).length;
+  const depts = new Set(rs.map(r => r.Department)).size, roles = new Set(rs.map(r => r.JobRole)).size;
+  const diff = rate == null ? "" : `<br>ทั้งบริษัท ${fmtPct(RATE_ALL)} (${rate >= RATE_ALL ? "สูงกว่า" : "ต่ำกว่า"} ${Math.abs(rate - RATE_ALL).toFixed(1)} จุด)`;
+  const cards = [
+    { cls: "hero", l: "อัตราการลาออก", en: "Attrition rate", v: fmtPct(rate), note: `${fmtInt(left)} จาก ${fmtInt(n)} คนลาออก${filtered ? diff : ""}` },
+    { l: "จำนวนพนักงาน", en: "Employees", v: fmtInt(n), note: filtered ? `จากทั้งหมด ${fmtInt(N_ALL)} คน` : `${depts} แผนก · ${roles} ตำแหน่งงาน` },
+    { l: "ทำงานล่วงเวลา (OT)", en: "Working overtime", v: n ? fmtPct(ot / n * 100) : "–", note: `${fmtInt(ot)} คน` },
+    { l: "รายได้ต่อเดือน (มัธยฐาน)", en: "Median monthly income", v: n ? fmtUsd(med("MonthlyIncome")) : "–", note: split("MonthlyIncome", fmtUsd) },
+    { l: "อายุงาน (มัธยฐาน)", en: "Median tenure", v: n ? fmtNum(med("YearsAtCompany")) + " ปี" : "–", note: split("YearsAtCompany", v => fmtNum(v) + " ปี") },
+    { l: "อายุ (มัธยฐาน)", en: "Median age", v: n ? fmtNum(med("Age")) + " ปี" : "–", note: split("Age", v => fmtNum(v) + " ปี") },
+  ];
+  $("kpis").innerHTML = cards.map(c => `<div class="kpi ${c.cls || ""}"><span class="en">${c.en}</span><span class="l">${c.l}</span><span class="v">${c.v}</span><span class="note">${c.note}</span></div>`).join("");
+}
+
+/* ---------- filter bar ---------- */
+function drawFilterBar() {
+  const chips = $("chips");
+  chips.innerHTML = "";
+  if (!filters.size) chips.innerHTML = `<span class="empty">ยังไม่ได้กรอง คลิกแท่งกราฟหรือช่องใน heatmap เพื่อกรองทั้งหน้า คลิกซ้ำเพื่อยกเลิก</span>`;
+  for (const [f, v] of filters) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip";
+    b.setAttribute("aria-label", `ลบตัวกรอง ${F[f].th}: ${lab(f, v)}`);
+    b.innerHTML = `${esc(F[f].th)}: <b>${esc(lab(f, v))}</b> <span aria-hidden="true">×</span>`;
+    b.addEventListener("click", () => { filters.delete(f); renderAll(); });
+    chips.appendChild(b);
+  }
+  const n = subset(null).length;
+  $("count").textContent = filters.size ? `กำลังดู ${fmtInt(n)} จาก ${fmtInt(N_ALL)} คน` : `ทั้งหมด ${fmtInt(N_ALL)} คน`;
+  $("reset").hidden = !filters.size;
+}
+
+/* ---------- explorer ---------- */
+function fillSelect(sel, groups, value) {
+  for (const [title, keys] of groups) {
+    const og = document.createElement("optgroup"); og.label = title;
+    for (const k of keys) { const o = document.createElement("option"); o.value = k; o.textContent = k === "corr" ? "ค่าสหสัมพันธ์ตัวแปรตัวเลข (ทุกตัว)" : F[k].th; og.appendChild(o); }
+    sel.appendChild(og);
+  }
+  sel.value = value;
+}
+fillSelect($("ex-field"), [["ตัวแปรอื่น", OTHER_FIELDS], ["ตัวแปรที่อยู่ในกราฟด้านบน", MAIN_FIELDS]], "StockOptionLevel");
+fillSelect($("tb-field"), [["กราฟด้านบน", [...MAIN_FIELDS, "corr"]], ["ตัวแปรอื่น", OTHER_FIELDS]], "JobRole");
+
+function drawExplorer() {
+  const f = $("ex-field").value, box = $("c-explore");
+  const st = F[f].ordered ? drawCols(box, "explore", f) : drawHBar(box, "explore", [{ field: f }], F[f].th)[0];
+  const ex = st && st.n ? extremes(st.items) : null;
+  $("n-explore").textContent = ex ? `${F[f].th}: ลาออกมากสุดคือ ${lab(f, ex.hi.value)} (${fmtPct(ex.hi.rate)}) น้อยสุดคือ ${lab(f, ex.lo.value)} (${fmtPct(ex.lo.rate)}) ค่าเฉลี่ย ${fmtPct(st.base)}` : "";
+}
+
+/* ---------- table + csv ---------- */
+function drawTable() {
+  const key = $("tb-field").value, t = $("table");
+  if (key === "corr") {
+    const c = corrs(subset(null));
+    t.innerHTML = `<thead><tr><th>ตัวแปร</th><th>คอลัมน์</th><th>ค่าสหสัมพันธ์กับการลาออก</th></tr></thead><tbody>` +
+      c.map(x => `<tr><td>${esc(NUM_LABEL[x.key] || x.key)}</td><td>${x.key === "OverTimeFlag" ? "OverTime (yes = 1)" : x.key}</td><td>${fmtR(x.r).replace("−", "-")}</td></tr>`).join("") + "</tbody>";
+    return;
+  }
+  const st = groupStats(key), sel = filters.get(key);
+  t.innerHTML = `<thead><tr><th>${esc(F[key].th)}</th><th>คน</th><th>ลาออก</th><th>อยู่ต่อ</th><th>อัตราลาออก</th><th>ต่างจากค่าเฉลี่ย (จุด)</th></tr></thead><tbody>` +
+    st.items.map(it => `<tr class="${sel === it.value ? "sel" : ""}"><td>${esc(lab(key, it.value))}</td><td>${fmtInt(it.n)}</td><td>${fmtInt(it.left)}</td><td>${fmtInt(it.n - it.left)}</td><td>${fmtPct(it.rate)}</td><td>${it.rate == null ? "–" : fmtPP(it.rate - st.base)}</td></tr>`).join("") +
+    `</tbody><tfoot><tr><td>รวม</td><td>${fmtInt(st.n)}</td><td>${fmtInt(st.left)}</td><td>${fmtInt(st.n - st.left)}</td><td>${fmtPct(st.base)}</td><td></td></tr></tfoot>`;
+}
+function downloadCsv() {
+  const q = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const fdesc = [...filters].map(([f, v]) => `${f}=${v}`).join("; ") || "none";
+  const lines = [["dimension", "dimension_th", "group", "group_th", "n", "left", "stayed", "rate_pct", "diff_from_avg_pp", "filters"].join(",")];
+  for (const f of [...MAIN_FIELDS, ...OTHER_FIELDS]) {
+    const st = groupStats(f);
+    for (const it of st.items) lines.push([f, F[f].th, it.value, lab(f, it.value), it.n, it.left, it.n - it.left,
+      it.rate == null ? "" : it.rate.toFixed(2), it.rate == null ? "" : (it.rate - st.base).toFixed(2), fdesc].map(q).join(","));
+  }
+  const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "hr_attrition_summary.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- SHAP comparison (ข้อมูลทั้งหมด ไม่ขึ้นกับตัวกรอง) ---------- */
+function drawCompare() {
+  const eda = corrs(rows).slice(0, 10).map(c => ({ key: c.key, v: fmtR(c.r) }));
+  const shap = D.shap.map(s => ({ key: s.feature === "OverTime" ? "OverTimeFlag" : s.feature, v: s.value.toFixed(3) }));
+  const inEda = new Set(eda.map(e => e.key)), inShap = new Set(shap.map(s => s.key));
+  const list = (title, cap, items, other) => `<div><h3>${title}</h3><div class="cap">${cap}</div><ol>` +
+    items.map((it, i) => `<li class="${other.has(it.key) ? "both" : ""}"><span class="r">${i + 1}</span><span>${esc(NUM_LABEL[it.key] || it.key)}</span><span class="v">${it.v}</span></li>`).join("") + "</ol></div>";
+  $("compare").innerHTML = list("ข้อมูลดิบ", "ค่าสหสัมพันธ์ ทั้ง 1,470 คน", eda, inShap) + list("โมเดล (SHAP)", "mean |SHAP| ของ test set 294 คน", shap, inEda);
+  const both = eda.filter(e => inShap.has(e.key)).map(e => NUM_LABEL[e.key] || e.key);
+  $("compare-note").textContent = `ตรงกัน ${both.length} จาก 10 ตัว ได้แก่ ${both.join(", ")} ฝั่ง SHAP มีฟีเจอร์ที่สร้างเพิ่ม (ความพึงพอใจเฉลี่ย, OT × ระยะทาง) ซึ่งรวมหลายคอลัมน์ดิบไว้ในตัวเดียว จึงไม่ตรงกับชื่อฝั่งข้อมูลดิบ ค่า SHAP มาจาก attrition-xgboost-P v1 ใน notebooks/05_shap_P.ipynb`;
+}
+
+/* ---------- render ---------- */
+function renderAll() {
+  drawFilterBar();
+  drawKpis();
+
+  const role = drawHBar($("c-role"), "role", [{ field: "JobRole" }], "อัตราลาออกตามตำแหน่งงาน", 36, 20)[0];
+  const ex = extremes(role.items);
+  $("n-role").textContent = ex ? `${ex.hi.value} ลาออก ${fmtPct(ex.hi.rate)} ประมาณ ${(ex.hi.rate / role.base).toFixed(1)} เท่าของค่าเฉลี่ย ส่วน ${ex.lo.value} ต่ำสุดที่ ${fmtPct(ex.lo.rate)}` : "";
+
+  const fac = drawHBar($("c-factors"), "factors", FACTOR_FIELDS.map(f => ({ field: f, head: F[f].short || F[f].th })), "อัตราลาออกตามปัจจัยด้านงานและส่วนตัว");
+  const spreads = fac.map(g => ({ g, e: extremes(g.items) })).filter(s => s.e).sort((a, b) => (b.e.hi.rate - b.e.lo.rate) - (a.e.hi.rate - a.e.lo.rate));
+  const sp = spreads[0];
+  $("n-factors").textContent = sp ? `กลุ่มที่ต่างกันมากที่สุดคือ ${F[sp.g.field].short || F[sp.g.field].th}: ${lab(sp.g.field, sp.e.hi.value)} ${fmtPct(sp.e.hi.rate)} เทียบกับ ${lab(sp.g.field, sp.e.lo.value)} ${fmtPct(sp.e.lo.rate)}` : "";
+
+  const heat = drawHeat($("c-heat"));
+  const cells = heat.flatMap(s => s.items.filter(i => i.rate != null && i.n >= 20).map(i => ({ f: s.field, ...i }))).sort((a, b) => b.rate - a.rate);
+  const oneAboveFour = heat.every(s => { const a = s.items[0], b = s.items[3]; return a.rate == null || b.rate == null || a.rate > b.rate; });
+  $("n-heat").textContent = cells.length ? `ช่องที่ลาออกสูงสุดคือ ${F[cells[0].f].th} คะแนน ${cells[0].value} (${fmtPct(cells[0].rate)})` +
+    (oneAboveFour ? " และคะแนน 1 ลาออกมากกว่าคะแนน 4 ทุกด้าน" : "") : "";
+
+  for (const [id, f, unit] of [["age", "AgeBand", " ปี"], ["tenure", "TenureBand", " ปี"], ["income", "IncomeBand", ""]]) {
+    const st = drawCols($("c-" + id), id, f), e = st.n ? extremes(st.items) : null;
+    const name = v => f !== "IncomeBand" ? v + unit : v.startsWith("≤") ? "≤$" + v.slice(1) : "$" + v;
+    $("n-" + id).textContent = e ? `สูงสุดช่วง ${name(e.hi.value)} (${fmtPct(e.hi.rate)}) ต่ำสุดช่วง ${name(e.lo.value)} (${fmtPct(e.lo.rate)}) ห่างกัน ${(e.hi.rate / Math.max(e.lo.rate, 0.1)).toFixed(1)} เท่า` : "";
+  }
+
+  const dist = drawIncome($("c-dist"));
+  const [ms, ml] = [dist[0].med, dist[1].med];
+  $("n-dist").textContent = ms && ml ? `มัธยฐานรายได้ของคนที่ลาออก (${fmtUsd(ml)}) ${ml < ms ? "ต่ำกว่า" : "สูงกว่า"}คนที่อยู่ต่อ (${fmtUsd(ms)}) ราว ${Math.abs(100 - ml / ms * 100).toFixed(0)}%` : "";
+
+  const lv = drawLevels($("c-level"));
+  const biggest = lv.items && [...lv.items].sort((a, b) => b.n - a.n)[0], lvx = lv.items ? extremes(lv.items) : null;
+  $("n-level").textContent = biggest && biggest.n && lvx ? `${lab("JobLevel", biggest.value)} มีคนมากที่สุด (${fmtInt(biggest.n)} คน) กลุ่มที่ลาออกมากสุดคือ ${lab("JobLevel", lvx.hi.value)} (${fmtPct(lvx.hi.rate)})` : "";
+
+  const cr = drawCorr($("c-corr"));
+  const strongest = [...cr.top10].sort((a, b) => Math.abs(b.r) - Math.abs(a.r))[0];
+  $("n-corr").textContent = strongest ? `ตัวที่สัมพันธ์มากที่สุดคือ ${(NUM_LABEL[strongest.key] || strongest.key).replace(" (ใช่ = 1)", "")} (${fmtR(strongest.r)}) คำนวณจาก ${fmtInt(cr.rs.length)} คน` +
+    (Math.abs(strongest.r) < 0.3 ? " ทุกตัวไม่ถึง ±0.3 จึงไม่มีตัวแปรเดียวที่อธิบายการลาออกได้ดี" : "") : "";
+
+  drawExplorer();
+  drawTable();
+
+  if (focusKey) {
+    const target = document.querySelector(`[data-key="${CSS.escape(focusKey)}"]`);
+    if (target) target.focus();
+  }
+}
+
+$("intro").textContent = `ข้อมูล IBM HR Attrition (${D.source}) พนักงาน ${fmtInt(N_ALL)} คน ทุกกราฟแสดงอัตราลาออกแยกตามกลุ่ม พร้อมเส้นค่าเฉลี่ย กลุ่มที่แท่งยาวเกินเส้นคือกลุ่มที่ลาออกมากกว่าปกติ คลิกแท่งกราฟหรือช่องใน heatmap เพื่อกรองทั้งหน้า ตัวเลขทั้งหมดคำนวณในเบราว์เซอร์จากไฟล์นี้`;
+$("meta").textContent = `สร้างเมื่อ ${D.built} ด้วย docs/hr_dashboard_S/build_page.py · กราฟและการแบ่งช่วงตาม docs/hr_attrition_dashboard.ipynb`;
+$("reset").addEventListener("click", () => { filters.clear(); renderAll(); });
+$("ex-field").addEventListener("change", drawExplorer);
+$("tb-field").addEventListener("change", drawTable);
+$("csv").addEventListener("click", downloadCsv);
+$("theme").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  renderAll();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+
+let lastW = 0, raf = 0;
+new ResizeObserver(() => {
+  const w = document.querySelector(".wrap").clientWidth;
+  if (w === lastW) return;
+  lastW = w;
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(renderAll);
+}).observe(document.querySelector(".wrap"));
+
+drawCompare();
+renderAll();
+if (document.fonts) document.fonts.ready.then(renderAll);
+</script>
+</body>
+</html>
