@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Mascot from './Mascot'
 import Overview from './Overview'
-import { inputClass, loadMascot, loadRate, saveMascot, saveRate } from './theme'
+import { inputClass, loadMascot, saveMascot, THB_PER_USD } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
@@ -13,7 +13,7 @@ const ShapViewer = lazy(() => import('./ShapViewer'))
 //   query = { id, tenant, n } ของพนักงานที่เลือก (n เพิ่มทุกครั้งที่กดโหลด ให้โหลดซ้ำได้)
 //   onRisk({ id, band, score, label } | { error, notFound }) = แจ้งตัวการ์ตูนใน sidebar
 //   onDone() = โหลดเสร็จ (สำเร็จหรือพัง) ให้ปุ่ม "โหลด" เลิกหมุน
-//   rate = บาทต่อ 1 ดอลลาร์, dark = ธีม (กราฟ recharts ต้องรู้เพื่อเลือกสี), who = ผู้ช่วยที่เลือก
+//   rate = บาทต่อ 1 ดอลลาร์ (ค่าคงที่ THB_PER_USD ใน theme.js), dark = ธีม (กราฟ recharts ต้องรู้เพื่อเลือกสี), who = ผู้ช่วยที่เลือก
 // แท็บ/รหัสพนักงาน/รหัสบริษัทเก็บใน URL (?tab=whatif&id=5) แชร์ลิงก์ได้ และปุ่ม back ใช้ได้
 const TABS = [
   { id: 'overview', icon: 'chart', label: 'ภาพรวมบริษัท', hint: 'ใครเสี่ยงลาออก และเพราะอะไร' },
@@ -36,7 +36,7 @@ export default function App() {
   const [tenantId, setTenantId] = useState(initial.tenant)
   const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant: initial.tenant, n: 1 } : null)
   const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
-  const [rate, setRate] = useState(loadRate) // จำไว้ในเบราว์เซอร์
+  const rate = THB_PER_USD // คงที่ ผู้ใช้ไม่ต้องรู้ว่าโมเดลใช้ดอลลาร์เบื้องหลัง
   const [risk, setRisk] = useState({}) // ความเสี่ยงล่าสุดแยกตามแท็บ
   const [who, setWho] = useState(loadMascot) // ผู้ช่วยที่เลือก ใช้ทั้ง sidebar และหน้าว่าง
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
@@ -181,7 +181,7 @@ export default function App() {
           </div>
           <form
             onSubmit={submit}
-            className="grid gap-3 rounded-xl border border-line bg-card p-3 sm:grid-cols-[8rem_1fr_8rem_auto] sm:items-end 2xl:w-[44rem]"
+            className="grid gap-3 rounded-xl border border-line bg-card p-3 sm:grid-cols-[8rem_1fr_auto] sm:items-end 2xl:w-[36rem]"
           >
             <Field label="รหัสพนักงาน" icon="user">
               <input
@@ -205,20 +205,6 @@ export default function App() {
                 value={tenantId}
                 onChange={(e) => setTenantId(e.target.value)}
                 placeholder="ไม่ระบุก็ได้ เช่น acme_th…"
-              />
-            </Field>
-            <Field label="บาท / 1 ดอลลาร์">
-              <input
-                className={inputClass}
-                name="thb_per_usd"
-                type="number"
-                inputMode="decimal"
-                autoComplete="off"
-                min="1"
-                step="0.5"
-                value={rate}
-                onChange={(e) => e.target.value > 0 && (setRate(Number(e.target.value)), saveRate(Number(e.target.value)))}
-                title="dataset เป็นดอลลาร์ หน้าเว็บแปลงเป็นบาทด้วยอัตรานี้"
               />
             </Field>
             <PrimaryButton loading={!!pending[tab]}>

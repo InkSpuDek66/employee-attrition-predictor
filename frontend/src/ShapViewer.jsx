@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { featureLabel, featureValue } from './featureLabels'
+import { featureLabel, featurePhrase, featureValue } from './featureLabels'
 import { api, baht, bandOf, CHART, friendly } from './theme'
 import { NotFoundState, SorryState } from './Mascot'
 import { EmptyPicker } from './Overview'
@@ -19,7 +19,7 @@ function Driver({ tone, title, row, count }) {
         {title}
       </div>
       <div className="mt-3 text-lg font-semibold text-fg">{row?.label ?? 'ไม่มี'}</div>
-      <div className="text-sm text-muted-fg">{row ? `ค่าของพนักงาน: ${row.shown}` : '—'}</div>
+      <div className="text-sm text-muted-fg">{row ? row.phrase : '—'}</div>
       <div className="mt-3 text-xs text-muted-fg">ทั้งหมด {count} ปัจจัยในรายการ</div>
     </div>
   )
@@ -27,7 +27,7 @@ function Driver({ tone, title, row, count }) {
 
 // สรุปเป็นประโยค อ่านง่ายกว่ากราฟ: 3 ปัจจัยที่ดันขึ้นมากสุด + 2 ปัจจัยที่ช่วยให้อยู่ต่อ
 function Summary({ ups, downs, band }) {
-  const list = (rows) => rows.map((r) => `${r.label} (${r.shown})`).join(', ')
+  const list = (rows) => rows.map((r) => r.phrase).join(', ')
   return (
     <div className="rounded-xl border border-line bg-card p-5">
       <div className="flex items-start gap-3">
@@ -108,6 +108,7 @@ export default function ShapViewer({ query, rate, dark, who, tenant, onRisk, onD
   const score = data.calibrated_risk_score ?? data.risk_score
   // เรียงจากผลกระทบมากไปน้อย (API เรียงให้แล้ว) กราฟแนวนอนแสดงตัวบนสุดก่อน
   const rows = data.contributions.map((c) => ({ ...c, label: featureLabel(c.feature), shown: c.feature === 'MonthlyIncome' ? baht(c.value * rate) : featureValue(c.feature, c.value) }))
+    .map((r) => ({ ...r, phrase: featurePhrase(r.feature, r.value, r.shown) }))
   const maxAbs = Math.max(...rows.map((r) => Math.abs(r.shap_value)), 1e-9)
   const ups = rows.filter((r) => r.shap_value > 0)
   const downs = rows.filter((r) => r.shap_value <= 0)

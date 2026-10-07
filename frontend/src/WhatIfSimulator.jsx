@@ -27,7 +27,7 @@ const GROUPS = [
         type: 'select',
         options: [['Non-Travel', 'ไม่เดินทาง'], ['Travel_Rarely', 'นานๆ ครั้ง'], ['Travel_Frequently', 'บ่อย']],
       },
-      { field: 'DistanceFromHome', type: 'range', min: 1, max: 30, step: 1 },
+      { field: 'DistanceFromHome', type: 'range', min: 1, max: 30, step: 1, unit: 'กม.' },
       { field: 'WorkLifeBalance', type: 'select', options: [[1, 'แย่'], [2, 'พอใช้'], [3, 'ดี'], [4, 'ดีมาก']] },
     ],
   },
@@ -119,14 +119,15 @@ function MoneyControl({ field, base, value, rate, onChange }) {
       </div>
       <p className={`mt-2 text-xs ${outside ? 'text-risk-mid' : 'text-muted-fg'}`}>
         {outside
-          ? `นอกช่วงที่โมเดลเคยเห็น (${baht(lo * rate)}–${baht(hi * rate)}) ผลอาจไม่สะท้อนความจริง`
-          : `≈ ${Math.round(value).toLocaleString()} ดอลลาร์ ที่ ${rate} บาท/ดอลลาร์ (ค่าที่ส่งเข้าโมเดล)`}
+          ? `เงินเดือนนี้อยู่นอกช่วงข้อมูลที่ระบบเรียนรู้มา (${baht(lo * rate)}–${baht(hi * rate)}) ผลอาจคลาดเคลื่อน`
+          : 'พิมพ์ตัวเลขแล้วกด Enter หรือลากแถบก็ได้'}
       </p>
     </div>
   )
 }
 
-function Control({ field, type, options, base, value, onChange, ...range }) {
+function Control({ field, type, options, base, value, onChange, unit, ...range }) {
+  const withUnit = (v) => (unit ? `${v.toLocaleString()} ${unit}` : v.toLocaleString())
   const changed = value !== base
   const optionText = (v) => options?.find(([o]) => String(o) === String(v))?.[1] ?? v
   return (
@@ -139,17 +140,17 @@ function Control({ field, type, options, base, value, onChange, ...range }) {
         <span className="text-sm font-medium text-fg">{featureLabel(field)}</span>
         {changed && (
           <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[11px] font-medium text-on-primary">
-            เดิม {type === 'range' ? base.toLocaleString() : optionText(base)}
+            เดิม {type === 'range' ? withUnit(base) : optionText(base)}
           </span>
         )}
       </div>
       {type === 'range' ? (
         <>
-          <div className="mb-2 text-xl font-semibold tabular-nums text-fg">{value.toLocaleString()}</div>
+          <div className="mb-2 text-xl font-semibold tabular-nums text-fg">{withUnit(value)}</div>
           <input type="range" {...range} value={value} onChange={(e) => onChange(e.target.value)} aria-label={featureLabel(field)} />
           <div className="mt-1 flex justify-between text-[11px] tabular-nums text-muted-fg">
-            <span>{range.min.toLocaleString()}</span>
-            <span>{range.max.toLocaleString()}</span>
+            <span>{withUnit(range.min)}</span>
+            <span>{withUnit(range.max)}</span>
           </div>
         </>
       ) : (
@@ -441,7 +442,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 <p>
                   <b className="text-fg">ต้นทุนมาตรการ</b> = เงินเดือน × {(impact.retain_cost / impact.monthly_income).toFixed(1)} เดือน
                 </p>
-                <p>ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล (README 6.3) ปรับให้ตรงกับบริษัทได้ที่ config/financial_impact.json</p>
+                <p>ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท</p>
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-ink px-4 py-3 text-white dark:border dark:border-line">
                 <span className="text-sm text-zinc-400">มูลค่าความเสี่ยง (คะแนน × ต้นทุนหาคนแทน)</span>
@@ -452,7 +453,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 </span>
               </div>
               <p className="mt-3 text-xs text-muted-fg">
-                {`แปลงจากดอลลาร์ใน dataset ที่ ${rate} บาท/ดอลลาร์ (ปรับอัตราได้ที่ช่องด้านบน)`}
+                ตัวเลขเป็นบาท ค่าประมาณเพื่อเปรียบเทียบมาตรการ ไม่ใช่ต้นทุนจริงของบริษัท
                 {!impact.include_severance && ' · ไม่นับค่าชดเชยตามมาตรา 118 เพราะจ่ายเมื่อนายจ้างเลิกจ้าง ไม่ใช่เมื่อลาออกเอง'}
               </p>
             </Card>
