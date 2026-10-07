@@ -12,6 +12,7 @@ const MOOD = {
   Medium: { text: 'ควรติดตาม', sub: 'ความเสี่ยงปานกลาง ลองดูมาตรการ' },
   High: { text: 'ควรรีบดูแล', sub: 'ความเสี่ยงสูง คุยกับพนักงานเร็วๆ นี้' },
   Sorry: { text: 'ขอโทษนะ', sub: 'ตอนนี้ดึงข้อมูลไม่ได้ ลองใหม่อีกครั้ง' },
+  NotFound: { text: 'ไม่เจอพนักงานรหัสนี้นะ', sub: 'ลองเช็กรหัสอีกที' },
 }
 
 const CHARACTERS = {
@@ -72,8 +73,25 @@ export function SorryState({ message }) {
   )
 }
 
+// กรอกรหัสผิด (404): ผู้ช่วยตัวเดียวทำท่างง ไม่ต้องขอโทษ เพราะระบบไม่ได้พัง
+export function NotFoundState({ who, message }) {
+  const Character = CHARACTERS[who]
+  return (
+    <div role="alert" className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-secondary px-6 py-10 sm:flex-row sm:justify-center sm:gap-6">
+      <div className="w-36 shrink-0">
+        <Character mood="NotFound" />
+      </div>
+      <Bubble tail={window.innerWidth < 640 ? 'top' : 'left'} className="max-w-md text-left">
+        <div className="font-semibold text-fg">ไม่เจอพนักงานรหัสนี้นะ</div>
+        <p className="mt-1 text-sm text-muted-fg">ลองเช็กรหัสพนักงานอีกที แล้วกด “โหลด” ใหม่</p>
+        <p className="mt-2 text-xs text-muted-fg/80">{message}</p>
+      </Bubble>
+    </div>
+  )
+}
+
 export default function Mascot({ risk, who, onChoose }) {
-  const mood = risk?.error ? 'Sorry' : (risk?.band ?? 'none')
+  const mood = risk?.notFound ? 'NotFound' : risk?.error ? 'Sorry' : (risk?.band ?? 'none')
   const m = MOOD[mood]
   const Character = CHARACTERS[who]
 
@@ -92,7 +110,7 @@ export default function Mascot({ risk, who, onChoose }) {
       <Bubble className="mt-2">
         <div className="text-sm font-semibold text-fg">{m.text}</div>
         <div className="text-xs text-muted-fg">{m.sub}</div>
-        {risk && !risk.error && (
+        {risk?.band && (
           <div className="mt-1 text-[11px] tabular-nums text-muted-fg/80">
             พนักงาน #{risk.id} · {risk.label} {Math.round(risk.score * 100)}
           </div>

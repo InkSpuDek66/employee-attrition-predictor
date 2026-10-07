@@ -6,7 +6,7 @@ const FUR = { cat: '#f4b06a', dog: '#d29a5e' }
 const FUR_DARK = { cat: '#d9853a', dog: '#b07a44' }
 const CREAM = '#fff3e3'
 const PINK = '#f7a1b0'
-const COLLAR = { Sorry: 'stroke-muted-fg', none: 'stroke-accent', Low: 'stroke-risk-low', Medium: 'stroke-risk-mid', High: 'stroke-risk-high' }
+const COLLAR = { Sorry: 'stroke-muted-fg', NotFound: 'stroke-accent', none: 'stroke-accent', Low: 'stroke-risk-low', Medium: 'stroke-risk-mid', High: 'stroke-risk-high' }
 const o = { stroke: LINE, strokeWidth: 2, strokeLinejoin: 'round', strokeLinecap: 'round' }
 
 // ขาหน้า: เส้นขอบหนา + ไส้สีขน + อุ้งเท้ากลมมีรอยนิ้ว
@@ -78,7 +78,7 @@ function Face({ mood, kind }) {
         {[53, 87].map((cx) => (
           <g key={cx}>
             <ellipse cx={cx} cy="81" rx="6.5" ry="8" fill="#2b1d1a" />
-            <circle cx={cx - 2} cy={mood === 'Medium' ? 76.5 : 78} r="2.8" fill="#fff" />
+            <circle cx={cx - 2} cy={mood === 'NotFound' ? 76.5 : 78} r="2.8" fill="#fff" />
             <circle cx={cx + 2.2} cy="84.5" r="1.2" fill="#fff" />
           </g>
         ))}
@@ -88,7 +88,8 @@ function Face({ mood, kind }) {
   const mouth = {
     none: 'M62 96 q4 4 8 0 q4 4 8 0', // ω
     Low: null,
-    Medium: 'M64 98 q3 -2 6 0 t6 0',
+    Medium: 'M66 97.5 Q70 96.5 74 97.5', // เม้มปาก ครุ่นคิด
+    NotFound: 'M64 98 q3 -2 6 0 t6 0',
     High: 'M62 99 q2 -3 4 0 t4 0 t4 0 t4 0',
     Sorry: 'M65 99 Q70 96 75 99',
   }[mood]
@@ -179,6 +180,24 @@ function Pose({ mood, kind }) {
     )
   }
   if (mood === 'Medium') {
+    // ครุ่นคิด: กอดอุ้งเท้า + ฟองความคิด "…"
+    return (
+      <>
+        <Paw kind={kind} d="M54 120 Q56 131 78 128" end={[79, 128]} />
+        <Paw kind={kind} d="M86 120 Q84 133 62 130" end={[61, 130]} />
+        {/* ฟองความคิด "…" (กำลังชั่งใจ) */}
+        <g className="mascot-float">
+          <circle cx="110" cy="42" r="2.5" className="fill-card" {...o} strokeWidth="1.4" />
+          <circle cx="117" cy="32" r="4" className="fill-card" {...o} strokeWidth="1.4" />
+          <ellipse cx="126" cy="16" rx="12" ry="9" className="fill-card" {...o} strokeWidth="1.4" />
+          <circle cx="121" cy="16" r="2.2" className="fill-risk-mid" />
+          <circle cx="126" cy="16" r="2.2" className="fill-risk-mid" />
+          <circle cx="131" cy="16" r="2.2" className="fill-risk-mid" />
+        </g>
+      </>
+    )
+  }
+  if (mood === 'NotFound') {
     return (
       <>
         {rest}
@@ -188,7 +207,7 @@ function Pose({ mood, kind }) {
           <circle cx="110" cy="38" r="2.5" className="fill-card" {...o} strokeWidth="1.4" />
           <circle cx="117" cy="28" r="4" className="fill-card" {...o} strokeWidth="1.4" />
           <ellipse cx="126" cy="12" rx="11" ry="10" className="fill-card" {...o} strokeWidth="1.4" />
-          <text x="126" y="17" textAnchor="middle" className="fill-risk-mid text-[14px] font-bold">?</text>
+          <text x="126" y="17" textAnchor="middle" className="fill-accent text-[14px] font-bold">?</text>
         </g>
       </>
     )

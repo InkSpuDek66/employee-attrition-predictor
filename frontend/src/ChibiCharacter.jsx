@@ -15,7 +15,7 @@ const FOLDER = '#f2c14e'
 const SUIT_BOY = { fill: 'fill-suit', stroke: 'stroke-suit', line: 'stroke-suit-line', button: 'fill-suit-line' }
 const SUIT_GIRL = { fill: 'fill-blazer', stroke: 'stroke-blazer', line: 'stroke-blazer-line', button: 'fill-blazer-line' }
 const TIE = {
-  Sorry: 'fill-muted-fg', none: 'fill-accent', Low: 'fill-risk-low', Medium: 'fill-risk-mid', High: 'fill-risk-high' }
+  Sorry: 'fill-muted-fg', NotFound: 'fill-accent', none: 'fill-accent', Low: 'fill-risk-low', Medium: 'fill-risk-mid', High: 'fill-risk-high' }
 const o = { stroke: LINE, strokeWidth: 2, strokeLinejoin: 'round', strokeLinecap: 'round' }
 
 function Arm({ d, suit }) {
@@ -100,13 +100,13 @@ function Face({ mood, girl }) {
       <g className="mascot-blink">
         {girl ? (
           <>
-            <BigEye cx={53} cy={81} look={mood === 'Medium' ? -1.5 : 0} girl />
-            <BigEye cx={87} cy={81} look={mood === 'Medium' ? -1.5 : 0} girl />
+            <BigEye cx={53} cy={81} look={mood === 'NotFound' ? -1.5 : 0} girl />
+            <BigEye cx={87} cy={81} look={mood === 'NotFound' ? -1.5 : 0} girl />
           </>
         ) : (
           <>
-            <SharpEye cx={53} cy={82} look={mood === 'Medium' ? -1.5 : 0} />
-            <SharpEye cx={87} cy={82} look={mood === 'Medium' ? -1.5 : 0} />
+            <SharpEye cx={53} cy={82} look={mood === 'NotFound' ? -1.5 : 0} />
+            <SharpEye cx={87} cy={82} look={mood === 'NotFound' ? -1.5 : 0} />
           </>
         )}
       </g>
@@ -122,7 +122,8 @@ function Face({ mood, girl }) {
     ) : (
       <path d="M60 94 Q70 105 80 94 Q70 97 60 94 Z" fill="#fff" {...o} strokeWidth="1.8" />
     ),
-    Medium: <path d="M65 98 q2.5 -2 5 0 t5 0" fill="none" {...o} strokeWidth="1.8" />,
+    Medium: <path d="M66 97.5 Q70 96.5 74 97.5" fill="none" {...o} strokeWidth="1.8" />, // เม้มปาก ครุ่นคิด
+    NotFound: <path d="M65 98 q2.5 -2 5 0 t5 0" fill="none" {...o} strokeWidth="1.8" />,
     High: <path d="M62 99 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" {...o} strokeWidth="1.8" />,
     Sorry: <path d="M65 98 Q70 95 75 98" fill="none" {...o} strokeWidth="1.8" />,
   }[mood]
@@ -131,7 +132,8 @@ function Face({ mood, girl }) {
         // ผู้หญิง: คิ้วบางโค้ง อยู่ใต้แนวหน้าม้า ห่างจากขนตาพอ (ชิดเกินจะดูขมวดคิ้ว)
         none: ['M47 65 Q52 62 58 64', 'M82 64 Q88 62 93 65'],
         Low: ['M47 64 Q52 60.5 58 63', 'M82 63 Q88 60.5 93 64'],
-        Medium: ['M47 63 Q52 61 57 63', 'M83 65 Q88 64 93 66'],
+        Medium: ['M47 64.5 Q52 62.5 57 64', 'M83 64 Q88 62.5 93 64.5'],
+        NotFound: ['M47 63 Q52 61 57 63', 'M83 65 Q88 64 93 66'],
         High: ['M47 66 Q52 64 57 61', 'M83 61 Q88 64 93 66'],
         Sorry: ['M47 65 Q52 64 57 61.5', 'M83 61.5 Q88 64 93 65'],
       }[mood]
@@ -139,7 +141,8 @@ function Face({ mood, girl }) {
         // ผู้ชาย: คิ้วชัดกว่าผู้หญิง แต่บางและโค้งนิดๆ (หนาตรงเกินไปทำให้ดูแก่)
         none: ['M45 68 Q52 64.5 60 66.5', 'M80 66.5 Q88 64.5 95 68'],
         Low: ['M45 67 Q52 63 60 65.5', 'M80 65.5 Q88 63 95 67'],
-        Medium: ['M45 68 Q52 65.5 60 67', 'M80 65 Q88 62.5 95 65'],
+        Medium: ['M45 68.5 Q52 66 60 67.5', 'M80 67.5 Q88 66 95 68.5'],
+        NotFound: ['M45 68 Q52 65.5 60 67', 'M80 65 Q88 62.5 95 65'],
         High: ['M46 70 Q53 68 60 64', 'M80 64 Q87 68 94 70'],
         Sorry: ['M46 69 Q53 68 60 65', 'M80 65 Q87 68 94 69'],
       }[mood]
@@ -231,10 +234,30 @@ function Pose({ mood, suit }) {
     )
   }
   if (mood === 'Medium') {
+    // ครุ่นคิด: กอดอก + ฟองความคิด "…" (ไม่ถึงกับกุมขมับแบบเสี่ยงสูง)
+    return (
+      <>
+        <Arm suit={suit} d="M52 118 Q52 131 79 128" />
+        <Hand cx={80} cy={127.5} />
+        <Arm suit={suit} d="M88 118 Q88 133 61 130" />
+        <Hand cx={60} cy={129.5} />
+        {/* ฟองความคิด "…" (กำลังชั่งใจ) */}
+        <g className="mascot-float">
+          <circle cx="110" cy="42" r="2.5" className="fill-card" {...o} strokeWidth="1.4" />
+          <circle cx="117" cy="32" r="4" className="fill-card" {...o} strokeWidth="1.4" />
+          <ellipse cx="126" cy="16" rx="12" ry="9" className="fill-card" {...o} strokeWidth="1.4" />
+          <circle cx="121" cy="16" r="2.2" className="fill-risk-mid" />
+          <circle cx="126" cy="16" r="2.2" className="fill-risk-mid" />
+          <circle cx="131" cy="16" r="2.2" className="fill-risk-mid" />
+        </g>
+      </>
+    )
+  }
+  if (mood === 'NotFound') {
     return (
       <>
         {folder}
-        {/* นิ้วจิ้มแก้ม + ฟองความคิด */}
+        {/* หาไม่เจอ: นิ้วจิ้มแก้ม งงๆ + ฟองความคิด "?" */}
         <Arm suit={suit} d="M88 120 Q104 112 102 100" />
         <Hand cx={101} cy={98} />
         <path d="M100 56 Q103 61 101 64 Q98 65 97 62 Q97 59 100 56Z" fill="#7cc4f5" stroke="#3b82c4" strokeWidth="1.1" className="mascot-drip" />
@@ -242,7 +265,7 @@ function Pose({ mood, suit }) {
           <circle cx="112" cy="40" r="2.5" className="fill-card" {...o} strokeWidth="1.4" />
           <circle cx="118" cy="30" r="4" className="fill-card" {...o} strokeWidth="1.4" />
           <ellipse cx="126" cy="14" rx="11" ry="10" className="fill-card" {...o} strokeWidth="1.4" />
-          <text x="126" y="19" textAnchor="middle" className="fill-risk-mid text-[14px] font-bold">?</text>
+          <text x="126" y="19" textAnchor="middle" className="fill-accent text-[14px] font-bold">?</text>
         </g>
       </>
     )

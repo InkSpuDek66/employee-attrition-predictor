@@ -57,6 +57,10 @@ export function friendly(err) {
 export async function api(path, options) {
   const res = await fetch(`/api${path}`, options)
   const body = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(typeof body?.detail === 'string' ? body.detail : `เรียก API ไม่สำเร็จ (${res.status})`)
+  if (!res.ok) {
+    const err = new Error(typeof body?.detail === 'string' ? body.detail : `เรียก API ไม่สำเร็จ (${res.status})`)
+    err.status = res.status // 404 = ไม่พบพนักงาน (กรอกผิด) แยกจากระบบพัง
+    throw err
+  }
   return body
 }

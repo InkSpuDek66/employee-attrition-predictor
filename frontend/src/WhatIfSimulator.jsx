@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { featureLabel } from './featureLabels'
 import { api, baht, BAND, friendly, INCOME_MIN_BAHT, INCOME_RANGE_USD, inputClass } from './theme'
-import { AssistantHint, SorryState } from './Mascot'
+import { AssistantHint, NotFoundState, SorryState } from './Mascot'
 import { Alert, Card, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 // ฟีเจอร์ที่ HR ปรับได้จริงผ่านมาตรการ (ไม่ใส่ข้อมูลส่วนตัว เช่น อายุ เพศ สถานภาพ)
@@ -236,8 +236,9 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
       },
       (err) => {
         if (err.name === 'AbortError') return
-        setLoaded({ n: query.n, error: friendly(err) })
-        onRisk({ error: true })
+        const notFound = err.status === 404
+        setLoaded({ n: query.n, error: friendly(err), notFound })
+        onRisk({ error: true, notFound })
       },
     )
     return () => ctrl.abort()
@@ -298,7 +299,9 @@ export default function WhatIfSimulator({ query, rate, who, onRisk }) {
       </AssistantHint>
     )
   }
-  if (loaded?.n === query.n && loaded.error) return <SorryState message={loaded.error} />
+  if (loaded?.n === query.n && loaded.error) {
+    return loaded.notFound ? <NotFoundState who={who} message={loaded.error} /> : <SorryState message={loaded.error} />
+  }
   if (loaded?.n !== query.n || !result) {
     return (
       <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">

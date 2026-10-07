@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { featureLabel, featureValue } from './featureLabels'
 import { api, baht, bandOf, CHART, friendly } from './theme'
-import { AssistantHint, SorryState } from './Mascot'
+import { AssistantHint, NotFoundState, SorryState } from './Mascot'
 import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 const TOP_N = [5, 10, 15, 20].map((n) => [n, `${n}`])
@@ -44,15 +44,16 @@ export default function ShapViewer({ query, rate, dark, who, onRisk }) {
       },
       (err) => {
         if (err.name === 'AbortError') return
-        setRes({ key, error: friendly(err) })
-        onRisk({ error: true })
+        const notFound = err.status === 404
+        setRes({ key, error: friendly(err), notFound })
+        onRisk({ error: true, notFound })
       },
     )
     return () => ctrl.abort()
   }, [query, topN, key, onRisk])
 
   const loading = query && res.key !== key
-  const { data, error } = res
+  const { data, error, notFound } = res
 
   if (!query) {
     return (
@@ -61,7 +62,7 @@ export default function ShapViewer({ query, rate, dark, who, onRisk }) {
       </AssistantHint>
     )
   }
-  if (error && !loading) return <SorryState message={error} />
+  if (error && !loading) return notFound ? <NotFoundState who={who} message={error} /> : <SorryState message={error} />
   if (!data) {
     return (
       <div className="grid gap-4 lg:grid-cols-3">
