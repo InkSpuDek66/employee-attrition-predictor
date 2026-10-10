@@ -108,7 +108,7 @@ body {
   @apply bg-canvas text-fg antialiased;
 }
 
-/* พื้นหลังจางๆ ของหน้า login: แสงฟ้าพาสเทลสองจุด + ลายจุดที่จางหายไปทางขอบจอ (ใช้สีธีม โหมดมืดเปลี่ยนเอง) */
+/* พื้นหลังจางๆ ของหน้า login: แสงฟ้าพาสเทลสองจุดบนพื้นสีเดิม (ใช้สีธีม โหมดมืดเปลี่ยนเอง) */
 .login-glow {
   background:
     radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%),
@@ -118,11 +118,6 @@ body {
   background:
     radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%),
     radial-gradient(38rem 30rem at 88% 92%, color-mix(in oklab, var(--color-accent) 10%, transparent), transparent 70%);
-}
-.login-dots {
-  background-image: radial-gradient(circle at 1px 1px, color-mix(in oklab, var(--color-accent) 24%, transparent) 1px, transparent 0);
-  background-size: 22px 22px;
-  mask-image: radial-gradient(ellipse 60% 55% at 50% 45%, #000 20%, transparent 75%);
 }
 
 /* แตะปุ่มบนมือถือไม่ต้องรอ double-tap zoom */

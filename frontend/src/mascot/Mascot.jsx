@@ -21,7 +21,8 @@ const CHARACTERS = {
   cat: (p) => <PetCharacter {...p} kind="cat" />,
   dog: (p) => <PetCharacter {...p} kind="dog" />,
 }
-const LABELS = { chibiGirl: 'พี่ HR (หญิง)', chibiBoy: 'พี่ HR (ชาย)', cat: 'น้องแมว', dog: 'น้องหมา' }
+// ชื่อผู้ช่วย ใช้ทั้งปุ่มเลือกผู้ช่วยใน sidebar และป้ายชื่อหน้า login
+const LABELS = { chibiGirl: 'จอย', chibiBoy: 'กิต', cat: 'ส้มฉุน', dog: 'ปุกปุย' }
 
 // กล่องคำพูด หางชี้ไปหาตัวการ์ตูน (tail = ทิศที่ตัวการ์ตูนอยู่)
 function Bubble({ tail = 'top', className = '', live = false, children }) {
@@ -71,6 +72,26 @@ export function SorryState({ message }) {
       </div>
       <div className="mt-4 font-semibold text-fg">ขอโทษนะ ตอนนี้ดึงข้อมูลไม่ได้</div>
       <p className="mx-auto mt-1 max-w-lg text-sm text-risk-high">{message}</p>
+    </div>
+  )
+}
+
+// หน้า login: ผู้ช่วยยืนโบกมือต้อนรับ พร้อมป้ายชื่อ (keys = ตัวที่จะแสดง เรียงซ้ายไปขวา)
+// โบก/ขยับไม่พร้อมกัน ดูมีชีวิต เป็นของตกแต่ง ซ่อนจากโปรแกรมอ่านหน้าจอ
+export function WelcomeMascots({ keys = MASCOTS, className = '' }) {
+  return (
+    <div className={`flex items-end ${className}`} aria-hidden="true">
+      {keys.map((k) => (
+        <div
+          key={k}
+          data-kind={k === 'cat' || k === 'dog' ? 'pet' : 'person'} // ให้หน้าที่ใช้ปรับขนาดสัตว์แยกได้
+          style={{ '--delay': `${MASCOTS.indexOf(k) * 220}ms` }}
+          className="flex flex-col items-center [&_.mascot-body]:[animation-delay:var(--delay)] [&_.mascot-wave]:[animation-delay:var(--delay)]"
+        >
+          {CHARACTERS[k]({ mood: 'none' })}
+          <span className="-mt-1 rounded-full border border-line bg-card/80 px-2.5 py-0.5 text-xs font-medium text-fg">{LABELS[k]}</span>
+        </div>
+      ))}
     </div>
   )
 }
