@@ -168,7 +168,7 @@ Response: `employees[]` (`employee_id`, `risk_score`, `calibrated_risk_score`, `
 | Authentication (SEC-01) | บัญชีทดลอง 2 บัญชีเขียนไว้ในโค้ด (`hr_demo`, `admin_demo`) และแสดงรหัสบนหน้า login ชั่วคราว | ตาราง users ใน DB + hash รหัสผ่าน (เช่น bcrypt) ให้ทีมเลือกวิธี แล้วลบรหัสออกจากหน้า login |
 | Token | HMAC-SHA256 จาก stdlib ถ้าไม่ตั้ง `AUTH_SECRET` สุ่มใหม่ทุกครั้งที่เปิด backend (ต้อง login ใหม่) ยังเพิกถอน token ก่อนหมดอายุไม่ได้ | ตั้ง `AUTH_SECRET` ตอน deploy ถ้าต้องการ logout ฝั่ง server ให้เก็บ session ใน DB |
 | Rate limit | เก็บในหน่วยความจำของ process เดียว | Redis หรือ reverse proxy ถ้ารันหลาย worker |
-| ขนาด body | เช็กจาก `Content-Length` (10 MB) | ตั้งเพดานที่ reverse proxy ด้วย (กัน chunked body) |
+| ขนาด body | 10 MB ทั้งแบบมี `Content-Length` และแบบส่งเป็น chunk (นับไบต์ระหว่างอ่าน) ไฟล์ .xlsx เช็กขนาดหลังแตก zip ไม่เกิน 60 MB ก่อน parse (กัน zip bomb) | ตั้งเพดานที่ reverse proxy ด้วยตอน deploy |
 | ข้อมูลส่วนบุคคล (PDPA) | `/shap` ยังคืนค่าจริงของอายุ/เพศ/สถานภาพ ยังไม่มี audit log | ตัด protected attribute ออกจาก response (SEC-01) และบันทึกการเข้าถึง (SEC-09) |
 | การเก็บข้อมูล | DB รันในเครื่อง (docker) ไม่มี backup/เข้ารหัส และ MLflow ของทีมบน DagsHub เป็นสาธารณะ | ห้ามใช้ข้อมูลพนักงานจริงจนกว่าจะ self-host ครบและมีระบบผู้ใช้จริง |
 | CORS / deploy | ใช้ proxy ของ Vite ตอนพัฒนา | ตั้ง CORS หรือ reverse proxy ตอน deploy (Docker Compose + Render) |
