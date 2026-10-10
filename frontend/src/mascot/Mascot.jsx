@@ -4,7 +4,7 @@
 // มี 4 ตัว: chibiGirl / chibiBoy (ChibiCharacter.jsx), cat / dog (PetCharacter.jsx) ตัวที่เลือกเก็บใน App (theme.js: loadMascot/saveMascot)
 import ChibiCharacter from './ChibiCharacter'
 import PetCharacter from './PetCharacter'
-import { MASCOTS } from './theme'
+import { MASCOTS } from '../theme'
 
 const MOOD = {
   none: { text: 'สวัสดี! เลือกพนักงานก่อนนะ', sub: 'เราจะช่วยดูความเสี่ยงให้' },

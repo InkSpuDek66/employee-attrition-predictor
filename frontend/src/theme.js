@@ -39,7 +39,7 @@ export const BAND = {
 
 export const bandOf = (score) => (score < LOW ? 'Low' : score < HIGH ? 'Medium' : 'High')
 
-// ผู้ช่วยในหน้า (Mascot.jsx) ลำดับนี้ใช้ทั้งปุ่มเลือกและหน้าขอโทษ ตัวที่เลือกจำใน localStorage
+// ผู้ช่วยในหน้า (mascot/Mascot.jsx) ลำดับนี้ใช้ทั้งปุ่มเลือกและหน้าขอโทษ ตัวที่เลือกจำใน localStorage
 export const MASCOTS = ['chibiGirl', 'chibiBoy', 'cat', 'dog']
 
 export function loadMascot() {

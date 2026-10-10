@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { featureLabel, featurePhrase, featureValue } from './featureLabels'
 import { api, baht, bandOf, friendly } from './theme'
-import { NotFoundState, SorryState } from './Mascot'
+import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
