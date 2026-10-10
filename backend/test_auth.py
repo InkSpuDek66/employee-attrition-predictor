@@ -62,5 +62,22 @@ def test_login_rate_limit_and_body_cap():
     assert e.value.status_code == 429
     auth.login_limit.reset()
     big = b"x" * (11 * 1024 * 1024)
-    r = client.post("/employees/validate", headers=login("hr_demo"), files={"file": ("a.csv", big, "text/csv")})
+    hr = login("hr_demo")
+    r = client.post("/employees/validate", headers=hr, files={"file": ("a.csv", big, "text/csv")})
+    assert r.status_code == 413
+    # ส่งเป็น chunk (ไม่มี Content-Length) ต้องโดนเพดานเหมือนกัน
+    chunks = (b"x" * (1024 * 1024) for _ in range(11))
+    r = client.post("/whatif", headers=hr | {"Content-Type": "application/json"}, content=chunks)
+    assert r.status_code == 413
+
+
+def test_xlsx_zip_bomb_rejected_before_parsing():
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("xl/worksheets/sheet1.xml", b"0" * (70 * 1024 * 1024))  # แตกได้ 70 MB บีบเหลือ ~70 KB
+    assert len(buf.getvalue()) < 1024 * 1024
+    r = client.post("/employees/validate", headers=login("hr_demo"), files={"file": ("bomb.xlsx", buf.getvalue(), "application/zip")})
     assert r.status_code == 413

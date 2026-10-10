@@ -11,6 +11,7 @@ POST /employees/import    ตรวจแล้วบันทึกลงตา
 
 import io
 import logging
+import zipfile
 from typing import Optional
 
 import pandas as pd
@@ -30,6 +31,7 @@ MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 10_000
 MAX_ERRORS = 200  # ส่งกลับไม่เกินนี้ ที่เหลือบอกแค่จำนวน
 THB_PER_USD = 35  # ต้องตรงกับ frontend/src/theme.js
+MAX_UNZIPPED = 60 * 1024 * 1024  # .xlsx คือ zip: 10,000 แถวจริงแตกออกมาไม่ถึง 20 MB เกินนี้ = zip bomb
 
 # (ฟิลด์ของโมเดล, หัวคอลัมน์ภาษาไทยใน template, คำอธิบาย/ตัวเลือก)
 COLUMNS = [
@@ -121,7 +123,12 @@ def _read(upload: UploadFile, data: bytes) -> pd.DataFrame:
         if name.endswith(".csv"):
             return pd.read_csv(io.BytesIO(data), dtype=object, encoding="utf-8-sig")
         if name.endswith(".xlsx"):
+            with zipfile.ZipFile(io.BytesIO(data)) as z:  # เช็กขนาดหลังแตกก่อน parse (กันไฟล์เล็กที่แตกเป็น GB)
+                if sum(i.file_size for i in z.infolist()) > MAX_UNZIPPED:
+                    raise HTTPException(413, "ไฟล์ Excel ใหญ่ผิดปกติเมื่อแตกออก แบ่งไฟล์หรือบันทึกเป็น CSV แล้วลองใหม่")
             return pd.read_excel(io.BytesIO(data), dtype=object, engine="openpyxl")
+    except HTTPException:
+        raise
     except Exception:  # noqa: BLE001  ไฟล์เสีย/ผิดรูปแบบ อะไรก็ตอบเป็นข้อความเดียวกัน
         raise HTTPException(422, "อ่านไฟล์ไม่ได้ ตรวจว่าเป็นไฟล์ Excel (.xlsx) หรือ CSV ที่ไม่เสีย")
     raise HTTPException(422, "รองรับเฉพาะไฟล์ .xlsx หรือ .csv")
