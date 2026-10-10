@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { featureLabel } from './featureLabels'
+import { featureLabel, JOB_LEVELS, SURVEY_NOTE } from './featureLabels'
 import { api, baht, BAND, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
@@ -25,7 +25,8 @@ const GROUPS = [
       {
         field: 'BusinessTravel',
         type: 'select',
-        options: [['Non-Travel', 'ไม่เดินทาง'], ['Travel_Rarely', 'นานๆ ครั้ง'], ['Travel_Frequently', 'บ่อย']],
+        options: [['Non-Travel', 'ไม่ต้องไป'], ['Travel_Rarely', 'นานๆ ครั้ง'], ['Travel_Frequently', 'บ่อย']],
+        hint: 'ไปหาลูกค้า/สาขาอื่น ไม่ใช่การเดินทางไปออฟฟิศทุกวัน',
       },
       { field: 'DistanceFromHome', type: 'range', min: 1, max: 30, step: 1, unit: 'กม.' },
       { field: 'WorkLifeBalance', type: 'select', options: [[1, 'แย่'], [2, 'พอใช้'], [3, 'ดี'], [4, 'ดีมาก']] },
@@ -35,7 +36,7 @@ const GROUPS = [
     title: 'ความก้าวหน้า',
     icon: 'trend',
     controls: [
-      { field: 'JobLevel', type: 'select', options: [1, 2, 3, 4, 5].map((v) => [v, String(v)]) },
+      { field: 'JobLevel', type: 'select', options: [1, 2, 3, 4, 5].map((v) => [v, JOB_LEVELS[v]]), wide: true },
       { field: 'YearsSinceLastPromotion', type: 'range', min: 0, max: 15, step: 1 },
       { field: 'TrainingTimesLastYear', type: 'range', min: 0, max: 6, step: 1 },
     ],
@@ -43,6 +44,7 @@ const GROUPS = [
   {
     title: 'ความพึงพอใจ',
     icon: 'heart',
+    note: SURVEY_NOTE,
     controls: [
       { field: 'JobSatisfaction', type: 'select', options: SAT },
       { field: 'EnvironmentSatisfaction', type: 'select', options: SAT },
@@ -126,18 +128,23 @@ function MoneyControl({ field, base, value, rate, onChange }) {
   )
 }
 
-function Control({ field, type, options, base, value, onChange, unit, ...range }) {
+// wide = กว้างเต็มแถว (ตัวเลือกยาวๆ เช่น ระดับตำแหน่ง จะได้อยู่แถวเดียว ไม่ทำให้กล่องข้างๆ สูงตาม)
+// hint = คำอธิบายสั้นใต้ชื่อช่อง (ช่องที่ชื่ออาจเข้าใจผิด)
+function Control({ field, type, options, base, value, onChange, unit, wide, hint, ...range }) {
   const withUnit = (v) => (unit ? `${v.toLocaleString()} ${unit}` : v.toLocaleString())
   const changed = value !== base
   const optionText = (v) => options?.find(([o]) => String(o) === String(v))?.[1] ?? v
   return (
     <div
-      className={`rounded-lg border p-4 transition-colors duration-200 ${
+      className={`rounded-lg border p-4 transition-colors duration-200 ${wide ? 'sm:col-span-2' : ''} ${
         changed ? 'border-accent bg-accent-soft/50' : 'border-line bg-card hover:border-secondary/50'
       }`}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
-        <span className="text-sm font-medium text-fg">{featureLabel(field)}</span>
+        <span className="text-sm font-medium text-fg">
+          {featureLabel(field)}
+          {hint && <span className="block text-xs font-normal text-muted-fg">{hint}</span>}
+        </span>
         {changed && (
           <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[11px] font-medium text-on-primary">
             เดิม {type === 'range' ? withUnit(base) : optionText(base)}
@@ -233,7 +240,7 @@ const PRESETS = [
   { label: 'ขึ้นเงินเดือน 10%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.1, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 10) }) },
   { label: 'ขึ้นเงินเดือน 20%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 20) }) },
   { label: 'เลื่อนตำแหน่ง', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0 }) },
-  { label: 'ลดการเดินทาง', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
+  { label: 'งดงานนอกสถานที่', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
   { label: 'อบรมเพิ่ม', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
   { label: 'ให้สิทธิ์ซื้อหุ้น', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
 ]
@@ -424,7 +431,9 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                     <Icon name={g.icon} className="size-4 text-accent" />
                     {g.title}
                   </legend>
-                  <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                  {g.note && <p className="-mt-1 mb-3 text-xs text-muted-fg">{g.note}</p>}
+                  {/* 2 คอลัมน์ตลอด: ทุกกลุ่มลงตัวพอดี (ช่องยาวใช้ wide = เต็มแถว) ไม่เหลือเศษบนจอกว้าง */}
+                  <div className="grid gap-3 sm:grid-cols-2">
                     {g.controls.map((c) => (
                       c.type === 'money' ? (
                         <MoneyControl key={c.field} {...c} rate={rate} base={loaded.base[c.field]} value={current(c.field)} onChange={(v) => setValue(c.field, v)} />

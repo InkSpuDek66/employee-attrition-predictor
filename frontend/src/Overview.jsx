@@ -1,7 +1,7 @@
 // ภาพรวมบริษัท (README 6.6) + รายชื่อพนักงานเสี่ยงสูงสุดให้กดเลือก ไม่ต้องรู้รหัสก่อน
 // ใช้ /company-summary, /company-summary/departments, /company-summary/top-employees (คะแนนยังไม่ปรับเทียบ ใช้จัดลำดับ)
 import { useState } from 'react'
-import { featureLabel } from './featureLabels'
+import { featureLabel, JOB_LEVELS } from './featureLabels'
 import { AssistantHint, SorryState } from './mascot/Mascot'
 import { api, baht, BAND, friendly, useApi } from './theme'
 import { Card, CountUp, Icon, Segmented, Skeleton } from './ui'
@@ -14,7 +14,7 @@ const topQuery = (n, department) => new URLSearchParams({ n, ...(department && {
 async function downloadCsv(department) {
   const { employees } = await api(`/company-summary/top-employees?${topQuery(100, department)}`)
   const header = ['อันดับ', 'รหัสพนักงาน', 'คะแนนความเสี่ยง', 'ระดับ', 'แผนก', 'ตำแหน่ง', 'ระดับตำแหน่ง']
-  const rows = employees.map((e, i) => [i + 1, e.employee_id, Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, e.job_level])
+  const rows = employees.map((e, i) => [i + 1, e.employee_id, Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, JOB_LEVELS[e.job_level] ?? e.job_level])
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(',')).join('\r\n')
   const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }))
   const a = Object.assign(document.createElement('a'), { href: url, download: `top-risk-${department || 'all'}.csv` })
@@ -70,7 +70,7 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
                 <span className="block text-sm font-medium text-fg">พนักงาน #{e.employee_id}</span>
                 {!compact && (
                   <span className="block truncate text-xs text-muted-fg">
-                    {e.job_role} · {e.department} · ระดับ {e.job_level}
+                    {e.job_role} · {e.department} · {JOB_LEVELS[e.job_level] ?? `ระดับ ${e.job_level}`}
                   </span>
                 )}
               </span>

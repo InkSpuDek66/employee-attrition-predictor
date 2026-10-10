@@ -57,3 +57,24 @@ def test_missing_and_unknown_columns():
 def test_rejects_wrong_file_type_and_broken_file():
     assert client.post("/employees/validate", files={"file": ("a.pdf", b"x", "application/pdf")}).status_code == 422
     assert client.post("/employees/validate", files={"file": ("a.xlsx", b"not excel", XLSX)}).status_code == 422
+
+
+def test_survey_fields_optional_and_job_level_words():
+    df = _template()
+    assert set(df["ระดับตำแหน่ง"]) <= {"จูเนียร์", "พนักงานระดับกลาง", "ซีเนียร์", "ผู้จัดการแผนก", "ผู้จัดการใหญ่"}
+    df.loc[0, "พอใจในงานที่ทำ"] = None  # เว้นว่าง 1 ช่อง
+    df = df.drop(columns=["สมดุลงานกับชีวิต", "ความทุ่มเทให้กับงาน"])  # ไม่มีทั้งคอลัมน์
+    df.loc[1, "ระดับตำแหน่ง"] = "4"  # ตัวเลขยังใช้ได้
+    body = _upload(df).json()
+    assert body["n_valid"] == 3 and body["errors"] == [] and body["missing_columns"] == []
+    df.loc[2, "ระดับตำแหน่ง"] = "หัวหน้าทีม"  # คำที่ไม่รู้จัก ต้องแจ้ง
+    assert any(e["column"] == "ระดับตำแหน่ง" for e in _upload(df).json()["errors"])
+
+
+def test_business_travel_new_name_and_old_name_both_accepted():
+    df = _template()
+    assert set(df["เดินทางไปทำงานนอกสถานที่"]) <= {"ไม่ต้องไป", "นานๆ ครั้ง", "บ่อย"}
+    old = df.rename(columns={"เดินทางไปทำงานนอกสถานที่": "การเดินทางไปทำงาน"})  # ไฟล์ที่กรอกก่อนเปลี่ยนชื่อ
+    old["การเดินทางไปทำงาน"] = "ไม่เดินทาง"
+    body = _upload(old).json()
+    assert body["n_valid"] == 3 and body["missing_columns"] == [] and body["unknown_columns"] == []
