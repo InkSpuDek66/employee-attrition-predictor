@@ -17,7 +17,7 @@ Course Milestones ที่ต้องเจอระหว่างทาง: 
 - [x] ทำ EDA ฝั่งฟีเจอร์ตัวเลข (Age, MonthlyIncome, DistanceFromHome, YearsAtCompany, TotalWorkingYears ฯลฯ) ร่วมกับ Nanthamon
   - วิธีทำ: เปิด notebook ของตัวเอง เทียบค่าเฉลี่ย/การกระจายตัวระหว่างกลุ่มลาออก vs ไม่ลาออก ทำกราฟ histogram/boxplot ต่อฟีเจอร์
   - ผลลัพธ์ที่ต้องส่ง: notebook EDA ฝั่งตัวเลข + สรุป 3–5 bullet ว่าฟีเจอร์ไหนน่าสนใจสุด
-  - สถานะ: `notebooks/01_eda_numeric_Y.ipynb` (23 ฟีเจอร์ตัวเลข, Mann-Whitney + effect size, อัตราลาออกตามช่วงค่า, correlation, สรุป 5 ข้อ) ยังไม่ได้รันเก็บ output/กราฟ (pandas ในเครื่องถูก Application Control บล็อก) รันแล้วรูปจะอยู่ที่ `docs/figures/eda_numeric_Y/`
+  - สถานะ: `notebooks/01_eda_numeric_Y.ipynb` (23 ฟีเจอร์ตัวเลข, Mann-Whitney + effect size, อัตราลาออกตามช่วงค่า, correlation, สรุป 5 ข้อ) รันแล้ว รูปสำหรับสไลด์อยู่ที่ `docs/figures/eda_numeric_Y/`
 
 ### wk2–3 (29 ก.ย.–12 ต.ค.): Modeling
 - [ ] Train baseline model (Logistic Regression) ร่วมกับ Nanthamon
