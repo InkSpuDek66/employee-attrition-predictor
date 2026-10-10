@@ -63,6 +63,7 @@ def test_import_saves_new_employee_in_baht(real_db):
     template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
     template.loc[0, "รหัสพนักงาน"] = NEW_ID
     template.loc[0, "เงินเดือน (บาท)"] = 70_000
+    template.loc[0, "เข้าออฟฟิศ (วัน/สัปดาห์)"] = 2
     buf = io.BytesIO()
     template.to_excel(buf, index=False)
     try:
@@ -70,6 +71,7 @@ def test_import_saves_new_employee_in_baht(real_db):
         assert r.status_code == 200, r.text
         assert r.json()["saved"] is True and "เพิ่มใหม่ 1" in r.json()["note"] and r.json()["saved_ids"] == [NEW_ID]
         assert ms.employee_record(NEW_ID)["MonthlyIncome"] == 2000  # 70,000 บาท / 35
+        assert ms.employee_record(NEW_ID)["OfficeDaysPerWeek"] == 2  # เก็บและอ่านกลับจาก DB
         assert client.get(f"/shap/{NEW_ID}").status_code == 200
     finally:
         with db.connect() as conn:

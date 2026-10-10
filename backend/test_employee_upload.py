@@ -78,3 +78,12 @@ def test_business_travel_new_name_and_old_name_both_accepted():
     old["การเดินทางไปทำงาน"] = "ไม่เดินทาง"
     body = _upload(old).json()
     assert body["n_valid"] == 3 and body["missing_columns"] == [] and body["unknown_columns"] == []
+
+
+
+def test_office_days_column_optional():
+    df = _template()
+    assert "เข้าออฟฟิศ (วัน/สัปดาห์)" in df.columns
+    assert _upload(df.drop(columns=["เข้าออฟฟิศ (วัน/สัปดาห์)"])).json()["missing_columns"] == []
+    df.loc[0, "เข้าออฟฟิศ (วัน/สัปดาห์)"] = 9
+    assert any(e["column"] == "เข้าออฟฟิศ (วัน/สัปดาห์)" for e in _upload(df).json()["errors"])

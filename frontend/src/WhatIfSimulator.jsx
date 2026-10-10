@@ -30,6 +30,13 @@ const GROUPS = [
       },
       { field: 'DistanceFromHome', type: 'range', min: 1, max: 30, step: 1, unit: 'กม.' },
       { field: 'WorkLifeBalance', type: 'select', options: [[1, 'แย่'], [2, 'พอใช้'], [3, 'ดี'], [4, 'ดีมาก']] },
+      {
+        field: 'OfficeDaysPerWeek',
+        type: 'select',
+        options: [[0, 'WFH ทุกวัน'], [1, '1 วัน'], [2, '2 วัน'], [3, '3 วัน'], [4, '4 วัน'], [5, '5 วัน']],
+        hint: 'ยิ่งเข้าออฟฟิศน้อย ระยะทางจากบ้านยิ่งมีผลน้อยลง (ระบบประมาณจากวันที่ต้องเดินทาง โมเดลไม่ได้เรียนเรื่อง WFH โดยตรง)',
+        wide: true,
+      },
     ],
   },
   {
@@ -241,6 +248,7 @@ const PRESETS = [
   { label: 'ขึ้นเงินเดือน 20%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 20) }) },
   { label: 'เลื่อนตำแหน่ง', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0 }) },
   { label: 'งดงานนอกสถานที่', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
+  { label: 'ให้ WFH 3 วัน', apply: (b) => ({ OfficeDaysPerWeek: Math.min(b.OfficeDaysPerWeek ?? 5, 2) }) },
   { label: 'อบรมเพิ่ม', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
   { label: 'ให้สิทธิ์ซื้อหุ้น', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
 ]

@@ -9,6 +9,7 @@ const LABELS = {
   Department: 'แผนก',
   JobRole: 'ตำแหน่งงาน',
   JobLevel: 'ระดับตำแหน่ง',
+  OfficeDaysPerWeek: 'เข้าออฟฟิศ (วัน/สัปดาห์)',
   BusinessTravel: 'เดินทางไปทำงานนอกสถานที่', // business trip (ไม่ใช่การเดินทางไปออฟฟิศ อันนั้นคือ DistanceFromHome)
   OverTime: 'ทำงานล่วงเวลา (OT)',
   PerformanceRating: 'ผลประเมินการทำงาน',
@@ -79,7 +80,7 @@ export function featureLabel(name) {
 // shown = ค่าที่แปลงแล้ว (featureValue หรือเงินบาท), value = ค่าดิบ (ใช้กับฟีเจอร์ที่ต้องดูค่าจริง)
 const PHRASES = {
   MonthlyIncome: (s) => `เงินเดือน ${s}`,
-  DistanceFromHome: (s) => `บ้านห่างจากที่ทำงาน ${s}`,
+  DistanceFromHome: (s) => `ระยะเดินทางไปทำงาน ${s}`, // คิดตามวันเข้าออฟฟิศแล้ว (WFH = เดินทางน้อยลง)
   OverTime: (s) => (s === 'ทำ' ? 'ทำงานล่วงเวลา (OT)' : 'ไม่ทำ OT'),
   OverTimeXDistance: (s, v) => (v > 0 ? `ทำ OT และบ้านห่างจากที่ทำงาน ${s}` : 'ไม่ทำ OT'),
   BusinessTravel: (s) => (s === 'ไม่ต้องไป' ? 'ไม่ต้องไปทำงานนอกสถานที่' : `ต้องไปทำงานนอกสถานที่${s}`),

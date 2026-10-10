@@ -57,6 +57,7 @@ COLUMNS = [
     ("RelationshipSatisfaction", "พอใจความสัมพันธ์กับเพื่อนร่วมงาน", "1 ต่ำ – 4 สูงมาก · จากแบบสำรวจพนักงาน"),
     ("JobInvolvement", "ความทุ่มเทให้กับงาน", "1 ต่ำ – 4 สูงมาก · จากการประเมินของหัวหน้า"),
     ("WorkLifeBalance", "สมดุลงานกับชีวิต", "1 แย่ – 4 ดีมาก · จากแบบสำรวจพนักงาน"),
+    ("OfficeDaysPerWeek", "เข้าออฟฟิศ (วัน/สัปดาห์)", "0–5 (0 = WFH ทั้งหมด) · จากนโยบายการทำงานหรือระบบลงเวลา"),
     ("PerformanceRating", "ผลประเมินการทำงาน", "1–4"),
     ("TrainingTimesLastYear", "จำนวนครั้งที่อบรมปีที่ผ่านมา", "ครั้ง"),
     ("NumCompaniesWorked", "จำนวนบริษัทที่เคยทำงาน", "บริษัท"),
@@ -76,6 +77,8 @@ LABEL = ("Attrition", "ลาออกแล้วหรือยัง", "ล�
 # ponytail: ค่ากลางทำให้คะแนนส่วนนี้ "เป็นกลาง" ไม่ได้สะท้อนตัวคนจริง ถ้าบริษัทมีแบบสำรวจควรกรอกค่าจริง
 SURVEY_FIELDS = ("JobSatisfaction", "EnvironmentSatisfaction", "RelationshipSatisfaction", "JobInvolvement", "WorkLifeBalance")
 SURVEY_DEFAULT = 3
+# ช่องที่เว้นว่าง/ไม่มีคอลัมน์ได้ -> ค่าที่ใส่ให้ (วันเข้าออฟฟิศ: ไม่มีข้อมูล = เข้าทุกวันเหมือน IBM)
+OPTIONAL_DEFAULTS = {**{f: SURVEY_DEFAULT for f in SURVEY_FIELDS}, "OfficeDaysPerWeek": 5}
 # ระดับตำแหน่งเป็นคำ (ตรงกับ JOB_LEVELS ใน frontend/src/featureLabels.js) ค่าที่ส่งเข้าโมเดลยังเป็น 1–5
 JOB_LEVELS = {1: "จูเนียร์", 2: "พนักงานระดับกลาง", 3: "ซีเนียร์", 4: "ผู้จัดการแผนก", 5: "ผู้จัดการใหญ่"}
 THAI = {f: th for f, th, _ in COLUMNS + [LABEL]}
@@ -182,7 +185,7 @@ async def _check(file: UploadFile, label: bool = False):
     df.columns = headers
     mapped = {h: HEADER_TO_FIELD[h] for h in headers if h in HEADER_TO_FIELD}
     present = set(mapped.values())
-    missing = [THAI[f] for f, _, _ in COLUMNS + ([LABEL] if label else []) if f not in present and f not in SURVEY_FIELDS]
+    missing = [THAI[f] for f, _, _ in COLUMNS + ([LABEL] if label else []) if f not in present and f not in OPTIONAL_DEFAULTS]
     unknown = [h for h in headers if h not in HEADER_TO_FIELD and not h.startswith("Unnamed")]
 
     errors: list[RowError] = []
@@ -194,9 +197,9 @@ async def _check(file: UploadFile, label: bool = False):
         if all(v is None for v in row.values()):
             continue  # แถวว่างท้ายไฟล์
         shown = dict(row)  # ค่าตามที่ผู้ใช้กรอก (ภาษาไทย) ไว้โชว์ในตัวอย่าง ก่อนแปลงเป็นค่าของโมเดล
-        for field in SURVEY_FIELDS:  # ไม่มีข้อมูลแบบสำรวจ = ใช้ค่ากลาง ไม่แจ้งเป็นข้อผิดพลาด
+        for field, default in OPTIONAL_DEFAULTS.items():  # ไม่มีข้อมูล = ใช้ค่าเริ่มต้น ไม่แจ้งเป็นข้อผิดพลาด
             if row.get(field) is None:
-                row[field] = SURVEY_DEFAULT
+                row[field] = default
         for field, table in THAI_VALUES.items():
             if isinstance(row.get(field), str):
                 row[field] = table.get(row[field], row[field])
@@ -322,7 +325,7 @@ def template_response(rows: list[dict], columns: list, filename: str) -> Streami
     with pd.ExcelWriter(buf, engine="openpyxl") as xw:
         pd.DataFrame(rows, columns=[th for _, th, _ in columns]).to_excel(xw, sheet_name="พนักงาน", index=False)
         pd.DataFrame(
-            [{"คอลัมน์": th, "ต้องกรอก": "ไม่บังคับ (ว่าง = พอใจ/ดี)" if f in SURVEY_FIELDS else "ต้อง", "ค่าที่รับ": hint} for f, th, hint in columns]
+            [{"คอลัมน์": th, "ต้องกรอก": "ไม่บังคับ (ว่าง = พอใจ/ดี)" if f in SURVEY_FIELDS else "ไม่บังคับ (ว่าง = 5 วัน)" if f in OPTIONAL_DEFAULTS else "ต้อง", "ค่าที่รับ": hint} for f, th, hint in columns]
         ).to_excel(
             xw, sheet_name="คำอธิบาย", index=False
         )

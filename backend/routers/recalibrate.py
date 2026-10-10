@@ -116,6 +116,8 @@ def _fit(raw: pd.DataFrame, method: str, tenant_id: str) -> RecalibrateResponse:
 @router.post("/recalibrate", response_model=RecalibrateResponse)
 def recalibrate(req: RecalibrateRequest, background: BackgroundTasks, user: dict = Depends(auth.require_admin)):
     raw = pd.DataFrame(req.records)
+    if ms.OFFICE_DAYS not in raw:  # ไม่บังคับ ไม่มี = เข้าออฟฟิศทุกวัน
+        raw[ms.OFFICE_DAYS] = ms.FULL_WEEK
     missing = sorted((ms.input_columns() | {"Attrition"}) - set(raw.columns))
     if missing:
         raise HTTPException(422, f"ขาดคอลัมน์: {missing}")
