@@ -2,17 +2,19 @@
 // ponytail: บัญชีทดลองแสดงบนหน้านี้ชั่วคราวให้ทีม/กรรมการลองได้ ลบกล่อง DEMO_ACCOUNTS ออกเมื่อมีระบบผู้ใช้จริง (SEC-01)
 import { useState } from 'react'
 import { api, friendly, inputClass } from './theme'
-import { Alert, Field, Icon, PrimaryButton } from './ui'
+import { Alert, Field, Icon, PrimaryButton, ThemeToggle } from './ui'
 
 const DEMO_ACCOUNTS = [
   { username: 'hr_demo', password: 'hr-demo-1234', role: 'ฝ่ายบุคคล', can: 'ดูภาพรวม, SHAP, What-if, ตรวจไฟล์นำเข้า' },
   { username: 'admin_demo', password: 'admin-demo-1234', role: 'ผู้ดูแลระบบ', can: 'ทุกอย่างของ HR + บันทึกไฟล์นำเข้า + ปรับเทียบโมเดล' },
 ]
 
-export default function Login({ onLogin }) {
+// expired = ถูกพากลับมาเพราะ token หมดอายุ/backend restart (บอกเหตุผล ไม่ให้งงว่าทำไมหลุด)
+export default function Login({ onLogin, dark, onToggleTheme, expired }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
 
   async function submit(e) {
@@ -34,7 +36,8 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10">
+    <main className="relative grid min-h-screen place-items-center bg-canvas px-4 py-10">
+      <ThemeToggle dark={dark} onToggle={onToggleTheme} className="absolute right-4 top-4" />
       <div className="w-full max-w-md space-y-4">
         <div className="flex items-center justify-center gap-2.5">
           <div className="grid size-10 place-items-center rounded-lg bg-primary text-on-primary">
@@ -65,16 +68,28 @@ export default function Login({ onLogin }) {
             />
           </Field>
           <Field label="รหัสผ่าน">
-            <input
-              className={inputClass}
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <span className="relative block">
+              <input
+                className={`${inputClass} pr-12`}
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-0 grid w-11 cursor-pointer place-items-center rounded-r-lg text-muted-fg transition-colors duration-150 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} className="size-5" />
+              </button>
+            </span>
           </Field>
+          {expired && !error && <Alert tone="warning">หมดเวลาการใช้งาน หรือระบบเพิ่งเริ่มใหม่ กรุณาเข้าสู่ระบบอีกครั้ง</Alert>}
           {error && <Alert>{error}</Alert>}
           <div className="grid">
             <PrimaryButton loading={busy} loadingText="กำลังเข้าสู่ระบบ…">

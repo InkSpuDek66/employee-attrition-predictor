@@ -62,9 +62,13 @@ def read_token(token: str):
     return data["sub"] if data.get("exp", 0) > time.time() and data.get("sub") in DEMO_USERS else None
 
 
+TENANT_NAMES = {"ibm_demo": "IBM HR Analytics (ข้อมูลตัวอย่าง)"}  # ชื่อเดียวกับตาราง tenants ใน DB
+
+
 def public(username: str) -> dict:
     u = DEMO_USERS[username]
-    return {"username": username, "name": u["name"], "role": u["role"], "tenant_id": u["tenant_id"]}
+    t = u["tenant_id"]
+    return {"username": username, "name": u["name"], "role": u["role"], "tenant_id": t, "tenant_name": TENANT_NAMES.get(t, t)}
 
 
 def current_user(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
