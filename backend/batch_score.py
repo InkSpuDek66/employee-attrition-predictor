@@ -8,6 +8,8 @@ ponytail: ให้คะแนนเฉพาะ tenant ibm_demo ตาม mode
 """
 
 import json
+import logging
+import threading
 
 import calibration
 import model_store as ms
@@ -16,6 +18,9 @@ import company_summary as cs  # noqa: E402
 import db  # noqa: E402
 
 TENANT = db.DEMO_TENANT
+log = logging.getLogger(__name__)
+_lock = threading.Lock()
+_pending = threading.Event()
 
 
 def run(conn) -> int:
@@ -81,6 +86,31 @@ def run(conn) -> int:
             ],
         )
     return len(ids)
+
+
+def _score_once():
+    with db.connect() as conn:
+        run(conn)
+
+
+def refresh_in_background():
+    """เรียกหลังข้อมูลเปลี่ยน (นำเข้าพนักงาน/ปรับเทียบ) ผ่าน FastAPI BackgroundTasks ให้ cache สรุปกลับมาใช้ได้
+    ถ้ากำลังรันอยู่ จะไม่ซ้อน แต่รันต่ออีกรอบหลังรอบนี้จบ ให้ได้ข้อมูลล่าสุด
+    ponytail: ล็อกใน process เดียว ถ้ารันหลาย worker/เครื่องให้ย้ายไปคิวงาน (หรือ advisory lock ของ Postgres)"""
+    if not db.url():
+        return
+    _pending.set()
+    if not _lock.acquire(blocking=False):
+        return
+    try:
+        while _pending.is_set():
+            _pending.clear()
+            try:
+                _score_once()
+            except Exception as e:  # noqa: BLE001  งานเบื้องหลัง ห้ามล้ม request; log แค่ชนิด (ข้อความอาจมีข้อมูลพนักงาน)
+                log.warning("batch_score: คำนวณสรุปใหม่ไม่สำเร็จ (%s)", type(e).__name__)
+    finally:
+        _lock.release()
 
 
 if __name__ == "__main__":

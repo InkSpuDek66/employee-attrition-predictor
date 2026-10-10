@@ -1,10 +1,46 @@
 // นำเข้าข้อมูลพนักงานจาก Excel/CSV: GET /employees/template, POST /employees/validate (ตรวจ), POST /employees/import (บันทึก)
 // บันทึกได้เฉพาะผู้ดูแลระบบ (canSave) และ backend ต้องต่อ database (ไม่งั้นได้ข้อความ 503 จาก backend)
+// ชิ้นส่วนที่ export (DownloadButton, DropZone, CheckDetails) ใช้ร่วมกับหน้าปรับเทียบโมเดล (Calibrate.jsx)
 import { useState } from 'react'
-import { api, download, friendly } from './theme'
+import { AssistantHint } from './mascot/Mascot'
+import { download, friendly, postFile } from './theme'
 import { Alert, Card, Icon } from './ui'
 
-function Count({ label, value, tone = 'text-fg' }) {
+export function DownloadButton({ path, filename, children, onError }) {
+  return (
+    <button
+      type="button"
+      onClick={() => download(path, filename).catch((err) => onError(friendly(err)))}
+      className="lift inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-card px-4 py-2 text-left font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    >
+      <Icon name="download" className="size-5 shrink-0" />
+      {children}
+    </button>
+  )
+}
+
+export function DropZone({ busy, file, onFile, name }) {
+  const [dragging, setDragging] = useState(false)
+  return (
+    <label
+      onDragOver={(e) => (e.preventDefault(), setDragging(true))}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => (e.preventDefault(), setDragging(false), onFile(e.dataTransfer.files[0]))}
+      className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors duration-150 focus-within:ring-2 focus-within:ring-accent/40 ${
+        dragging ? 'border-accent bg-accent-soft' : 'border-line hover:border-secondary hover:bg-muted'
+      }`}
+    >
+      <span className="grid size-12 place-items-center rounded-xl bg-primary-soft text-accent">
+        <Icon name="upload" className="size-6" />
+      </span>
+      <span className="font-medium text-fg">{busy ? 'กำลังตรวจ…' : file ? file.name : 'ลากไฟล์มาวาง หรือกดเพื่อเลือกไฟล์'}</span>
+      <span className="text-xs text-muted-fg">เลือกไฟล์ใหม่ได้ตลอด ระบบตรวจใหม่ทันที</span>
+      <input type="file" name={name} accept=".xlsx,.csv" className="sr-only" onChange={(e) => (onFile(e.target.files[0]), (e.target.value = ''))} />
+    </label>
+  )
+}
+
+export function Count({ label, value, tone = 'text-fg' }) {
   return (
     <div className="rounded-lg border border-line bg-canvas p-4">
       <div className="text-xs font-medium text-muted-fg">{label}</div>
@@ -13,25 +49,101 @@ function Count({ label, value, tone = 'text-fg' }) {
   )
 }
 
-export default function Upload({ canSave }) {
+// ผลตรวจไฟล์: จำนวนแถว, คอลัมน์ที่ขาด, ตารางแถวที่ผิด, ตัวอย่างแถวที่ผ่าน
+export function CheckDetails({ result }) {
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-3" aria-live="polite">
+        <Count label="แถวทั้งหมด" value={result.n_rows} />
+        <Count label="ผ่าน" value={result.n_valid} tone="text-risk-low" />
+        <Count label="ต้องแก้" value={result.n_invalid} tone={result.n_invalid ? 'text-risk-high' : 'text-fg'} />
+      </div>
+
+      {result.missing_columns.length > 0 && (
+        <div className="mt-4">
+          <Alert>ไม่พบคอลัมน์ที่ต้องมี: {result.missing_columns.join(', ')} (เทียบกับไฟล์ตัวอย่าง)</Alert>
+        </div>
+      )}
+      {result.unknown_columns.length > 0 && (
+        <p className="mt-3 text-sm text-muted-fg">ไม่ได้ใช้คอลัมน์เหล่านี้ (ไม่เป็นไร): {result.unknown_columns.join(', ')}</p>
+      )}
+
+      {result.errors.length > 0 && (
+        <div className="mt-5">
+          <h3 className="mb-2 text-sm font-semibold text-fg">แถวที่ต้องแก้ (เลขแถวตามที่เห็นใน Excel)</h3>
+          <div className="-mx-5 max-h-96 overflow-auto sm:-mx-6">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0">
+                <tr className="border-y border-line bg-canvas text-left text-xs font-medium text-muted-fg">
+                  <th className="px-5 py-2 sm:px-6">แถว</th>
+                  <th className="px-2 py-2">คอลัมน์</th>
+                  <th className="px-5 py-2 sm:px-6">ปัญหา</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {result.errors.map((e, i) => (
+                  <tr key={i} className="hover:bg-canvas">
+                    <td className="px-5 py-2 tabular-nums text-muted-fg sm:px-6">{e.row}</td>
+                    <td className="px-2 py-2 font-medium text-fg">{e.column}</td>
+                    <td className="px-5 py-2 text-risk-high sm:px-6">{e.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {result.errors_truncated > 0 && (
+            <p className="mt-2 text-xs text-muted-fg">และอีก {result.errors_truncated.toLocaleString()} จุด แก้ชุดนี้แล้วอัปโหลดใหม่</p>
+          )}
+        </div>
+      )}
+
+      {result.preview.length > 0 && (
+        <div className="mt-5">
+          <h3 className="mb-2 text-sm font-semibold text-fg">ตัวอย่างแถวที่ผ่าน (5 แถวแรก)</h3>
+          <div className="-mx-5 overflow-x-auto sm:-mx-6">
+            <table className="w-full whitespace-nowrap text-sm">
+              <thead>
+                <tr className="border-y border-line bg-canvas text-left text-xs font-medium text-muted-fg">
+                  {Object.keys(result.preview[0]).map((h) => (
+                    <th key={h} className="px-3 py-2 first:pl-5 sm:first:pl-6">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {result.preview.map((r, i) => (
+                  <tr key={i}>
+                    {Object.values(r).map((v, j) => (
+                      <td key={j} className="px-3 py-2 tabular-nums first:pl-5 sm:first:pl-6">
+                        {typeof v === 'number' ? v.toLocaleString() : v}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// onSaved() = ข้อมูลพนักงานเปลี่ยน ให้หน้าอื่นโหลดใหม่, onPick(id) = ไปดูพนักงานคนนั้นในหน้า SHAP
+export default function Upload({ who, canSave, onSaved, onPick }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
-  const [dragging, setDragging] = useState(false)
   const [saving, setSaving] = useState(false)
-
-  function post(path, f) {
-    const form = new FormData()
-    form.append('file', f)
-    return api(path, { method: 'POST', body: form })
-  }
 
   async function save() {
     setSaving(true)
     setError('')
     try {
-      setResult(await post('/employees/import', file))
+      setResult(await postFile('/employees/import', file))
+      onSaved()
     } catch (err) {
       setError(friendly(err))
     } finally {
@@ -46,7 +158,7 @@ export default function Upload({ canSave }) {
     setError('')
     setResult(null)
     try {
-      setResult(await post('/employees/validate', f))
+      setResult(await postFile('/employees/validate', f))
     } catch (err) {
       setError(friendly(err))
     } finally {
@@ -64,48 +176,31 @@ export default function Upload({ canSave }) {
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Card icon="list" title="1. ดาวน์โหลดไฟล์ตัวอย่าง" subtitle="Excel ที่มีหัวคอลัมน์ครบ + แถวตัวอย่าง + ชีตคำอธิบายค่าที่รับ">
-          <button
-            type="button"
-            onClick={() => download('/employees/template', 'employee_template.xlsx').catch((err) => setError(friendly(err)))}
-            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-line px-4 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-          >
-            <Icon name="download" className="size-5" />
-            ดาวน์โหลด employee_template.xlsx
-          </button>
+          <DownloadButton path="/employees/template" filename="employee_template.xlsx" onError={setError}>
+            ดาวน์โหลดไฟล์ตัวอย่าง (.xlsx)
+          </DownloadButton>
           <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-muted-fg">
             <li>กรอกหนึ่งแถวต่อพนักงานหนึ่งคน รหัสพนักงานห้ามซ้ำ</li>
             <li>เงินเดือนกรอกเป็นบาท ระยะทางเป็นกิโลเมตร</li>
             <li>ค่าที่เป็นตัวเลือกพิมพ์ภาษาไทยได้ เช่น OT: ทำ / ไม่ทำ (ดูชีต “คำอธิบาย”)</li>
             <li>ไฟล์ที่ export จากระบบเดิมใช้หัวคอลัมน์ภาษาอังกฤษแบบ IBM ได้</li>
+            <li>ช่องความพึงพอใจ/สมดุลงานกับชีวิต (จากแบบสำรวจพนักงาน) และความทุ่มเท (จากการประเมินของหัวหน้า) ไม่มีข้อมูลก็เว้นว่างได้</li>
+            <li>“เข้าออฟฟิศ (วัน/สัปดาห์)” ใส่ 0–5 ตามนโยบาย WFH หรือระบบลงเวลา เว้นว่าง = เข้าทุกวัน</li>
           </ul>
         </Card>
 
         <Card icon="upload" title="2. อัปโหลดไฟล์เพื่อตรวจ" subtitle=".xlsx หรือ .csv ไม่เกิน 5 MB / 10,000 แถว">
-          <label
-            onDragOver={(e) => (e.preventDefault(), setDragging(true))}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => (e.preventDefault(), setDragging(false), check(e.dataTransfer.files[0]))}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors duration-150 focus-within:ring-2 focus-within:ring-accent/40 ${
-              dragging ? 'border-accent bg-accent-soft' : 'border-line hover:border-secondary hover:bg-muted'
-            }`}
-          >
-            <span className="grid size-12 place-items-center rounded-xl bg-primary/10 text-primary">
-              <Icon name="upload" className="size-6" />
-            </span>
-            <span className="font-medium text-fg">{busy ? 'กำลังตรวจ…' : file ? file.name : 'ลากไฟล์มาวาง หรือกดเพื่อเลือกไฟล์'}</span>
-            <span className="text-xs text-muted-fg">เลือกไฟล์ใหม่ได้ตลอด ระบบตรวจใหม่ทันที</span>
-            <input
-              type="file"
-              name="employees_file"
-              accept=".xlsx,.csv"
-              className="sr-only"
-              onChange={(e) => (check(e.target.files[0]), (e.target.value = ''))}
-            />
-          </label>
+          <DropZone busy={busy} file={file} onFile={check} name="employees_file" />
         </Card>
       </div>
 
       {error && <Alert>{error}</Alert>}
+
+      {!result && !error && !busy && (
+        <AssistantHint who={who} title="เริ่มจากดาวน์โหลดไฟล์ตัวอย่างนะ">
+          กรอกพนักงานหนึ่งคนต่อหนึ่งแถว แล้วลากไฟล์มาวางในช่องด้านบน ระบบจะตรวจให้ก่อนว่าแถวไหนต้องแก้ ยังไม่บันทึกจนกว่าจะกดยืนยัน
+        </AssistantHint>
+      )}
 
       {result && (
         <Card
@@ -113,86 +208,37 @@ export default function Upload({ canSave }) {
           title={ok ? '3. ไฟล์ถูกต้องทั้งหมด' : '3. ผลการตรวจ: มีจุดที่ต้องแก้'}
           subtitle={`${result.filename} · ${result.note}`}
         >
-          <div className="grid gap-3 sm:grid-cols-3" aria-live="polite">
-            <Count label="แถวทั้งหมด" value={result.n_rows} />
-            <Count label="ผ่าน" value={result.n_valid} tone="text-risk-low" />
-            <Count label="ต้องแก้" value={result.n_invalid} tone={result.n_invalid ? 'text-risk-high' : 'text-fg'} />
-          </div>
-
-          {result.missing_columns.length > 0 && (
-            <div className="mt-4">
-              <Alert>ไม่พบคอลัมน์ที่ต้องมี: {result.missing_columns.join(', ')} (เทียบกับไฟล์ตัวอย่าง)</Alert>
-            </div>
-          )}
-          {result.unknown_columns.length > 0 && (
-            <p className="mt-3 text-sm text-muted-fg">ไม่ได้ใช้คอลัมน์เหล่านี้ (ไม่เป็นไร): {result.unknown_columns.join(', ')}</p>
-          )}
-
-          {result.errors.length > 0 && (
-            <div className="mt-5">
-              <h3 className="mb-2 text-sm font-semibold text-fg">แถวที่ต้องแก้ (เลขแถวตามที่เห็นใน Excel)</h3>
-              <div className="-mx-5 max-h-96 overflow-auto sm:-mx-6">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0">
-                    <tr className="border-y border-line bg-canvas text-left text-xs font-medium text-muted-fg">
-                      <th className="px-5 py-2 sm:px-6">แถว</th>
-                      <th className="px-2 py-2">คอลัมน์</th>
-                      <th className="px-5 py-2 sm:px-6">ปัญหา</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {result.errors.map((e, i) => (
-                      <tr key={i} className="hover:bg-canvas">
-                        <td className="px-5 py-2 tabular-nums text-muted-fg sm:px-6">{e.row}</td>
-                        <td className="px-2 py-2 font-medium text-fg">{e.column}</td>
-                        <td className="px-5 py-2 text-risk-high sm:px-6">{e.message}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {result.errors_truncated > 0 && (
-                <p className="mt-2 text-xs text-muted-fg">และอีก {result.errors_truncated.toLocaleString()} จุด แก้ชุดนี้แล้วอัปโหลดใหม่</p>
-              )}
-            </div>
-          )}
-
-          {result.preview.length > 0 && (
-            <div className="mt-5">
-              <h3 className="mb-2 text-sm font-semibold text-fg">ตัวอย่างแถวที่ผ่าน (5 แถวแรก)</h3>
-              <div className="-mx-5 overflow-x-auto sm:-mx-6">
-                <table className="w-full whitespace-nowrap text-sm">
-                  <thead>
-                    <tr className="border-y border-line bg-canvas text-left text-xs font-medium text-muted-fg">
-                      {Object.keys(result.preview[0]).map((h) => (
-                        <th key={h} className="px-3 py-2 first:pl-5 sm:first:pl-6">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {result.preview.map((r, i) => (
-                      <tr key={i}>
-                        {Object.values(r).map((v, j) => (
-                          <td key={j} className="px-3 py-2 tabular-nums first:pl-5 sm:first:pl-6">
-                            {typeof v === 'number' ? v.toLocaleString() : v}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          <CheckDetails result={result} />
 
           <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
             {result.saved ? (
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-risk-low">
-                <Icon name="check" className="size-5" />
-                {result.note}
-              </span>
+              <div className="space-y-3">
+                <span className="inline-flex items-center gap-2 text-sm font-medium text-risk-low">
+                  <Icon name="check" className="size-5" />
+                  {result.note}
+                </span>
+                {result.saved_ids.length > 0 && (
+                  <div>
+                    <div className="mb-2 text-sm text-muted-fg">ดูพนักงานที่เพิ่งบันทึก (กดเพื่อดูว่าเสี่ยงแค่ไหน และเพราะอะไร)</div>
+                    <div className="flex flex-wrap gap-2">
+                      {result.saved_ids.slice(0, 10).map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => onPick(id)}
+                          className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                        >
+                          พนักงาน #{id}
+                          <Icon name="right" className="size-4 text-muted-fg" />
+                        </button>
+                      ))}
+                      {result.saved_ids.length > 10 && (
+                        <span className="self-center text-sm text-muted-fg">และคนอื่นๆ (ดูได้จากแท็บภาพรวม)</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 <button

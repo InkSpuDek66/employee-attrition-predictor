@@ -3,33 +3,43 @@
 /* โหมดมืดสลับด้วย class .dark บน <html> (index.html ตั้งค่าแรกตามเครื่อง/ที่เคยเลือก) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens: แนว Vercel / Linear / shadcn — พื้นขาว เทา zinc ปุ่มดำ น้ำเงินสีเดียวไว้ชี้จุดที่โต้ตอบ/ถูกปรับ
+/* Design tokens: ธีมฟ้าพาสเทลเป็นสีประจำเว็บ สีอื่นมีแค่แดง/เหลือง/เขียวของระดับความเสี่ยง
+   - primary = ฟ้าพาสเทล (ปุ่มหลัก โลโก้) ตัวหนังสือบนปุ่มเป็นกรมท่า เพราะพาสเทลอ่อนเกินจะใช้ตัวขาว
+   - accent = ฟ้าเข้ม ใช้กับตัวหนังสือ/ไอคอน/เส้นโฟกัสที่ต้องอ่านบนพื้นขาว (contrast ≥ 4.5:1)
+   - พื้น/เส้น/ตัวหนังสือรองเป็นเทาอมฟ้า ให้ทั้งหน้าอยู่โทนเดียวกัน
    Geist ใช้กับตัวอังกฤษ/ตัวเลข ตัวไทยตกไปที่ IBM Plex Sans Thai ใช้ผ่าน class เช่น bg-primary text-muted-fg */
 @theme {
   --font-sans: 'Geist', 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, sans-serif;
-  --color-primary: #18181b;
-  --color-primary-hover: #3f3f46;
-  --color-primary-soft: #f4f4f5;
-  --color-on-primary: #ffffff;
-  --color-secondary: #d4d4d8;
-  --color-accent: #0070f3;
-  --color-accent-soft: #eff6ff;
-  --color-ink: #09090b;
-  --color-canvas: #fafafa;
+  --color-primary: #a9d1fb;
+  --color-primary-hover: #8ec2f8;
+  --color-primary-soft: #e7f2fe;
+  --color-on-primary: #0b2a4a;
+  --color-secondary: #bcd0e6;
+  --color-accent: #2b6cb0;
+  --color-accent-soft: #edf5fe;
+  --color-ink: #0f1e33;
+  --color-canvas: #f5f9fd;
   --color-card: #ffffff;
-  --color-fg: #09090b;
-  --color-muted: #f4f4f5;
-  --color-muted-fg: #71717a;
-  --color-line: #e4e4e7;
+  --color-fg: #0f1b2d;
+  --color-muted: #edf3fa;
+  --color-muted-fg: #56677d;
+  --color-line: #dae4ef;
   --color-risk-low: #15803d;
   --color-risk-low-soft: #f0fdf4;
   --color-risk-mid: #a16207;
   --color-risk-mid-soft: #fefce8;
   --color-risk-high: #dc2626;
   --color-risk-high-soft: #fef2f2;
+  /* สีเติมของแถบ/มาตรวัดระดับความเสี่ยง (สดกว่าสีตัวหนังสือด้านบน) ใช้ชุดเดียวกันทุกหน้า */
+  --color-band-low: #22c55e;
+  --color-band-mid: #eab308;
+  --color-band-high: #ef4444;
   --color-up: #ef4444;
-  --color-down: #0070f3;
-  /* ชุดตัวการ์ตูนใน sidebar (ChibiCharacter.jsx) */
+  --color-down: #4589d6;
+  /* กราฟที่มีหลายชุดข้อมูล (ช่อง 1 ฟ้า, ช่อง 2 ส้ม ตามลำดับชุดสีที่ตรวจตาบอดสีแล้ว) */
+  --color-chart-1: #2a78d6;
+  --color-chart-2: #eb6834;
+  /* ชุดตัวการ์ตูนใน sidebar (mascot/ChibiCharacter.jsx) */
   --color-suit: #2f3b58;
   --color-suit-line: #45527a;
   --color-pants: #252f47;
@@ -37,31 +47,36 @@
   --color-blazer-line: #4a4a55;
 }
 
-/* โหมดมืด: แนวเดียวกับ Vercel dark — พื้นเกือบดำ ขอบเทาเข้ม ปุ่มขาว ตัวอักษรสถานะใช้โทนสว่าง (contrast ≥ 4.5:1 บนพื้นมืด) */
+/* โหมดมืด: กรมท่าเข้มแทนดำสนิท ปุ่มยังเป็นฟ้าพาสเทล ตัวอักษรสถานะใช้โทนสว่าง (contrast ≥ 4.5:1 บนพื้นมืด) */
 .dark {
   color-scheme: dark;
-  --color-primary: #fafafa;
-  --color-primary-hover: #d4d4d8;
-  --color-primary-soft: #18181b;
-  --color-on-primary: #09090b;
-  --color-secondary: #3f3f46;
-  --color-accent: #3291ff;
-  --color-accent-soft: #0b1a33;
-  --color-ink: #18181b;
-  --color-canvas: #09090b;
-  --color-card: #111113;
-  --color-fg: #fafafa;
-  --color-muted: #1c1c1f;
-  --color-muted-fg: #a1a1aa;
-  --color-line: #27272a;
+  --color-primary: #9ccaf8;
+  --color-primary-hover: #b9daf9;
+  --color-primary-soft: #132640;
+  --color-on-primary: #0a2238;
+  --color-secondary: #2c3f5c;
+  --color-accent: #8cc2fa;
+  --color-accent-soft: #10233c;
+  --color-ink: #0f1e33;
+  --color-canvas: #0a1220;
+  --color-card: #0f1a2c;
+  --color-fg: #e8f1fc;
+  --color-muted: #16233a;
+  --color-muted-fg: #9cafc7;
+  --color-line: #22324b;
   --color-risk-low: #4ade80;
   --color-risk-low-soft: #0c2417;
   --color-risk-mid: #facc15;
   --color-risk-mid-soft: #2a2306;
   --color-risk-high: #f87171;
   --color-risk-high-soft: #2c1215;
+  --color-band-low: #4ade80;
+  --color-band-mid: #facc15;
+  --color-band-high: #f87171;
   --color-up: #f87171;
-  --color-down: #3291ff;
+  --color-down: #7ab4f5;
+  --color-chart-1: #3987e5;
+  --color-chart-2: #d95926;
   /* ชุดตัวการ์ตูนเป็นโทนครีม/ขาว ให้ตัดกับพื้นมืด */
   --color-suit: #efe6d2;
   --color-suit-line: #c8b995;
@@ -70,8 +85,123 @@
   --color-blazer-line: #cfc6b2;
 }
 
+/* สีโลโก้ (logo/Logo.jsx) โหมดสว่าง = สีเดียวกับ logo/logo.svg, โหมดมืด = กรอบกรมท่า ตัวอักษร/ประตูสว่างขึ้น */
+:root {
+  --logo-tile: #ffffff;
+  --logo-glow: #a9d1fb;
+  --logo-ink: #1b4f9c;
+  --logo-arrow: #3a86e3;
+  --logo-door-a: #2b7ad4;
+  --logo-door-b: #1e62b6;
+  --logo-door-inner: #f2f7fe;
+  --logo-walker: #1d58b0;
+  --logo-exit: #a3cdf8;
+}
+.dark {
+  --logo-tile: #13233d;
+  --logo-glow: #2b6cb0;
+  --logo-ink: #e3efff;
+  --logo-arrow: #8cc2fa;
+  --logo-door-a: #4a90e2;
+  --logo-door-b: #2f6fc4;
+  --logo-door-inner: #dcecfd;
+  --logo-walker: #14427f;
+  --logo-exit: #e3efff;
+}
+
 body {
   @apply bg-canvas text-fg antialiased;
+}
+
+/* พื้นหลังจางๆ ของหน้า login: แสงฟ้าพาสเทลสองมุมทแยง (ซ้ายบน/ขวาล่าง) เข้มเท่ากัน บนพื้นสีเดิม (ใช้สีธีม โหมดมืดเปลี่ยนเอง) */
+.login-glow {
+  background:
+    radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%),
+    radial-gradient(42rem 32rem at 88% 92%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%);
+}
+/* หน้าหลัก: แสงฟ้าพาสเทลมุมขวาบนกับซ้ายล่าง จางกว่าหน้า login (ไม่แย่งสายตาจากข้อมูล) */
+.app-glow {
+  background:
+    radial-gradient(40rem 28rem at 100% 0%, color-mix(in oklab, var(--color-primary) 22%, transparent), transparent 70%),
+    radial-gradient(36rem 26rem at 0% 100%, color-mix(in oklab, var(--color-primary) 16%, transparent), transparent 70%);
+}
+.dark .app-glow {
+  background:
+    radial-gradient(40rem 28rem at 100% 0%, color-mix(in oklab, var(--color-primary) 7%, transparent), transparent 70%),
+    radial-gradient(36rem 26rem at 0% 100%, color-mix(in oklab, var(--color-primary) 5%, transparent), transparent 70%);
+}
+/* กล่องรอโหลด: แถบแสงวิ่งผ่านแทนการกะพริบ */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-muted) 0%, color-mix(in oklab, var(--color-card) 70%, var(--color-muted)) 50%, var(--color-muted) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+/* ของที่กดได้: ยกขึ้นนิดๆ + เงาอ่อนตอนชี้เมาส์ */
+.lift {
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -4px color-mix(in oklab, var(--color-accent) 25%, transparent);
+}
+.dark .login-glow {
+  background:
+    radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%),
+    radial-gradient(42rem 32rem at 88% 92%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%);
+}
+
+/* อนิเมชั่นของหน้าจอ: สั้น (≤ 0.9s) เล่นตอนแสดง/ข้อมูลเปลี่ยนเท่านั้น และหยุดเองเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว" (กฎ reduced-motion ด้านล่าง) */
+/* กราฟแท่งยืดออกตอนแสดงครั้งแรก + เลื่อนความยาวนุ่มๆ ตอนค่าเปลี่ยน (ซ้าย = ยืดจากซ้าย, -r = ยืดจากขวา) */
+.bar-grow {
+  transform-origin: left center;
+  animation: bar-grow 550ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: width 400ms ease;
+}
+.bar-grow-r {
+  transform-origin: right center;
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+}
+/* เนื้อหาแท็บค่อยๆ ปรากฏ (เล่นใหม่ทุกครั้งที่แท็บถูกเปิด เพราะ hidden -> แสดง) */
+.fade-up {
+  animation: fade-up 260ms ease-out both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+}
+/* หน้า login: โลโก้/ฟอร์มค่อยๆ ขึ้นมา, มาสคอตกระโดดเข้ามาจากขอบจอ (ทีละตัวตาม --hop) */
+.login-enter {
+  animation: fade-up 500ms ease-out both;
+  animation-delay: var(--enter, 0ms);
+}
+.hop-in-left,
+.hop-in-right {
+  animation: hop-in-left 900ms ease-out both;
+  animation-delay: var(--hop, 0ms);
+}
+.hop-in-right {
+  animation-name: hop-in-right;
+}
+@keyframes hop-in-left {
+  0% { opacity: 0; transform: translate(-160px, 0); }
+  15% { opacity: 1; }
+  25% { transform: translate(-120px, -16px); }
+  50% { transform: translate(-80px, 0); }
+  75% { transform: translate(-40px, -16px); }
+  100% { opacity: 1; transform: translate(0, 0); }
+}
+@keyframes hop-in-right {
+  0% { opacity: 0; transform: translate(160px, 0); }
+  15% { opacity: 1; }
+  25% { transform: translate(120px, -16px); }
+  50% { transform: translate(80px, 0); }
+  75% { transform: translate(40px, -16px); }
+  100% { opacity: 1; transform: translate(0, 0); }
 }
 
 /* แตะปุ่มบนมือถือไม่ต้องรอ double-tap zoom */
@@ -84,7 +214,7 @@ label {
 }
 
 input[type='range'] {
-  @apply h-1.5 w-full cursor-pointer accent-fg;
+  @apply h-1.5 w-full cursor-pointer accent-accent;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -96,7 +226,7 @@ input[type='range'] {
   }
 }
 
-/* ตัวการ์ตูนใน sidebar (Mascot.jsx) */
+/* ตัวการ์ตูนใน sidebar (mascot/Mascot.jsx) */
 .mascot-static,
 .mascot-static * {
   animation: none !important;
@@ -147,7 +277,7 @@ input[type='range'] {
   0%, 12%, 100% { transform: none; }
   35%, 70% { transform: translateY(10px) scaleY(0.94); }
 }
-/* ประกายฉลองตอนความเสี่ยงลดลงเป็นระดับต่ำ (WhatIfSimulator.jsx) เล่นครั้งเดียว */
+/* ข้อความเด้งตอนระดับความเสี่ยงเปลี่ยน (WhatIfSimulator.jsx BandToast) เล่นครั้งเดียว: ประกายตอนลดลง, สั่นตอนเพิ่มขึ้น */
 .celebrate-spark {
   animation: celebrate-spark 900ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
@@ -163,6 +293,14 @@ input[type='range'] {
   0% { transform: translateY(6px) scale(0.9); opacity: 0; }
   15%, 75% { transform: none; opacity: 1; }
   100% { transform: translateY(-4px); opacity: 0; }
+}
+.toast-shake {
+  animation: toast-shake 480ms ease-in-out 200ms both;
+}
+@keyframes toast-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
 }
 .mascot-check {
   transform-box: fill-box;

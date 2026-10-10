@@ -1,5 +1,5 @@
 // ชิ้นส่วน UI ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
-import { BAND, bandOf, GAUGE, HIGH, LOW } from './theme'
+import { BAND, bandOf, HIGH, LOW, useCountUp } from './theme'
 
 // ไอคอนเส้น (path จาก Heroicons outline, MIT) ไม่ต้องลง library เพิ่ม
 const ICONS = {
@@ -29,6 +29,9 @@ const ICONS = {
   upload: 'M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5',
   download: 'M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3',
   check: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  eye: 'M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+  eyeOff: 'M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88',
+  scale: 'M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z',
   logout: 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9',
   info: 'm11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z',
 }
@@ -47,6 +50,21 @@ export function Icon({ name, className = 'size-5' }) {
     >
       <path d={ICONS[name]} />
     </svg>
+  )
+}
+
+// ปุ่มสลับโหมดมืด/สว่าง ใช้ทั้งหน้า login และ sidebar
+export function ThemeToggle({ dark, onToggle, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={dark ? 'เปลี่ยนเป็นโหมดสว่าง' : 'เปลี่ยนเป็นโหมดมืด'}
+      title={dark ? 'โหมดสว่าง' : 'โหมดมืด'}
+      className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className}`}
+    >
+      <Icon name={dark ? 'sun' : 'moon'} className="size-5" />
+    </button>
   )
 }
 
@@ -81,7 +99,7 @@ export function Card({ title, subtitle, icon, action, children, className = '' }
         <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             {icon && (
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-accent">
                 <Icon name={icon} className="size-5" />
               </div>
             )}
@@ -110,7 +128,11 @@ export function Alert({ tone = 'error', children }) {
 
 // โครงสีเทากะพริบระหว่างโหลด กันหน้ากระโดด (CLS)
 export function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse rounded-xl bg-muted ${className}`} />
+  return <div className={`skeleton rounded-xl ${className}`} />
+}
+
+export function CountUp({ value, format = Math.round }) {
+  return format(useCountUp(value))
 }
 
 // คะแนนใหญ่ + แถบไล่สีเขียว เหลือง แดง พร้อมหมุดตำแหน่งคะแนนและเส้นเกณฑ์
@@ -122,7 +144,7 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
       <div className="text-xs font-medium tracking-wide text-muted-fg">{title}</div>
       <div className="mt-1 flex items-end gap-2">
         <span className={`${size === 'lg' ? 'text-5xl' : 'text-4xl'} font-semibold leading-none tabular-nums ${b.text}`}>
-          {Math.round(pct)}
+          <CountUp value={pct} />
         </span>
         <span className="pb-0.5 text-sm text-muted-fg">/ 100</span>
         <span className={`ml-auto rounded-md px-2.5 py-1 text-sm font-semibold ring-1 ${b.pill}`}>เสี่ยง{bandTh ?? b.th}</span>
@@ -130,7 +152,7 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
       <div
         className="relative mt-4 h-2 rounded-full"
         style={{
-          background: `linear-gradient(to right, ${GAUGE[0]} 0 ${LOW * 100}%, ${GAUGE[1]} 0 ${HIGH * 100}%, ${GAUGE[2]} 0)`,
+          background: `linear-gradient(to right, var(--color-band-low) 0 ${LOW * 100}%, var(--color-band-mid) 0 ${HIGH * 100}%, var(--color-band-high) 0)`,
         }}
         role="meter"
         aria-valuemin={0}
@@ -153,21 +175,32 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
   )
 }
 
+// กลุ่มตัวเลือกแบบเลือกได้อย่างเดียว ตามแบบ radio group: Tab เข้ากลุ่มครั้งเดียว แล้วใช้ลูกศรเลื่อนเลือก
 export function Segmented({ options, value, onChange, label, size = 'md' }) {
+  const current = Math.max(0, options.findIndex(([v]) => String(v) === String(value)))
+  function onKeyDown(e) {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]
+    if (!step) return
+    e.preventDefault()
+    const next = (current + step + options.length) % options.length
+    onChange(options[next][0])
+    e.currentTarget.querySelectorAll('[role=radio]')[next]?.focus()
+  }
   return (
-    <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label={label}>
-      {options.map(([v, text]) => {
-        const active = String(v) === String(value)
+    <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+      {options.map(([v, text], i) => {
+        const active = i === current
         return (
           <button
             key={v}
             type="button"
             role="radio"
             aria-checked={active}
+            tabIndex={active ? 0 : -1}
             onClick={() => onChange(v)}
             className={`flex-1 cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
               size === 'sm' ? 'h-8' : 'h-10'
-            } ${active ? 'bg-card text-primary ring-1 ring-line' : 'text-muted-fg hover:text-fg'}`}
+            } ${active ? 'bg-card text-accent ring-1 ring-line' : 'text-muted-fg hover:text-fg'}`}
           >
             {text}
           </button>

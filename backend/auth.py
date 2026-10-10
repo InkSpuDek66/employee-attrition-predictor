@@ -24,6 +24,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 import calibration
+import business_rules  # noqa: E402  (ต้องอยู่หลัง calibration ซึ่ง import model_store ที่เพิ่ม src/ เข้า sys.path)
 
 router = APIRouter(tags=["auth"])
 
@@ -62,9 +63,13 @@ def read_token(token: str):
     return data["sub"] if data.get("exp", 0) > time.time() and data.get("sub") in DEMO_USERS else None
 
 
+TENANT_NAMES = {"ibm_demo": "IBM HR Analytics (ข้อมูลตัวอย่าง)"}  # ชื่อเดียวกับตาราง tenants ใน DB
+
+
 def public(username: str) -> dict:
     u = DEMO_USERS[username]
-    return {"username": username, "name": u["name"], "role": u["role"], "tenant_id": u["tenant_id"]}
+    t = u["tenant_id"]
+    return {"username": username, "name": u["name"], "role": u["role"], "tenant_id": t, "tenant_name": TENANT_NAMES.get(t, t)}
 
 
 def current_user(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
@@ -123,7 +128,7 @@ class RateLimit:
 login_limit = RateLimit(10)  # กันเดารหัสผ่าน
 LIMITS = {  # ใช้ใน main.py
     "whatif": RateLimit(240),  # หน้า What-if เรียกทุกครั้งที่ปรับค่า
-    "recalibrate": RateLimit(10),
+    "recalibrate": RateLimit(30),  # รวมดูประวัติ/ดาวน์โหลดไฟล์ตัวอย่างในแท็บปรับเทียบ
     "import": RateLimit(20),
 }
 
@@ -137,6 +142,7 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: dict
+    settings: dict = {}  # ค่าที่หน้าเว็บต้องใช้ตรงกับ backend เช่น อัตราบาท/ดอลลาร์ (DE-01)
 
 
 @router.post("/auth/login", response_model=LoginResponse)
@@ -146,7 +152,9 @@ def login(req: LoginRequest, request: Request):
     # เทียบแบบเวลาคงที่ และตอบข้อความเดียวกันไม่ว่าผิดชื่อหรือผิดรหัส
     if not hmac.compare_digest((u or {}).get("password", "").encode(), req.password.encode()) or not u:
         raise HTTPException(401, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-    return LoginResponse(access_token=issue_token(req.username), user=public(req.username))
+    return LoginResponse(
+        access_token=issue_token(req.username), user=public(req.username), settings={"thb_per_usd": business_rules.THB_PER_USD}
+    )
 
 
 @router.get("/auth/me")

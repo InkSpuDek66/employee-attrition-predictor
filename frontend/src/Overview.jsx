@@ -1,25 +1,10 @@
 // ภาพรวมบริษัท (README 6.6) + รายชื่อพนักงานเสี่ยงสูงสุดให้กดเลือก ไม่ต้องรู้รหัสก่อน
 // ใช้ /company-summary, /company-summary/departments, /company-summary/top-employees (คะแนนยังไม่ปรับเทียบ ใช้จัดลำดับ)
-import { useEffect, useState } from 'react'
-import { featureLabel } from './featureLabels'
-import { AssistantHint, SorryState } from './Mascot'
-import { api, baht, BAND, friendly } from './theme'
-import { Card, Icon, Segmented, Skeleton } from './ui'
-
-// โหลดหลาย endpoint พร้อมกัน ผลผูกกับ key ของคำขอ (key ไม่ตรง = กำลังโหลด) เลี่ยง setState ตรงๆ ใน effect
-function useApi(paths) {
-  const key = paths.join('|')
-  const [res, setRes] = useState({ key: null })
-  useEffect(() => {
-    const ctrl = new AbortController()
-    Promise.all(key.split('|').map((p) => api(p, { signal: ctrl.signal }))).then(
-      (data) => setRes({ key, data }),
-      (err) => err.name !== 'AbortError' && setRes({ key, error: friendly(err) }),
-    )
-    return () => ctrl.abort()
-  }, [key])
-  return { loading: res.key !== key, data: res.data, error: res.error }
-}
+import { useState } from 'react'
+import { featureLabel, JOB_LEVELS } from './featureLabels'
+import { AssistantHint, SorryState } from './mascot/Mascot'
+import { api, baht, BAND, friendly, useApi } from './theme'
+import { Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
 // บริษัทมาจากผู้ใช้ที่ login (backend อ่านจาก token) บริษัทที่ปรับเทียบแล้วได้คะแนนปรับเทียบอัตโนมัติ
@@ -29,7 +14,7 @@ const topQuery = (n, department) => new URLSearchParams({ n, ...(department && {
 async function downloadCsv(department) {
   const { employees } = await api(`/company-summary/top-employees?${topQuery(100, department)}`)
   const header = ['อันดับ', 'รหัสพนักงาน', 'คะแนนความเสี่ยง', 'ระดับ', 'แผนก', 'ตำแหน่ง', 'ระดับตำแหน่ง']
-  const rows = employees.map((e, i) => [i + 1, e.employee_id, Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, e.job_level])
+  const rows = employees.map((e, i) => [i + 1, e.employee_id, Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, JOB_LEVELS[e.job_level] ?? e.job_level])
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(',')).join('\r\n')
   const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }))
   const a = Object.assign(document.createElement('a'), { href: url, download: `top-risk-${department || 'all'}.csv` })
@@ -37,12 +22,13 @@ async function downloadCsv(department) {
   URL.revokeObjectURL(url)
 }
 
-export function CsvButton({ department }) {
+export function CsvButton({ department, onDone = () => {} }) {
   const [state, setState] = useState('') // '' | 'busy' | ข้อความ error
   async function go() {
     setState('busy')
     try {
       await downloadCsv(department)
+      onDone()
       setState('')
     } catch (err) {
       setState(friendly(err))
@@ -77,14 +63,14 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
             <button
               type="button"
               onClick={() => onPick(e.employee_id)}
-              className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="lift flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <span className="w-5 text-right text-xs tabular-nums text-muted-fg">{i + 1}</span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-fg">พนักงาน #{e.employee_id}</span>
                 {!compact && (
                   <span className="block truncate text-xs text-muted-fg">
-                    {e.job_role} · {e.department} · ระดับ {e.job_level}
+                    {e.job_role} · {e.department} · {JOB_LEVELS[e.job_level] ?? `ระดับ ${e.job_level}`}
                   </span>
                 )}
               </span>
@@ -113,11 +99,14 @@ export function EmptyPicker({ who, title, children, onPick }) {
   )
 }
 
-function Kpi({ label, value, sub, tone = 'text-fg', small = false }) {
+// num + format = ตัวเลขนับขึ้นตอนเปิด/สลับแผนก
+function Kpi({ label, num, format, sub, tone = 'text-fg', small = false }) {
   return (
     <div className="rounded-xl border border-line bg-card p-5">
       <div className="text-xs font-medium text-muted-fg">{label}</div>
-      <div className={`mt-1 font-semibold tabular-nums ${small ? 'text-2xl' : 'text-3xl'} ${tone}`}>{value}</div>
+      <div className={`mt-1 font-semibold tabular-nums ${small ? 'text-2xl' : 'text-3xl'} ${tone}`}>
+        <CountUp value={num} format={format} />
+      </div>
       {sub && <div className="mt-1 text-xs text-muted-fg">{sub}</div>}
     </div>
   )
@@ -126,15 +115,15 @@ function Kpi({ label, value, sub, tone = 'text-fg', small = false }) {
 // แถบสัดส่วน ต่ำ/กลาง/สูง พร้อมจำนวนคน (ไม่ใช้สีอย่างเดียว มีตัวเลขกำกับ)
 function BandBar({ bands, total }) {
   const order = [
-    ['Low', 'bg-risk-low'],
-    ['Medium', 'bg-risk-mid'],
-    ['High', 'bg-risk-high'],
+    ['Low', 'bg-band-low'],
+    ['Medium', 'bg-band-mid'],
+    ['High', 'bg-band-high'],
   ]
   return (
     <div>
-      <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+      <div className="bar-grow flex h-3 overflow-hidden rounded-full bg-muted">
         {order.map(([k, c]) => (
-          <div key={k} className={c} style={{ width: `${(bands[k] / total) * 100}%` }} title={`${BAND[k].th} ${bands[k]} คน`} />
+          <div key={k} className={`${c} transition-[width] duration-400`} style={{ width: `${(bands[k] / total) * 100}%` }} title={`${BAND[k].th} ${bands[k]} คน`} />
         ))}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-fg">
@@ -149,7 +138,7 @@ function BandBar({ bands, total }) {
   )
 }
 
-export default function Overview({ rate, onPick }) {
+export default function Overview({ rate, onPick, onCsv }) {
   const [department, setDepartment] = useState('')
   const q = new URLSearchParams({ top_n: 5, ...(department && { department }) })
   const { loading, data, error } = useApi([`/company-summary?${q}`, '/company-summary/departments'])
@@ -177,10 +166,10 @@ export default function Overview({ rate, onPick }) {
       <Segmented label="เลือกแผนก" options={deptOptions} value={department} onChange={setDepartment} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="พนักงานทั้งหมด" value={s.n_employees.toLocaleString()} sub={department || 'ทุกแผนก'} />
-        <Kpi label="คะแนนความเสี่ยงเฉลี่ย" value={Math.round(s.mean_risk_score * 100)} sub="จาก 100" />
-        <Kpi label="เสี่ยงสูง" value={`${s.risk_bands.High.toLocaleString()} คน`} sub={`${highPct}% ของพนักงาน`} tone="text-risk-high" />
-        <Kpi small label="มูลค่าความเสี่ยงรวม" value={baht(s.expected_loss_total * rate)} sub="คะแนน × ต้นทุนหาคนแทน (ใช้เทียบ ไม่ใช่ยอดจริง)" />
+        <Kpi label="พนักงานทั้งหมด" num={s.n_employees} format={(v) => Math.round(v).toLocaleString()} sub={department || 'ทุกแผนก'} />
+        <Kpi label="คะแนนความเสี่ยงเฉลี่ย" num={s.mean_risk_score * 100} format={Math.round} sub="จาก 100" />
+        <Kpi label="เสี่ยงสูง" num={s.risk_bands.High} format={(v) => `${Math.round(v).toLocaleString()} คน`} sub={`${highPct}% ของพนักงาน`} tone="text-risk-high" />
+        <Kpi small label="มูลค่าความเสี่ยงรวม" num={s.expected_loss_total * rate} format={baht} sub="คะแนน × ต้นทุนหาคนแทน (ใช้เทียบ ไม่ใช่ยอดจริง)" />
       </div>
 
       <Card icon="chart" title="สัดส่วนระดับความเสี่ยง">
@@ -192,7 +181,7 @@ export default function Overview({ rate, onPick }) {
           icon="user"
           title="พนักงานเสี่ยงสูงสุด 10 คน"
           subtitle="กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง"
-          action={<CsvButton department={department} />}
+          action={<CsvButton department={department} onDone={onCsv} />}
         >
           <TopRiskList department={department} onPick={onPick} />
         </Card>
@@ -215,7 +204,7 @@ export default function Overview({ rate, onPick }) {
                   </span>
                 </div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${(f.share / maxShare) * 100}%` }} />
+                  <div className="bar-grow h-full rounded-full bg-accent" style={{ width: `${(f.share / maxShare) * 100}%` }} />
                 </div>
                 {f.recommendation && <p className="mt-1.5 text-xs text-muted-fg">{f.recommendation}</p>}
               </li>

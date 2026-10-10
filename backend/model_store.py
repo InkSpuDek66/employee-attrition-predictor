@@ -32,11 +32,26 @@ def model():
     return mlflow.xgboost.load_model(MODEL_URI)
 
 
+# วันเข้าออฟฟิศต่อสัปดาห์ (WFH) ไม่ใช่ฟีเจอร์ของโมเดล IBM ไม่มีข้อมูลนี้ = ถือว่าเข้าทุกวัน
+OFFICE_DAYS = "OfficeDaysPerWeek"
+FULL_WEEK = 5
+
+
 @lru_cache
 def raw_employees() -> pd.DataFrame:
-    if db.url():
-        return db.read_employees()
-    return load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
+    df = db.read_employees() if db.url() else load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
+    return df if OFFICE_DAYS in df else df.assign(**{OFFICE_DAYS: FULL_WEEK})
+
+
+def commute_adjusted(raw: pd.DataFrame) -> pd.DataFrame:
+    """ระยะทางจากบ้านที่ใช้ให้คะแนน = ระยะทาง × วันเข้าออฟฟิศ / 5 (ไม่ต่ำกว่า 1 ค่าต่ำสุดที่โมเดลเคยเห็น)
+    ponytail: โมเดลไม่ได้เรียนผลของ WFH โดยตรง เป็นการประมาณว่าเดินทางน้อยลงตามสัดส่วนวัน
+    ถ้าวันหลังเทรนด้วยข้อมูลที่มี WFH จริง ให้ใช้เป็นฟีเจอร์ของโมเดลแทน"""
+    if OFFICE_DAYS not in raw:
+        return raw
+    days = pd.to_numeric(raw[OFFICE_DAYS], errors="coerce").fillna(FULL_WEEK)
+    distance = (pd.to_numeric(raw["DistanceFromHome"]) * days / FULL_WEEK).round().clip(lower=1).astype(int)
+    return raw.assign(DistanceFromHome=distance)
 
 
 def input_columns() -> set:
@@ -58,7 +73,7 @@ def to_features(raw: pd.DataFrame) -> pd.DataFrame:
     ต่อข้อมูลอ้างอิงเข้าไปก่อน clean เพื่อให้ one-hot ได้คอลัมน์ครบเหมือนตอนเทรน แม้ข้อมูลใหม่จะมีหมวดไม่ครบ
     """
     # Attrition ไม่ใช้ทำนาย (ตัดทิ้งก่อนเข้าโมเดล) แต่ clean_data ต้องมีครบ พนักงานที่ import มายังไม่มีผลจริง จึงใส่ค่าแทน
-    both = pd.concat([raw, raw_employees()], ignore_index=True).assign(**{TARGET_COLUMN: "No"})
+    both = pd.concat([commute_adjusted(raw), raw_employees()], ignore_index=True).assign(**{TARGET_COLUMN: "No"})
     X = add_features(clean_data(both), only=SELECTED_FEATURES).drop(columns=TARGET_COLUMN)
     return X.iloc[: len(raw)][model().feature_names_in_]
 
@@ -67,7 +82,7 @@ def to_features(raw: pd.DataFrame) -> pd.DataFrame:
 def employee_features() -> pd.DataFrame:
     """ฟีเจอร์ของพนักงานทุกคน index = EmployeeNumber"""
     raw = raw_employees()
-    return to_features(raw).set_index(raw["EmployeeNumber"])
+    return to_features(raw).set_index(raw["EmployeeNumber"])  # to_features ปรับระยะทางตามวันเข้าออฟฟิศให้แล้ว
 
 
 @lru_cache

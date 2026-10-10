@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { featureLabel } from './featureLabels'
-import { api, baht, BAND, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges } from './theme'
-import { NotFoundState, SorryState } from './Mascot'
+import { featureLabel, JOB_LEVELS, SURVEY_NOTE } from './featureLabels'
+import { api, baht, BAND, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
+import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
-import { Alert, Card, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
+import { Alert, Card, CountUp, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 // ฟีเจอร์ที่ HR ปรับได้จริงผ่านมาตรการ (ไม่ใส่ข้อมูลส่วนตัว เช่น อายุ เพศ สถานภาพ)
 const SAT = [[1, 'ต่ำ'], [2, 'กลาง'], [3, 'สูง'], [4, 'สูงมาก']]
@@ -25,17 +25,25 @@ const GROUPS = [
       {
         field: 'BusinessTravel',
         type: 'select',
-        options: [['Non-Travel', 'ไม่เดินทาง'], ['Travel_Rarely', 'นานๆ ครั้ง'], ['Travel_Frequently', 'บ่อย']],
+        options: [['Non-Travel', 'ไม่ต้องไป'], ['Travel_Rarely', 'นานๆ ครั้ง'], ['Travel_Frequently', 'บ่อย']],
+        hint: 'ไปหาลูกค้า/สาขาอื่น ไม่ใช่การเดินทางไปออฟฟิศทุกวัน',
       },
       { field: 'DistanceFromHome', type: 'range', min: 1, max: 30, step: 1, unit: 'กม.' },
       { field: 'WorkLifeBalance', type: 'select', options: [[1, 'แย่'], [2, 'พอใช้'], [3, 'ดี'], [4, 'ดีมาก']] },
+      {
+        field: 'OfficeDaysPerWeek',
+        type: 'select',
+        options: [[0, 'WFH ทุกวัน'], [1, '1 วัน'], [2, '2 วัน'], [3, '3 วัน'], [4, '4 วัน'], [5, '5 วัน']],
+        hint: 'ยิ่งเข้าออฟฟิศน้อย ระยะทางจากบ้านยิ่งมีผลน้อยลง (ระบบประมาณจากวันที่ต้องเดินทาง โมเดลไม่ได้เรียนเรื่อง WFH โดยตรง)',
+        wide: true,
+      },
     ],
   },
   {
     title: 'ความก้าวหน้า',
     icon: 'trend',
     controls: [
-      { field: 'JobLevel', type: 'select', options: [1, 2, 3, 4, 5].map((v) => [v, String(v)]) },
+      { field: 'JobLevel', type: 'select', options: [1, 2, 3, 4, 5].map((v) => [v, JOB_LEVELS[v]]), wide: true },
       { field: 'YearsSinceLastPromotion', type: 'range', min: 0, max: 15, step: 1 },
       { field: 'TrainingTimesLastYear', type: 'range', min: 0, max: 6, step: 1 },
     ],
@@ -43,6 +51,7 @@ const GROUPS = [
   {
     title: 'ความพึงพอใจ',
     icon: 'heart',
+    note: SURVEY_NOTE,
     controls: [
       { field: 'JobSatisfaction', type: 'select', options: SAT },
       { field: 'EnvironmentSatisfaction', type: 'select', options: SAT },
@@ -126,18 +135,23 @@ function MoneyControl({ field, base, value, rate, onChange }) {
   )
 }
 
-function Control({ field, type, options, base, value, onChange, unit, ...range }) {
+// wide = กว้างเต็มแถว (ตัวเลือกยาวๆ เช่น ระดับตำแหน่ง จะได้อยู่แถวเดียว ไม่ทำให้กล่องข้างๆ สูงตาม)
+// hint = คำอธิบายสั้นใต้ชื่อช่อง (ช่องที่ชื่ออาจเข้าใจผิด)
+function Control({ field, type, options, base, value, onChange, unit, wide, hint, ...range }) {
   const withUnit = (v) => (unit ? `${v.toLocaleString()} ${unit}` : v.toLocaleString())
   const changed = value !== base
   const optionText = (v) => options?.find(([o]) => String(o) === String(v))?.[1] ?? v
   return (
     <div
-      className={`rounded-lg border p-4 transition-colors duration-200 ${
+      className={`rounded-lg border p-4 transition-colors duration-200 ${wide ? 'sm:col-span-2' : ''} ${
         changed ? 'border-accent bg-accent-soft/50' : 'border-line bg-card hover:border-secondary/50'
       }`}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
-        <span className="text-sm font-medium text-fg">{featureLabel(field)}</span>
+        <span className="text-sm font-medium text-fg">
+          {featureLabel(field)}
+          {hint && <span className="block text-xs font-normal text-muted-fg">{hint}</span>}
+        </span>
         {changed && (
           <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[11px] font-medium text-on-primary">
             เดิม {type === 'range' ? withUnit(base) : optionText(base)}
@@ -191,22 +205,38 @@ function DeltaBadge({ delta, className = '' }) {
   )
 }
 
-// ประกายฉลองรอบกล่องผลจำลอง เล่นครั้งเดียวต่อ key (ตอนความเสี่ยงหลังปรับตกลงมาเป็นระดับต่ำ)
+// ข้อความเด้งเมื่อระดับความเสี่ยงหลังปรับเปลี่ยน เล่นครั้งเดียวต่อ key
+// ลดลง = ประกายฉลอง, เพิ่มขึ้น = ป้ายเตือนสั่นนิดๆ (ป้ายพื้นอ่อน + ตัวหนังสือสีระดับ อ่านได้ทั้งโหมดมืด/สว่าง)
 const SPARKS = [[-70, -50], [70, -55], [-90, 10], [90, 5], [-50, 60], [55, 65], [0, -80], [0, 80]]
-function Celebrate() {
+const BAND_TOAST = {
+  low: { text: 'เยี่ยมเลย! ลดเหลือระดับต่ำ', icon: 'check', pill: 'bg-risk-low-soft text-risk-low ring-risk-low/30', sparks: ['fill-risk-low', 'fill-risk-mid', 'fill-accent'] },
+  midDown: { text: 'ดีขึ้นแล้ว! ลดเหลือระดับปานกลาง', icon: 'down', pill: 'bg-risk-mid-soft text-risk-mid ring-risk-mid/30', sparks: ['fill-risk-mid', 'fill-accent'] },
+  midUp: { text: 'ระวัง! เพิ่มเป็นระดับปานกลาง', icon: 'warning', pill: 'bg-risk-mid-soft text-risk-mid ring-risk-mid/30', warn: true },
+  high: { text: 'ระวัง! ความเสี่ยงเพิ่มเป็นระดับสูง', icon: 'warning', pill: 'bg-risk-high-soft text-risk-high ring-risk-high/30', warn: true },
+}
+
+function BandToast({ kind }) {
+  const t = BAND_TOAST[kind]
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center" aria-hidden="true">
-      {SPARKS.map(([dx, dy], i) => (
-        <svg
-          key={i}
-          viewBox="-7 -7 14 14"
-          className={`celebrate-spark absolute size-5 ${['fill-risk-low', 'fill-risk-mid', 'fill-accent'][i % 3]}`}
-          style={{ '--dx': `${dx}px`, '--dy': `${dy}px`, animationDelay: `${(i % 4) * 60}ms` }}
-        >
-          <path d="M0 -7 Q1 -1 7 0 Q1 1 0 7 Q-1 1 -7 0 Q-1 -1 0 -7Z" />
-        </svg>
-      ))}
-      <div className="celebrate-text rounded-full bg-risk-low px-3 py-1 text-sm font-semibold text-white">เยี่ยมเลย! ลดเหลือระดับต่ำ</div>
+    <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center">
+      {!t.warn &&
+        SPARKS.slice(0, kind === 'low' ? 8 : 6).map(([dx, dy], i) => (
+          <svg
+            key={i}
+            viewBox="-7 -7 14 14"
+            aria-hidden="true"
+            className={`celebrate-spark absolute size-5 ${t.sparks[i % t.sparks.length]}`}
+            style={{ '--dx': `${dx}px`, '--dy': `${dy}px`, animationDelay: `${(i % 4) * 60}ms` }}
+          >
+            <path d="M0 -7 Q1 -1 7 0 Q1 1 0 7 Q-1 1 -7 0 Q-1 -1 0 -7Z" />
+          </svg>
+        ))}
+      <div role="status" className="celebrate-text">
+        <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold shadow-sm ring-1 ${t.pill} ${t.warn ? 'toast-shake' : ''}`}>
+          <Icon name={t.icon} className="size-4" />
+          {t.text}
+        </div>
+      </div>
     </div>
   )
 }
@@ -217,7 +247,8 @@ const PRESETS = [
   { label: 'ขึ้นเงินเดือน 10%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.1, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 10) }) },
   { label: 'ขึ้นเงินเดือน 20%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 20) }) },
   { label: 'เลื่อนตำแหน่ง', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0 }) },
-  { label: 'ลดการเดินทาง', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
+  { label: 'งดงานนอกสถานที่', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
+  { label: 'ให้ WFH 3 วัน', apply: (b) => ({ OfficeDaysPerWeek: Math.min(b.OfficeDaysPerWeek ?? 5, 2) }) },
   { label: 'อบรมเพิ่ม', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
   { label: 'ให้สิทธิ์ซื้อหุ้น', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
 ]
@@ -242,7 +273,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
   const [retention, setRetention] = useState('')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState([]) // ผลจำลองที่บันทึกไว้เทียบ (ต่อพนักงานหนึ่งคน สูงสุด 4)
-  const [celebrate, setCelebrate] = useState(0) // เพิ่มทุกครั้งที่ความเสี่ยงหลังปรับเพิ่งตกเป็นระดับต่ำ
+  const [toast, setToast] = useState(null) // { n, kind } ข้อความเด้งตอนระดับความเสี่ยงหลังปรับเปลี่ยน (n เพิ่มทุกครั้ง ให้เล่นใหม่)
   const lastBand = useRef(null)
 
   // โหลดพนักงานใหม่เมื่อเลือกจากช่องด้านบน
@@ -282,7 +313,9 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
         const sent = toApiChanges(changes)
         const res = await post({ employee_id: loaded.id, changes: sent, ...(loaded.tenant && { tenant_id: loaded.tenant }) }, ctrl.signal)
         setResult(res)
-        if (lastBand.current !== 'Low' && res.after.risk_band === 'Low') setCelebrate((c) => c + 1)
+        // เทียบกับผลครั้งก่อน (ครั้งแรกเทียบกับระดับก่อนปรับ) ไม่ฉลองถ้าระดับไม่เปลี่ยน
+        const kind = toastKind(lastBand.current ?? res.before.risk_band, res.after.risk_band)
+        if (kind) setToast((t) => ({ n: (t?.n ?? 0) + 1, kind }))
         lastBand.current = res.after.risk_band
         onRisk({ id: loaded.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
         setError('')
@@ -376,7 +409,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 type="button"
                 onClick={() => setChanges({})}
                 disabled={!nChanged}
-                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-primary transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <Icon name="reset" className="size-4" />
                 กลับเป็นค่าเดิม
@@ -391,7 +424,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                     key={p.label}
                     type="button"
                     onClick={() => applyPreset(p)}
-                    className="h-9 cursor-pointer rounded-full border border-line bg-card px-3.5 text-sm font-medium text-fg transition-colors duration-150 hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className="lift h-9 cursor-pointer rounded-full border border-line bg-card px-3.5 text-sm font-medium text-fg hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   >
                     + {p.label}
                   </button>
@@ -403,10 +436,12 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
               {GROUPS.map((g) => (
                 <fieldset key={g.title}>
                   <legend className="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-fg">
-                    <Icon name={g.icon} className="size-4 text-primary" />
+                    <Icon name={g.icon} className="size-4 text-accent" />
                     {g.title}
                   </legend>
-                  <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                  {g.note && <p className="-mt-1 mb-3 text-xs text-muted-fg">{g.note}</p>}
+                  {/* 2 คอลัมน์ตลอด: ทุกกลุ่มลงตัวพอดี (ช่องยาวใช้ wide = เต็มแถว) ไม่เหลือเศษบนจอกว้าง */}
+                  <div className="grid gap-3 sm:grid-cols-2">
                     {g.controls.map((c) => (
                       c.type === 'money' ? (
                         <MoneyControl key={c.field} {...c} rate={rate} base={loaded.base[c.field]} value={current(c.field)} onChange={(v) => setValue(c.field, v)} />
@@ -444,11 +479,11 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 </p>
                 <p>ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท</p>
               </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-ink px-4 py-3 text-white dark:border dark:border-line">
-                <span className="text-sm text-zinc-400">มูลค่าความเสี่ยง (คะแนน × ต้นทุนหาคนแทน)</span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary-soft px-4 py-3 text-fg ring-1 ring-primary/50">
+                <span className="text-sm text-muted-fg">มูลค่าความเสี่ยง (คะแนน × ต้นทุนหาคนแทน)</span>
                 <span className="flex items-center gap-2 text-lg font-semibold tabular-nums">
                   {money(impact.expected_loss)}
-                  <Icon name="right" className="size-4 text-zinc-500" />
+                  <Icon name="right" className="size-4 text-muted-fg" />
                   {money(afterScore * impact.replacement_cost)}
                 </span>
               </div>
@@ -461,7 +496,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
         </div>
 
         <aside className="relative lg:sticky lg:top-6">
-          {celebrate > 0 && <Celebrate key={celebrate} />}
+          {toast && <BandToast key={toast.n} kind={toast.kind} />}
           <Card>
             <div className="mb-5 flex items-center justify-between">
               <div>
@@ -536,7 +571,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
           <div>
             <div className="text-[11px] text-muted-fg">หลังปรับ</div>
             <div className={`text-2xl font-semibold leading-none tabular-nums ${BAND[result.after.risk_band].text}`}>
-              {Math.round(afterScore * 100)}
+              <CountUp value={afterScore * 100} />
             </div>
           </div>
           <DeltaBadge delta={delta} className="flex-1 py-2" />
