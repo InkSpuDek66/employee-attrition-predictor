@@ -8,6 +8,11 @@ import { Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
 // บริษัทมาจากผู้ใช้ที่ login (backend อ่านจาก token) บริษัทที่ปรับเทียบแล้วได้คะแนนปรับเทียบอัตโนมัติ
+// วงกลมตัวย่อหน้าแถวพนักงาน: ข้อมูลไม่มีชื่อคน ใช้ตัวย่อตำแหน่งแทน (Sales Executive = SE, ภาษาไทยใช้พยัญชนะตัวแรก)
+const initials = (role = '') => {
+  const words = role.match(/[A-Za-z]+/g)
+  return words ? words.slice(0, 2).map((w) => w[0].toUpperCase()).join('') : role.replace(/^[เแโใไ]/, '').charAt(0) || '?'
+}
 const topQuery = (n, department) => new URLSearchParams({ n, ...(department && { department }) })
 
 // ดาวน์โหลดรายชื่อเสี่ยงสูงเป็น CSV (เปิดใน Excel ภาษาไทยได้ เพราะใส่ BOM) ไว้ใช้ในประชุม/ส่งหัวหน้าแผนก
@@ -66,6 +71,9 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
               className="lift flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <span className="w-5 text-right text-xs tabular-nums text-muted-fg">{i + 1}</span>
+              <span className={`grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold ring-1 ${b.pill}`} title={e.job_role} aria-hidden="true">
+                {initials(e.job_role)}
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-fg">พนักงาน #{e.employee_id}</span>
                 {!compact && (
@@ -112,28 +120,65 @@ function Kpi({ label, num, format, sub, tone = 'text-fg', small = false }) {
   )
 }
 
-// แถบสัดส่วน ต่ำ/กลาง/สูง พร้อมจำนวนคน (ไม่ใช้สีอย่างเดียว มีตัวเลขกำกับ)
-function BandBar({ bands, total }) {
-  const order = [
-    ['Low', 'bg-band-low'],
-    ['Medium', 'bg-band-mid'],
-    ['High', 'bg-band-high'],
-  ]
+// โดนัทสัดส่วน ต่ำ/กลาง/สูง + ตัวเลขกำกับทุกช่วง (ไม่ใช้สีอย่างเดียว) ชี้ที่ช่วงเพื่อดูจำนวน
+const BANDS = [
+  ['Low', 'stroke-band-low', 'bg-band-low'],
+  ['Medium', 'stroke-band-mid', 'bg-band-mid'],
+  ['High', 'stroke-band-high', 'bg-band-high'],
+]
+const R = 42
+const C = 2 * Math.PI * R
+const GAP = 1.5 // ช่องว่างสีพื้นระหว่างช่วง (หน่วยเดียวกับ viewBox)
+
+function BandDonut({ bands, total }) {
+  let start = 0
   return (
-    <div>
-      <div className="bar-grow flex h-3 overflow-hidden rounded-full bg-muted">
-        {order.map(([k, c]) => (
-          <div key={k} className={`${c} transition-[width] duration-400`} style={{ width: `${(bands[k] / total) * 100}%` }} title={`${BAND[k].th} ${bands[k]} คน`} />
+    <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
+      <svg viewBox="0 0 100 100" className="size-40 shrink-0 -rotate-90" role="img" aria-label={`พนักงาน ${total} คน: ${BANDS.map(([k]) => `เสี่ยง${BAND[k].th} ${bands[k]} คน`).join(', ')}`}>
+        <circle cx="50" cy="50" r={R} fill="none" className="stroke-muted" strokeWidth="12" />
+        {BANDS.map(([k, stroke]) => {
+          const len = (bands[k] / total) * C
+          const arc = (
+            <circle
+              key={k}
+              cx="50"
+              cy="50"
+              r={R}
+              fill="none"
+              strokeWidth="12"
+              className={`donut-arc ${stroke}`}
+              strokeDasharray={`${Math.max(len - GAP, 0)} ${C}`}
+              strokeDashoffset={-start}
+            >
+              <title>{`เสี่ยง${BAND[k].th} ${bands[k].toLocaleString()} คน`}</title>
+            </circle>
+          )
+          start += len
+          return bands[k] > 0 && arc
+        })}
+        <g className="rotate-90 [transform-origin:50px_50px]">
+          <text x="50" y="49" textAnchor="middle" className="fill-fg text-[15px] font-semibold tabular-nums">
+            {total.toLocaleString()}
+          </text>
+          <text x="50" y="61" textAnchor="middle" className="fill-muted-fg text-[7px]">
+            คนทั้งหมด
+          </text>
+        </g>
+      </svg>
+      <ul className="grid w-full grid-cols-3 gap-3">
+        {BANDS.map(([k, , fill]) => (
+          <li key={k} className="rounded-lg bg-canvas px-3 py-2.5">
+            <div className="flex items-center gap-1.5 text-xs text-muted-fg">
+              <span className={`size-2.5 rounded-sm ${fill}`} />
+              เสี่ยง{BAND[k].th}
+            </div>
+            <div className={`mt-1 text-2xl font-semibold tabular-nums ${BAND[k].text}`}>
+              <CountUp value={bands[k]} format={(v) => Math.round(v).toLocaleString()} />
+            </div>
+            <div className="text-xs tabular-nums text-muted-fg">{Math.round((bands[k] / total) * 100)}% ของพนักงาน</div>
+          </li>
         ))}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-fg">
-        {order.map(([k, c]) => (
-          <span key={k} className="flex items-center gap-1.5">
-            <span className={`size-2.5 rounded-sm ${c}`} />
-            เสี่ยง{BAND[k].th} <b className="tabular-nums text-fg">{bands[k].toLocaleString()}</b> คน ({Math.round((bands[k] / total) * 100)}%)
-          </span>
-        ))}
-      </div>
+      </ul>
     </div>
   )
 }
@@ -173,7 +218,7 @@ export default function Overview({ rate, onPick, onCsv }) {
       </div>
 
       <Card icon="chart" title="สัดส่วนระดับความเสี่ยง">
-        <BandBar bands={s.risk_bands} total={s.n_employees} />
+        <BandDonut bands={s.risk_bands} total={s.n_employees} />
       </Card>
 
       <div className="grid items-start gap-4 xl:grid-cols-2">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { featureLabel, featurePhrase, featureValue } from './featureLabels'
-import { api, baht, bandOf, friendly } from './theme'
+import Logo from '../logo/Logo'
+import { api, baht, bandOf, friendly, loadSession } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
@@ -84,6 +85,33 @@ function ShapBars({ rows, maxAbs }) {
   )
 }
 
+// พิมพ์/บันทึก PDF ด้วยหน้าต่างพิมพ์ของเบราว์เซอร์ ไม่ต้องลง library
+// โหมดมืดสลับเป็นสว่างชั่วคราวตอนพิมพ์ (กระดาษพื้นขาว) window.print() รอจนปิดหน้าต่างพิมพ์ แล้วค่อยคืนค่า
+function printReport() {
+  const html = document.documentElement
+  const dark = html.classList.contains('dark')
+  html.classList.remove('dark')
+  window.print()
+  html.classList.toggle('dark', dark)
+}
+
+// หัวรายงาน แสดงเฉพาะตอนพิมพ์ (บนจอมีหัวหน้าเว็บอยู่แล้ว)
+function PrintHeader({ id }) {
+  const user = loadSession()?.user
+  return (
+    <div className="hidden items-center gap-3 border-b border-line pb-4 print:flex">
+      <Logo className="size-12" />
+      <div className="flex-1">
+        <div className="text-lg font-semibold text-fg">รายงานความเสี่ยงการลาออก · พนักงาน #{id}</div>
+        <div className="text-sm text-muted-fg">
+          {user?.tenant_name ?? user?.tenant_id} · พิมพ์เมื่อ {new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })}
+          {user?.name && ` · โดย ${user.name}`}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick }) {
   const [topN, setTopN] = useState(10)
   // ผลล่าสุดผูกกับ key ของคำขอ ถ้า key ไม่ตรงกับที่ขออยู่ = กำลังโหลด (ข้อมูลเก่ายังโชว์แบบจางๆ)
@@ -144,7 +172,18 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
 
   return (
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <PrintHeader id={query.id} />
+      <div className="flex justify-end print:hidden">
+        <button
+          type="button"
+          onClick={printReport}
+          className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        >
+          <Icon name="download" className="size-4" />
+          พิมพ์ / บันทึก PDF
+        </button>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3 print:grid-cols-3">
         <Card>
           <RiskGauge title={`ความเสี่ยงที่จะลาออก · พนักงาน #${query.id}`} score={score} />
           <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-fg">
@@ -159,13 +198,13 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
       <Summary ups={ups} downs={downs} band={bandOf(score)} />
       {data.warning && <Alert tone="warning">{data.warning}</Alert>}
 
-      <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr] print:grid-cols-1">
         <Card
           icon="chart"
           title="ปัจจัยที่ส่งผลมากที่สุด"
           subtitle="แท่งยิ่งยาว ยิ่งมีผลกับคะแนนมาก"
           action={
-            <div className="w-44">
+            <div className="w-44 print:hidden">
               <Segmented size="sm" label="จำนวนปัจจัย" options={TOP_N} value={topN} onChange={(v) => setTopN(Number(v))} />
             </div>
           }

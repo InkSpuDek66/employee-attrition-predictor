@@ -145,7 +145,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
   }
 
   return (
-    <div className="relative isolate min-h-screen lg:pl-64">
+    <div className="relative isolate min-h-screen lg:pl-64 print:pl-0">
       <div className="app-glow pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
       <a
         href="#main"
@@ -155,7 +155,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
       </a>
       {/* Sidebar (จอใหญ่) / แถบบน (มือถือ) */}
       {/* จอเตี้ย (แล็ปท็อปซูม 100%): sidebar เลื่อนได้ในตัว กล่องผู้ใช้ + ปุ่มออกจากระบบติดขอบล่างเสมอ */}
-      <aside className="border-b border-line bg-card lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r">
+      <aside className="border-b border-line bg-card print:hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-center gap-2.5 px-4 py-4 lg:py-6">
           <Logo className="size-10 shrink-0" />
           <div className="leading-tight">
@@ -229,8 +229,8 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
 
       </aside>
 
-      <main id="main" className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
-        <header className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <main id="main" className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8 print:max-w-none print:p-0">
+        <header className="mb-6 flex flex-col gap-5 print:hidden xl:flex-row xl:items-end xl:justify-between">
           <div>
             {tab === 'overview' && <div className="mb-1 text-sm text-accent">{greeting(user.name)}</div>}
             <div className="text-sm font-medium text-muted-fg">{current.label}</div>

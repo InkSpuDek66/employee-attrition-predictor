@@ -1,4 +1,5 @@
 // ชิ้นส่วน UI ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
+import { MascotLoader } from './mascot/Mascot'
 import { BAND, bandOf, HIGH, LOW, useCountUp } from './theme'
 
 // ไอคอนเส้น (path จาก Heroicons outline, MIT) ไม่ต้องลง library เพิ่ม
@@ -86,7 +87,7 @@ export function PrimaryButton({ loading, children, loadingText = 'กำลั�
       disabled={loading}
       className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-wait disabled:opacity-60"
     >
-      {loading && <span className="size-4 animate-spin rounded-full border-2 border-on-primary/40 border-t-on-primary" />}
+      {loading && <MascotLoader />}
       {loading ? loadingText : children}
     </button>
   )
@@ -147,7 +148,7 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
           <CountUp value={pct} />
         </span>
         <span className="pb-0.5 text-sm text-muted-fg">/ 100</span>
-        <span className={`ml-auto rounded-md px-2.5 py-1 text-sm font-semibold ring-1 ${b.pill}`}>เสี่ยง{bandTh ?? b.th}</span>
+        <span className={`ml-auto whitespace-nowrap rounded-md px-2.5 py-1 text-sm font-semibold ring-1 ${b.pill}`}>เสี่ยง{bandTh ?? b.th}</span>
       </div>
       <div
         className="relative mt-4 h-2 rounded-full"

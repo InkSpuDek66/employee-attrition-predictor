@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, friendly, postFile, useApi } from './theme'
 import { Alert, Card, Icon, Segmented, Skeleton } from './ui'
-import { AssistantHint } from './mascot/Mascot'
+import { AssistantHint, MascotLoader } from './mascot/Mascot'
 import { CheckDetails, Count, DownloadButton, DropZone } from './Upload'
 
 const METHODS = [
@@ -275,7 +275,7 @@ export default function Calibrate({ who, onChanged }) {
               disabled={!file || busy}
               className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {busy && <span className="size-4 animate-spin rounded-full border-2 border-on-primary/40 border-t-on-primary" />}
+              {busy && <MascotLoader />}
               {busy ? 'กำลังตรวจไฟล์และปรับเทียบ…' : 'ปรับเทียบด้วยไฟล์นี้'}
             </button>
           </div>

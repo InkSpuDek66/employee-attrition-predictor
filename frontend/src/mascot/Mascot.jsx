@@ -4,7 +4,7 @@
 // มี 4 ตัว: chibiGirl / chibiBoy (ChibiCharacter.jsx), cat / dog (PetCharacter.jsx) ตัวที่เลือกเก็บใน App (theme.js: loadMascot/saveMascot)
 import ChibiCharacter from './ChibiCharacter'
 import PetCharacter from './PetCharacter'
-import { MASCOTS } from '../theme'
+import { loadMascot, MASCOTS } from '../theme'
 
 const MOOD = {
   none: { text: 'สวัสดี! เลือกพนักงานก่อนนะ', sub: 'เราจะช่วยดูความเสี่ยงให้' },
@@ -37,6 +37,21 @@ function Bubble({ tail = 'top', className = '', live = false, children }) {
       <span className={`absolute size-3 rotate-45 border-line bg-card ${pos}`} />
       {children}
     </div>
+  )
+}
+
+// ตัวโหลดในปุ่ม: หน้าผู้ช่วยที่เลือกไว้ (อ่านจาก localStorage เหมือน App) กระโดด + จุด 3 จุดเด้ง แทนวงกลมหมุน
+// ของตกแต่ง ซ่อนจากโปรแกรมอ่านหน้าจอ (ข้อความ "กำลัง..." ข้างๆ บอกสถานะแทน) ท่าอยู่ใน index.css (loader-*)
+export function MascotLoader() {
+  return (
+    <span className="inline-flex items-center gap-1" aria-hidden="true">
+      <span className="loader-hop mr-0.5 size-5 overflow-hidden rounded-full bg-card/80 ring-1 ring-on-primary/20">
+        {CHARACTERS[loadMascot()]({ mood: 'none', mini: true })}
+      </span>
+      <span className="loader-dot size-1 rounded-full bg-current" />
+      <span className="loader-dot size-1 rounded-full bg-current" />
+      <span className="loader-dot size-1 rounded-full bg-current" />
+    </span>
   )
 }
 

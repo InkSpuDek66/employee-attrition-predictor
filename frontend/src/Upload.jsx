@@ -2,7 +2,7 @@
 // บันทึกได้เฉพาะผู้ดูแลระบบ (canSave) และ backend ต้องต่อ database (ไม่งั้นได้ข้อความ 503 จาก backend)
 // ชิ้นส่วนที่ export (DownloadButton, DropZone, CheckDetails) ใช้ร่วมกับหน้าปรับเทียบโมเดล (Calibrate.jsx)
 import { useState } from 'react'
-import { AssistantHint } from './mascot/Mascot'
+import { AssistantHint, MascotLoader } from './mascot/Mascot'
 import { download, friendly, postFile } from './theme'
 import { Alert, Card, Icon } from './ui'
 
@@ -247,7 +247,7 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
                   disabled={!ok || !canSave || saving}
                   className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {saving && <span className="size-4 animate-spin rounded-full border-2 border-on-primary/40 border-t-on-primary" />}
+                  {saving && <MascotLoader />}
                   {saving ? 'กำลังบันทึก…' : `บันทึกเข้าระบบ ${result.n_valid.toLocaleString()} คน`}
                 </button>
                 <span className="text-sm text-muted-fg">
