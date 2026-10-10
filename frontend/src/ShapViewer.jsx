@@ -69,7 +69,7 @@ function ShapBars({ rows, maxAbs }) {
             <span className="relative block h-4">
               <span className="absolute inset-y-[-4px] left-1/2 w-px bg-line" aria-hidden="true" />
               <span
-                className={`absolute inset-y-0 rounded ${up ? 'bg-up' : 'bg-down'}`}
+                className={`bar-grow absolute inset-y-0 rounded ${up ? 'bg-up' : 'bar-grow-r bg-down'}`}
                 style={{ width, [up ? 'left' : 'right']: '50%' }}
                 aria-hidden="true"
               />
@@ -182,7 +182,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
               ดันให้อยู่ต่อ
             </span>
           </div>
-          <ShapBars rows={rows} maxAbs={maxAbs} />
+          <ShapBars key={query.n} rows={rows} maxAbs={maxAbs} />
         </Card>
 
         <Card icon="list" title="รายละเอียดแต่ละปัจจัย" subtitle="ค่าจริงของพนักงานและทิศทางที่ส่งผล">
@@ -204,7 +204,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
                         <div className="font-medium text-fg">{r.label}</div>
                         <div className="mt-1 h-1 w-full max-w-40 rounded-full bg-muted">
                           <div
-                            className={`h-full rounded-full ${up ? 'bg-up' : 'bg-down'}`}
+                            className={`bar-grow h-full rounded-full ${up ? 'bg-up' : 'bg-down'}`}
                             style={{ width: `${(Math.abs(r.shap_value) / maxAbs) * 100}%` }}
                           />
                         </div>

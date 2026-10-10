@@ -3,7 +3,7 @@ import { featureLabel } from './featureLabels'
 import { api, baht, BAND, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
-import { Alert, Card, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
+import { Alert, Card, CountUp, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 // ฟีเจอร์ที่ HR ปรับได้จริงผ่านมาตรการ (ไม่ใส่ข้อมูลส่วนตัว เช่น อายุ เพศ สถานภาพ)
 const SAT = [[1, 'ต่ำ'], [2, 'กลาง'], [3, 'สูง'], [4, 'สูงมาก']]
@@ -536,7 +536,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
           <div>
             <div className="text-[11px] text-muted-fg">หลังปรับ</div>
             <div className={`text-2xl font-semibold leading-none tabular-nums ${BAND[result.after.risk_band].text}`}>
-              {Math.round(afterScore * 100)}
+              <CountUp value={afterScore * 100} />
             </div>
           </div>
           <DeltaBadge delta={delta} className="flex-1 py-2" />

@@ -245,15 +245,15 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
           )}
         </header>
 
-        <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`}>
+        <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`} className="fade-up">
           <Overview rate={rate} onPick={pick} />
         </div>
         <Suspense fallback={tab === 'import' || tab === 'calibrate' ? <Skeleton className="h-96" /> : null}>
-          <div hidden={tab !== 'import'}>
+          <div hidden={tab !== 'import'} className="fade-up">
             <Upload canSave={user.role === 'admin'} onSaved={refreshData} onPick={pick} />
           </div>
           {user.role === 'admin' && (
-            <div hidden={tab !== 'calibrate'}>
+            <div hidden={tab !== 'calibrate'} className="fade-up">
               <Calibrate onChanged={refreshData} />
             </div>
           )}
@@ -261,7 +261,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
         <Suspense fallback={<Skeleton className="h-96" />}>
           {TABS.filter((t) => t.Component).map(({ id, Component }) => (
-            <div key={`${id}-${dataVersion}`} hidden={tab !== id}>
+            <div key={`${id}-${dataVersion}`} hidden={tab !== id} className="fade-up">
               <Component query={query} rate={rate} dark={dark} who={who} tenant={tenant} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
             </div>
           ))}

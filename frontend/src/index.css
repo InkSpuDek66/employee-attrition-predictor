@@ -108,16 +108,66 @@ body {
   @apply bg-canvas text-fg antialiased;
 }
 
-/* พื้นหลังจางๆ ของหน้า login: แสงฟ้าพาสเทลสองจุดบนพื้นสีเดิม (ใช้สีธีม โหมดมืดเปลี่ยนเอง) */
+/* พื้นหลังจางๆ ของหน้า login: แสงฟ้าพาสเทลสองมุมทแยง (ซ้ายบน/ขวาล่าง) เข้มเท่ากัน บนพื้นสีเดิม (ใช้สีธีม โหมดมืดเปลี่ยนเอง) */
 .login-glow {
   background:
     radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%),
-    radial-gradient(38rem 30rem at 88% 92%, color-mix(in oklab, var(--color-accent) 16%, transparent), transparent 70%);
+    radial-gradient(42rem 32rem at 88% 92%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%);
 }
 .dark .login-glow {
   background:
     radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%),
-    radial-gradient(38rem 30rem at 88% 92%, color-mix(in oklab, var(--color-accent) 10%, transparent), transparent 70%);
+    radial-gradient(42rem 32rem at 88% 92%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%);
+}
+
+/* อนิเมชั่นของหน้าจอ: สั้น (≤ 0.9s) เล่นตอนแสดง/ข้อมูลเปลี่ยนเท่านั้น และหยุดเองเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว" (กฎ reduced-motion ด้านล่าง) */
+/* กราฟแท่งยืดออกตอนแสดงครั้งแรก + เลื่อนความยาวนุ่มๆ ตอนค่าเปลี่ยน (ซ้าย = ยืดจากซ้าย, -r = ยืดจากขวา) */
+.bar-grow {
+  transform-origin: left center;
+  animation: bar-grow 550ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: width 400ms ease;
+}
+.bar-grow-r {
+  transform-origin: right center;
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+}
+/* เนื้อหาแท็บค่อยๆ ปรากฏ (เล่นใหม่ทุกครั้งที่แท็บถูกเปิด เพราะ hidden -> แสดง) */
+.fade-up {
+  animation: fade-up 260ms ease-out both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+}
+/* หน้า login: โลโก้/ฟอร์มค่อยๆ ขึ้นมา, มาสคอตกระโดดเข้ามาจากขอบจอ (ทีละตัวตาม --hop) */
+.login-enter {
+  animation: fade-up 500ms ease-out both;
+  animation-delay: var(--enter, 0ms);
+}
+.hop-in-left,
+.hop-in-right {
+  animation: hop-in-left 900ms ease-out both;
+  animation-delay: var(--hop, 0ms);
+}
+.hop-in-right {
+  animation-name: hop-in-right;
+}
+@keyframes hop-in-left {
+  0% { opacity: 0; transform: translate(-160px, 0); }
+  15% { opacity: 1; }
+  25% { transform: translate(-120px, -16px); }
+  50% { transform: translate(-80px, 0); }
+  75% { transform: translate(-40px, -16px); }
+  100% { opacity: 1; transform: translate(0, 0); }
+}
+@keyframes hop-in-right {
+  0% { opacity: 0; transform: translate(160px, 0); }
+  15% { opacity: 1; }
+  25% { transform: translate(120px, -16px); }
+  50% { transform: translate(80px, 0); }
+  75% { transform: translate(40px, -16px); }
+  100% { opacity: 1; transform: translate(0, 0); }
 }
 
 /* แตะปุ่มบนมือถือไม่ต้องรอ double-tap zoom */

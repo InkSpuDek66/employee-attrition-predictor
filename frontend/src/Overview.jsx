@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { featureLabel } from './featureLabels'
 import { AssistantHint, SorryState } from './mascot/Mascot'
 import { api, baht, BAND, friendly, useApi } from './theme'
-import { Card, Icon, Segmented, Skeleton } from './ui'
+import { Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
 // บริษัทมาจากผู้ใช้ที่ login (backend อ่านจาก token) บริษัทที่ปรับเทียบแล้วได้คะแนนปรับเทียบอัตโนมัติ
@@ -98,11 +98,14 @@ export function EmptyPicker({ who, title, children, onPick }) {
   )
 }
 
-function Kpi({ label, value, sub, tone = 'text-fg', small = false }) {
+// num + format = ตัวเลขนับขึ้นตอนเปิด/สลับแผนก
+function Kpi({ label, num, format, sub, tone = 'text-fg', small = false }) {
   return (
     <div className="rounded-xl border border-line bg-card p-5">
       <div className="text-xs font-medium text-muted-fg">{label}</div>
-      <div className={`mt-1 font-semibold tabular-nums ${small ? 'text-2xl' : 'text-3xl'} ${tone}`}>{value}</div>
+      <div className={`mt-1 font-semibold tabular-nums ${small ? 'text-2xl' : 'text-3xl'} ${tone}`}>
+        <CountUp value={num} format={format} />
+      </div>
       {sub && <div className="mt-1 text-xs text-muted-fg">{sub}</div>}
     </div>
   )
@@ -117,9 +120,9 @@ function BandBar({ bands, total }) {
   ]
   return (
     <div>
-      <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+      <div className="bar-grow flex h-3 overflow-hidden rounded-full bg-muted">
         {order.map(([k, c]) => (
-          <div key={k} className={c} style={{ width: `${(bands[k] / total) * 100}%` }} title={`${BAND[k].th} ${bands[k]} คน`} />
+          <div key={k} className={`${c} transition-[width] duration-400`} style={{ width: `${(bands[k] / total) * 100}%` }} title={`${BAND[k].th} ${bands[k]} คน`} />
         ))}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-fg">
@@ -162,10 +165,10 @@ export default function Overview({ rate, onPick }) {
       <Segmented label="เลือกแผนก" options={deptOptions} value={department} onChange={setDepartment} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="พนักงานทั้งหมด" value={s.n_employees.toLocaleString()} sub={department || 'ทุกแผนก'} />
-        <Kpi label="คะแนนความเสี่ยงเฉลี่ย" value={Math.round(s.mean_risk_score * 100)} sub="จาก 100" />
-        <Kpi label="เสี่ยงสูง" value={`${s.risk_bands.High.toLocaleString()} คน`} sub={`${highPct}% ของพนักงาน`} tone="text-risk-high" />
-        <Kpi small label="มูลค่าความเสี่ยงรวม" value={baht(s.expected_loss_total * rate)} sub="คะแนน × ต้นทุนหาคนแทน (ใช้เทียบ ไม่ใช่ยอดจริง)" />
+        <Kpi label="พนักงานทั้งหมด" num={s.n_employees} format={(v) => Math.round(v).toLocaleString()} sub={department || 'ทุกแผนก'} />
+        <Kpi label="คะแนนความเสี่ยงเฉลี่ย" num={s.mean_risk_score * 100} format={Math.round} sub="จาก 100" />
+        <Kpi label="เสี่ยงสูง" num={s.risk_bands.High} format={(v) => `${Math.round(v).toLocaleString()} คน`} sub={`${highPct}% ของพนักงาน`} tone="text-risk-high" />
+        <Kpi small label="มูลค่าความเสี่ยงรวม" num={s.expected_loss_total * rate} format={baht} sub="คะแนน × ต้นทุนหาคนแทน (ใช้เทียบ ไม่ใช่ยอดจริง)" />
       </div>
 
       <Card icon="chart" title="สัดส่วนระดับความเสี่ยง">
@@ -200,7 +203,7 @@ export default function Overview({ rate, onPick }) {
                   </span>
                 </div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${(f.share / maxShare) * 100}%` }} />
+                  <div className="bar-grow h-full rounded-full bg-accent" style={{ width: `${(f.share / maxShare) * 100}%` }} />
                 </div>
                 {f.recommendation && <p className="mt-1.5 text-xs text-muted-fg">{f.recommendation}</p>}
               </li>

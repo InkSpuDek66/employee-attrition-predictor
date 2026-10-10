@@ -77,16 +77,22 @@ export function SorryState({ message }) {
 }
 
 // หน้า login: ผู้ช่วยยืนโบกมือต้อนรับ พร้อมป้ายชื่อ (keys = ตัวที่จะแสดง เรียงซ้ายไปขวา)
+// enter = 'left' | 'right' กระโดดเข้ามาจากขอบจอฝั่งนั้น ตัวที่อยู่ด้านนอกมาก่อน
 // โบก/ขยับไม่พร้อมกัน ดูมีชีวิต เป็นของตกแต่ง ซ่อนจากโปรแกรมอ่านหน้าจอ
-export function WelcomeMascots({ keys = MASCOTS, className = '' }) {
+export function WelcomeMascots({ keys = MASCOTS, enter, className = '' }) {
   return (
     <div className={`flex items-end ${className}`} aria-hidden="true">
-      {keys.map((k) => (
+      {keys.map((k, i) => (
         <div
           key={k}
           data-kind={k === 'cat' || k === 'dog' ? 'pet' : 'person'} // ให้หน้าที่ใช้ปรับขนาดสัตว์แยกได้
-          style={{ '--delay': `${MASCOTS.indexOf(k) * 220}ms` }}
-          className="flex flex-col items-center [&_.mascot-body]:[animation-delay:var(--delay)] [&_.mascot-wave]:[animation-delay:var(--delay)]"
+          style={{
+            '--delay': `${MASCOTS.indexOf(k) * 220}ms`,
+            '--hop': `${200 + (enter === 'right' ? keys.length - 1 - i : i) * 220}ms`,
+          }}
+          className={`flex flex-col items-center [&_.mascot-body]:[animation-delay:var(--delay)] [&_.mascot-wave]:[animation-delay:var(--delay)] ${
+            enter ? `hop-in-${enter}` : ''
+          }`}
         >
           {CHARACTERS[k]({ mood: 'none' })}
           <span className="-mt-1 rounded-full border border-line bg-card/80 px-2.5 py-0.5 text-xs font-medium text-fg">{LABELS[k]}</span>
