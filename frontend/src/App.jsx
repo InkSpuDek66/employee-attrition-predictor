@@ -169,10 +169,10 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
                 onClick={() => setTab(t.id)}
                 aria-current={active ? 'page' : undefined}
                 className={`relative flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-xs font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-left lg:text-sm ${
-                  active ? 'bg-muted text-fg' : 'text-muted-fg hover:bg-muted hover:text-fg'
+                  active ? 'bg-primary-soft text-fg' : 'text-muted-fg hover:bg-muted hover:text-fg'
                 }`}
               >
-                {active && <span className="absolute inset-y-2 left-0 hidden w-1 rounded-r bg-primary lg:block" />}
+                {active && <span className="absolute inset-y-2 left-0 hidden w-1 rounded-r bg-accent lg:block" />}
                 <Icon name={t.icon} className="size-5" />
                 <span className="lg:hidden">{t.short}</span>
                 <span className="hidden lg:inline">{t.label}</span>

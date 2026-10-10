@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { featureLabel, featurePhrase, featureValue } from './featureLabels'
-import { api, baht, bandOf, CHART, friendly } from './theme'
+import { api, baht, bandOf, friendly } from './theme'
 import { NotFoundState, SorryState } from './Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
@@ -30,7 +30,7 @@ function Summary({ ups, downs, band }) {
   return (
     <div className="rounded-xl border border-line bg-card p-5">
       <div className="flex items-start gap-3">
-        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-accent">
           <Icon name="info" className="size-5" />
         </div>
         <div className="space-y-1.5 text-sm leading-relaxed">
@@ -53,7 +53,7 @@ function Summary({ ups, downs, band }) {
 }
 
 // กราฟแท่งแนวนอนแบบซ้าย/ขวาจากเส้นกลาง (ขวา = ดันให้เสี่ยง, ซ้าย = ดันให้อยู่ต่อ) วาดด้วย CSS ไม่ต้องโหลด library กราฟ
-function ShapBars({ rows, maxAbs, C }) {
+function ShapBars({ rows, maxAbs }) {
   return (
     <ul className="space-y-1.5">
       {rows.map((r) => {
@@ -69,8 +69,8 @@ function ShapBars({ rows, maxAbs, C }) {
             <span className="relative block h-4">
               <span className="absolute inset-y-[-4px] left-1/2 w-px bg-line" aria-hidden="true" />
               <span
-                className="absolute inset-y-0 rounded"
-                style={{ background: up ? C.up : C.down, width, [up ? 'left' : 'right']: '50%' }}
+                className={`absolute inset-y-0 rounded ${up ? 'bg-up' : 'bg-down'}`}
+                style={{ width, [up ? 'left' : 'right']: '50%' }}
                 aria-hidden="true"
               />
               <span className="sr-only">
@@ -84,8 +84,7 @@ function ShapBars({ rows, maxAbs, C }) {
   )
 }
 
-export default function ShapViewer({ query, rate, dark, who, onRisk, onDone, onPick }) {
-  const C = CHART[dark ? 'dark' : 'light']
+export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick }) {
   const [topN, setTopN] = useState(10)
   // ผลล่าสุดผูกกับ key ของคำขอ ถ้า key ไม่ตรงกับที่ขออยู่ = กำลังโหลด (ข้อมูลเก่ายังโชว์แบบจางๆ)
   const [res, setRes] = useState({ key: null })
@@ -174,16 +173,16 @@ export default function ShapViewer({ query, rate, dark, who, onRisk, onDone, onP
           <div className="mb-3 flex flex-wrap gap-4 text-xs text-muted-fg">
             <span className="flex items-center gap-1.5">
               <Icon name="up" className="size-3.5 text-risk-high" />
-              <span className="size-2.5 rounded-sm" style={{ background: C.up }} />
+              <span className="size-2.5 rounded-sm bg-up" />
               ดันให้เสี่ยงลาออกมากขึ้น
             </span>
             <span className="flex items-center gap-1.5">
-              <Icon name="down" className="size-3.5 text-accent" />
-              <span className="size-2.5 rounded-sm" style={{ background: C.down }} />
+              <Icon name="down" className="size-3.5 text-down" />
+              <span className="size-2.5 rounded-sm bg-down" />
               ดันให้อยู่ต่อ
             </span>
           </div>
-          <ShapBars rows={rows} maxAbs={maxAbs} C={C} />
+          <ShapBars rows={rows} maxAbs={maxAbs} />
         </Card>
 
         <Card icon="list" title="รายละเอียดแต่ละปัจจัย" subtitle="ค่าจริงของพนักงานและทิศทางที่ส่งผล">

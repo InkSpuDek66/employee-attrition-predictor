@@ -29,7 +29,7 @@ export function DropZone({ busy, file, onFile, name }) {
         dragging ? 'border-accent bg-accent-soft' : 'border-line hover:border-secondary hover:bg-muted'
       }`}
     >
-      <span className="grid size-12 place-items-center rounded-xl bg-primary/10 text-primary">
+      <span className="grid size-12 place-items-center rounded-xl bg-primary-soft text-accent">
         <Icon name="upload" className="size-6" />
       </span>
       <span className="font-medium text-fg">{busy ? 'กำลังตรวจ…' : file ? file.name : 'ลากไฟล์มาวาง หรือกดเพื่อเลือกไฟล์'}</span>

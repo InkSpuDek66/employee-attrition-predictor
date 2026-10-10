@@ -5,12 +5,6 @@ import { useEffect, useState } from 'react'
 export const LOW = 0.4
 export const HIGH = 0.7
 
-// สีแท่งกราฟ SHAP (ใส่เป็น style) ชุดเดียวกับ token ใน index.css แยกตามธีม
-export const CHART = {
-  light: { up: '#ef4444', down: '#0070f3' },
-  dark: { up: '#f87171', down: '#3291ff' },
-}
-
 // เงิน: ถือว่า MonthlyIncome ใน IBM dataset เป็นดอลลาร์ (แนวเดียวกับ src/app_pages/whatif_page.py)
 // หน้าเว็บรับ/แสดงเป็นบาท แล้วหารด้วยอัตรานี้ก่อนส่งเข้าโมเดล ผู้ใช้ปรับไม่ได้และไม่เห็นดอลลาร์
 // อัตราจริงอยู่ที่ src/business_rules.py (DE-01) backend ส่งมาตอน login ค่าด้านล่างเป็นค่าสำรองสำหรับ session เก่า
@@ -33,8 +27,6 @@ export function parseIncomeBaht(text, rate, fallback) {
 // changes ที่ส่งเข้า backend: เงินเดือนเก็บเป็นดอลลาร์ทศนิยม (ให้ช่องโชว์บาทตรงที่กรอก) แต่ API รับจำนวนเต็ม
 export const toApiChanges = (changes) =>
   'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
-// ช่วงสีของแถบคะแนน ต่ำ / กลาง / สูง
-export const GAUGE = ['#22c55e', '#eab308', '#ef4444']
 
 export const inputClass =
   'h-11 w-full rounded-lg border border-line bg-card px-3 text-fg outline-none transition-colors duration-200 placeholder:text-muted-fg/60 hover:border-secondary focus-visible:border-accent focus-visible:ring-3 focus-visible:ring-accent/20'

@@ -111,9 +111,9 @@ function Kpi({ label, value, sub, tone = 'text-fg', small = false }) {
 // แถบสัดส่วน ต่ำ/กลาง/สูง พร้อมจำนวนคน (ไม่ใช้สีอย่างเดียว มีตัวเลขกำกับ)
 function BandBar({ bands, total }) {
   const order = [
-    ['Low', 'bg-risk-low'],
-    ['Medium', 'bg-risk-mid'],
-    ['High', 'bg-risk-high'],
+    ['Low', 'bg-band-low'],
+    ['Medium', 'bg-band-mid'],
+    ['High', 'bg-band-high'],
   ]
   return (
     <div>

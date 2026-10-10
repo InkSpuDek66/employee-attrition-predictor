@@ -1,5 +1,5 @@
 // ชิ้นส่วน UI ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
-import { BAND, bandOf, GAUGE, HIGH, LOW } from './theme'
+import { BAND, bandOf, HIGH, LOW } from './theme'
 
 // ไอคอนเส้น (path จาก Heroicons outline, MIT) ไม่ต้องลง library เพิ่ม
 const ICONS = {
@@ -99,7 +99,7 @@ export function Card({ title, subtitle, icon, action, children, className = '' }
         <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             {icon && (
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-accent">
                 <Icon name={icon} className="size-5" />
               </div>
             )}
@@ -148,7 +148,7 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
       <div
         className="relative mt-4 h-2 rounded-full"
         style={{
-          background: `linear-gradient(to right, ${GAUGE[0]} 0 ${LOW * 100}%, ${GAUGE[1]} 0 ${HIGH * 100}%, ${GAUGE[2]} 0)`,
+          background: `linear-gradient(to right, var(--color-band-low) 0 ${LOW * 100}%, var(--color-band-mid) 0 ${HIGH * 100}%, var(--color-band-high) 0)`,
         }}
         role="meter"
         aria-valuemin={0}
@@ -196,7 +196,7 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
             onClick={() => onChange(v)}
             className={`flex-1 cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
               size === 'sm' ? 'h-8' : 'h-10'
-            } ${active ? 'bg-card text-primary ring-1 ring-line' : 'text-muted-fg hover:text-fg'}`}
+            } ${active ? 'bg-card text-accent ring-1 ring-line' : 'text-muted-fg hover:text-fg'}`}
           >
             {text}
           </button>
