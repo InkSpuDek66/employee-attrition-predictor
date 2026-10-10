@@ -243,7 +243,7 @@ input[type='range'] {
   0%, 12%, 100% { transform: none; }
   35%, 70% { transform: translateY(10px) scaleY(0.94); }
 }
-/* ประกายฉลองตอนความเสี่ยงลดลงเป็นระดับต่ำ (WhatIfSimulator.jsx) เล่นครั้งเดียว */
+/* ข้อความเด้งตอนระดับความเสี่ยงเปลี่ยน (WhatIfSimulator.jsx BandToast) เล่นครั้งเดียว: ประกายตอนลดลง, สั่นตอนเพิ่มขึ้น */
 .celebrate-spark {
   animation: celebrate-spark 900ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
@@ -259,6 +259,14 @@ input[type='range'] {
   0% { transform: translateY(6px) scale(0.9); opacity: 0; }
   15%, 75% { transform: none; opacity: 1; }
   100% { transform: translateY(-4px); opacity: 0; }
+}
+.toast-shake {
+  animation: toast-shake 480ms ease-in-out 200ms both;
+}
+@keyframes toast-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
 }
 .mascot-check {
   transform-box: fill-box;

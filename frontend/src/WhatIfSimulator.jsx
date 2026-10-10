@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { featureLabel } from './featureLabels'
-import { api, baht, BAND, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges } from './theme'
+import { api, baht, BAND, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, CountUp, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
@@ -191,22 +191,38 @@ function DeltaBadge({ delta, className = '' }) {
   )
 }
 
-// ประกายฉลองรอบกล่องผลจำลอง เล่นครั้งเดียวต่อ key (ตอนความเสี่ยงหลังปรับตกลงมาเป็นระดับต่ำ)
+// ข้อความเด้งเมื่อระดับความเสี่ยงหลังปรับเปลี่ยน เล่นครั้งเดียวต่อ key
+// ลดลง = ประกายฉลอง, เพิ่มขึ้น = ป้ายเตือนสั่นนิดๆ (ป้ายพื้นอ่อน + ตัวหนังสือสีระดับ อ่านได้ทั้งโหมดมืด/สว่าง)
 const SPARKS = [[-70, -50], [70, -55], [-90, 10], [90, 5], [-50, 60], [55, 65], [0, -80], [0, 80]]
-function Celebrate() {
+const BAND_TOAST = {
+  low: { text: 'เยี่ยมเลย! ลดเหลือระดับต่ำ', icon: 'check', pill: 'bg-risk-low-soft text-risk-low ring-risk-low/30', sparks: ['fill-risk-low', 'fill-risk-mid', 'fill-accent'] },
+  midDown: { text: 'ดีขึ้นแล้ว! ลดเหลือระดับปานกลาง', icon: 'down', pill: 'bg-risk-mid-soft text-risk-mid ring-risk-mid/30', sparks: ['fill-risk-mid', 'fill-accent'] },
+  midUp: { text: 'ระวัง! เพิ่มเป็นระดับปานกลาง', icon: 'warning', pill: 'bg-risk-mid-soft text-risk-mid ring-risk-mid/30', warn: true },
+  high: { text: 'ระวัง! ความเสี่ยงเพิ่มเป็นระดับสูง', icon: 'warning', pill: 'bg-risk-high-soft text-risk-high ring-risk-high/30', warn: true },
+}
+
+function BandToast({ kind }) {
+  const t = BAND_TOAST[kind]
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center" aria-hidden="true">
-      {SPARKS.map(([dx, dy], i) => (
-        <svg
-          key={i}
-          viewBox="-7 -7 14 14"
-          className={`celebrate-spark absolute size-5 ${['fill-risk-low', 'fill-risk-mid', 'fill-accent'][i % 3]}`}
-          style={{ '--dx': `${dx}px`, '--dy': `${dy}px`, animationDelay: `${(i % 4) * 60}ms` }}
-        >
-          <path d="M0 -7 Q1 -1 7 0 Q1 1 0 7 Q-1 1 -7 0 Q-1 -1 0 -7Z" />
-        </svg>
-      ))}
-      <div className="celebrate-text rounded-full bg-risk-low px-3 py-1 text-sm font-semibold text-white">เยี่ยมเลย! ลดเหลือระดับต่ำ</div>
+    <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center">
+      {!t.warn &&
+        SPARKS.slice(0, kind === 'low' ? 8 : 6).map(([dx, dy], i) => (
+          <svg
+            key={i}
+            viewBox="-7 -7 14 14"
+            aria-hidden="true"
+            className={`celebrate-spark absolute size-5 ${t.sparks[i % t.sparks.length]}`}
+            style={{ '--dx': `${dx}px`, '--dy': `${dy}px`, animationDelay: `${(i % 4) * 60}ms` }}
+          >
+            <path d="M0 -7 Q1 -1 7 0 Q1 1 0 7 Q-1 1 -7 0 Q-1 -1 0 -7Z" />
+          </svg>
+        ))}
+      <div role="status" className="celebrate-text">
+        <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold shadow-sm ring-1 ${t.pill} ${t.warn ? 'toast-shake' : ''}`}>
+          <Icon name={t.icon} className="size-4" />
+          {t.text}
+        </div>
+      </div>
     </div>
   )
 }
@@ -242,7 +258,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
   const [retention, setRetention] = useState('')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState([]) // ผลจำลองที่บันทึกไว้เทียบ (ต่อพนักงานหนึ่งคน สูงสุด 4)
-  const [celebrate, setCelebrate] = useState(0) // เพิ่มทุกครั้งที่ความเสี่ยงหลังปรับเพิ่งตกเป็นระดับต่ำ
+  const [toast, setToast] = useState(null) // { n, kind } ข้อความเด้งตอนระดับความเสี่ยงหลังปรับเปลี่ยน (n เพิ่มทุกครั้ง ให้เล่นใหม่)
   const lastBand = useRef(null)
 
   // โหลดพนักงานใหม่เมื่อเลือกจากช่องด้านบน
@@ -282,7 +298,9 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
         const sent = toApiChanges(changes)
         const res = await post({ employee_id: loaded.id, changes: sent, ...(loaded.tenant && { tenant_id: loaded.tenant }) }, ctrl.signal)
         setResult(res)
-        if (lastBand.current !== 'Low' && res.after.risk_band === 'Low') setCelebrate((c) => c + 1)
+        // เทียบกับผลครั้งก่อน (ครั้งแรกเทียบกับระดับก่อนปรับ) ไม่ฉลองถ้าระดับไม่เปลี่ยน
+        const kind = toastKind(lastBand.current ?? res.before.risk_band, res.after.risk_band)
+        if (kind) setToast((t) => ({ n: (t?.n ?? 0) + 1, kind }))
         lastBand.current = res.after.risk_band
         onRisk({ id: loaded.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
         setError('')
@@ -461,7 +479,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
         </div>
 
         <aside className="relative lg:sticky lg:top-6">
-          {celebrate > 0 && <Celebrate key={celebrate} />}
+          {toast && <BandToast key={toast.n} kind={toast.kind} />}
           <Card>
             <div className="mb-5 flex items-center justify-between">
               <div>

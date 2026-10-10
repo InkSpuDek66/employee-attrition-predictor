@@ -39,6 +39,11 @@ export const BAND = {
 
 export const bandOf = (score) => (score < LOW ? 'Low' : score < HIGH ? 'Medium' : 'High')
 
+// What-if: ระดับเดิม -> ใหม่ ควรเด้งข้อความแบบไหน (null = ระดับไม่เปลี่ยน ไม่ต้องเด้ง)
+const BAND_RANK = { Low: 0, Medium: 1, High: 2 }
+export const toastKind = (from, to) =>
+  from === to ? null : BAND_RANK[to] < BAND_RANK[from] ? (to === 'Low' ? 'low' : 'midDown') : to === 'High' ? 'high' : 'midUp'
+
 // ผู้ช่วยในหน้า (mascot/Mascot.jsx) ลำดับนี้ใช้ทั้งปุ่มเลือกและหน้าขอโทษ ตัวที่เลือกจำใน localStorage
 export const MASCOTS = ['chibiGirl', 'chibiBoy', 'cat', 'dog']
 
