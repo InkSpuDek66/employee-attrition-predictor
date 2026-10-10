@@ -6,7 +6,7 @@ POST /employees/import    ตรวจแล้วบันทึกลงตา
 
 ตรวจด้วย schemas.EmployeeInput ตัวเดียวกับ /predict, /whatif จึงตรงกับที่โมเดลรับได้จริง
 ห้ามใช้กับข้อมูลพนักงานจริง: login ตอนนี้เป็นบัญชีทดลอง (auth.py) และ MLflow ของทีมเป็นสาธารณะ
-เงินเดือนรับเป็นบาท แปลงเป็นหน่วยโมเดล (USD) ตอนบันทึก ด้วย THB_PER_USD (DE-01 ย้ายไป config กลางภายหลัง)
+เงินเดือนรับเป็นบาท แปลงเป็นหน่วยโมเดล (USD) ตอนบันทึก ด้วย business_rules.THB_PER_USD (DE-01)
 """
 
 import io
@@ -15,14 +15,16 @@ import zipfile
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
 import auth
 import model_store as ms
 from schemas import EmployeeInput
-import db  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
+import batch_score
+import business_rules  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
+import db  # noqa: E402
 
 router = APIRouter(tags=["employees"])
 log = logging.getLogger(__name__)
@@ -30,7 +32,7 @@ log = logging.getLogger(__name__)
 MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 10_000
 MAX_ERRORS = 200  # ส่งกลับไม่เกินนี้ ที่เหลือบอกแค่จำนวน
-THB_PER_USD = 35  # ต้องตรงกับ frontend/src/theme.js
+THB_PER_USD = business_rules.THB_PER_USD
 MAX_UNZIPPED = 60 * 1024 * 1024  # .xlsx คือ zip: 10,000 แถวจริงแตกออกมาไม่ถึง 20 MB เกินนี้ = zip bomb
 
 # (ฟิลด์ของโมเดล, หัวคอลัมน์ภาษาไทยใน template, คำอธิบาย/ตัวเลือก)
@@ -239,7 +241,10 @@ async def validate_upload(file: UploadFile = File(...)):
 
 @router.post("/employees/import", response_model=ValidateResponse)
 async def import_employees(
-    file: UploadFile = File(...), user: dict = Depends(auth.require_admin), _=Depends(auth.LIMITS["import"].per_user)
+    background: BackgroundTasks,
+    file: UploadFile = File(...),
+    user: dict = Depends(auth.require_admin),
+    _=Depends(auth.LIMITS["import"].per_user),
 ):
     """บันทึกทั้งไฟล์ (ทุกแถวต้องถูกต้อง) รหัสพนักงานที่มีอยู่แล้ว = อัปเดตเป็นข้อมูลใหม่"""
     if not db.url():
@@ -257,6 +262,7 @@ async def import_employees(
         raise HTTPException(422, "มีค่าบางแถวเกินช่วงที่ฐานข้อมูลรับ (เช่น อายุ 15–80 ปี) ยังไม่ได้บันทึกอะไร ตรวจไฟล์แล้วลองใหม่")
     ms.raw_employees.cache_clear()  # ให้ทุกหน้าเห็นพนักงานที่เพิ่ง import
     ms.employee_features.cache_clear()
+    background.add_task(batch_score.refresh_in_background)  # คำนวณสรุปใหม่หลังตอบกลับ ให้ /company-summary กลับมาใช้ cache
     n_updated = len(existing & set(rows["EmployeeNumber"]))
     return result.model_copy(
         update={

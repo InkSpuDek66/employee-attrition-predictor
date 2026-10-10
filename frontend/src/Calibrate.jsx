@@ -184,12 +184,15 @@ export default function Calibrate({ onChanged }) {
 
       {error && <Alert>{error}</Alert>}
 
-      {res?.result && <Result r={res.result} />}
-      {res && !res.result && (
-        <Card icon="warning" title="3. ไฟล์ยังไม่ผ่าน ยังไม่ได้ปรับเทียบ" subtitle={`${res.check.filename} · ${res.message}`}>
-          <CheckDetails result={res.check} />
-        </Card>
-      )}
+      {/* ประกาศผลให้โปรแกรมอ่านหน้าจอทันทีที่ปรับเสร็จหรือไฟล์ไม่ผ่าน */}
+      <div aria-live="polite">
+        {res?.result && <Result r={res.result} />}
+        {res && !res.result && (
+          <Card icon="warning" title="3. ไฟล์ยังไม่ผ่าน ยังไม่ได้ปรับเทียบ" subtitle={`${res.check.filename} · ${res.message}`}>
+            <CheckDetails result={res.check} />
+          </Card>
+        )}
+      </div>
 
       {items.length > 0 && (
         <Card icon="clock" title="ประวัติการปรับเทียบ" subtitle="ระบบใช้ครั้งล่าสุด (แถวบนสุด)">

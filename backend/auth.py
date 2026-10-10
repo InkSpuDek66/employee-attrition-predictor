@@ -24,6 +24,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 import calibration
+import business_rules  # noqa: E402  (ต้องอยู่หลัง calibration ซึ่ง import model_store ที่เพิ่ม src/ เข้า sys.path)
 
 router = APIRouter(tags=["auth"])
 
@@ -141,6 +142,7 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: dict
+    settings: dict = {}  # ค่าที่หน้าเว็บต้องใช้ตรงกับ backend เช่น อัตราบาท/ดอลลาร์ (DE-01)
 
 
 @router.post("/auth/login", response_model=LoginResponse)
@@ -150,7 +152,9 @@ def login(req: LoginRequest, request: Request):
     # เทียบแบบเวลาคงที่ และตอบข้อความเดียวกันไม่ว่าผิดชื่อหรือผิดรหัส
     if not hmac.compare_digest((u or {}).get("password", "").encode(), req.password.encode()) or not u:
         raise HTTPException(401, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-    return LoginResponse(access_token=issue_token(req.username), user=public(req.username))
+    return LoginResponse(
+        access_token=issue_token(req.username), user=public(req.username), settings={"thb_per_usd": business_rules.THB_PER_USD}
+    )
 
 
 @router.get("/auth/me")

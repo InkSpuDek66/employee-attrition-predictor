@@ -23,6 +23,10 @@ HIGH_RISK = 0.7
 MEDIUM_RISK = 0.4
 RISK_BANDS = {"High": "สูง", "Medium": "ปานกลาง", "Low": "ต่ำ"}
 
+# DE-01: ถือว่า MonthlyIncome ของ IBM dataset เป็น USD หน้าเว็บ/ไฟล์นำเข้าใช้บาท แปลงด้วยค่านี้ที่เดียว
+# backend ส่งให้หน้าเว็บตอน login (auth.py) ส่วน THB_PER_USD ใน frontend/src/theme.js เป็นค่าสำรอง มี test เช็กว่าตรงกัน
+THB_PER_USD = 35
+
 
 def risk_band(score: float) -> str:
     """คืน 'High' / 'Medium' / 'Low' ตาม README 6.1"""

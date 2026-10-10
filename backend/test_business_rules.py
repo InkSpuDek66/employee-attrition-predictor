@@ -59,3 +59,5 @@ def test_frontend_risk_thresholds_match_backend():
     low = float(re.search(r"export const LOW = ([\d.]+)", js).group(1))
     high = float(re.search(r"export const HIGH = ([\d.]+)", js).group(1))
     assert (low, high) == (br.MEDIUM_RISK, br.HIGH_RISK)
+    # ค่าสำรองของอัตราบาท/ดอลลาร์ (ใช้เมื่อ session เก่าไม่มี settings) ต้องตรงกับ backend
+    assert float(re.search(r"export const THB_PER_USD = ([\d.]+)", js).group(1)) == br.THB_PER_USD

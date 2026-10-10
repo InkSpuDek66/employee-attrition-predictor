@@ -12,11 +12,12 @@ from typing import Literal, Optional
 
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sklearn.metrics import brier_score_loss
 
 import auth
+import batch_score
 import calibration
 import model_store as ms
 from routers import employee_upload as eu
@@ -96,14 +97,16 @@ def _fit(raw: pd.DataFrame, method: str, tenant_id: str) -> RecalibrateResponse:
 
 
 @router.post("/recalibrate", response_model=RecalibrateResponse)
-def recalibrate(req: RecalibrateRequest, user: dict = Depends(auth.require_admin)):
+def recalibrate(req: RecalibrateRequest, background: BackgroundTasks, user: dict = Depends(auth.require_admin)):
     raw = pd.DataFrame(req.records)
     missing = sorted((ms.input_columns() | {"Attrition"}) - set(raw.columns))
     if missing:
         raise HTTPException(422, f"ขาดคอลัมน์: {missing}")
     if not raw["Attrition"].isin(["Yes", "No"]).all():
         raise HTTPException(422, 'Attrition ต้องเป็น "Yes" หรือ "No" เท่านั้น')
-    return _fit(raw, req.method, user["tenant_id"])
+    result = _fit(raw, req.method, user["tenant_id"])
+    background.add_task(batch_score.refresh_in_background)  # คะแนนปรับเทียบในตารางผลทำนายเปลี่ยน
+    return result
 
 
 @router.get("/recalibrate/template")
@@ -115,11 +118,17 @@ def recalibrate_template(demo: bool = False, _: dict = Depends(auth.require_admi
 
 
 @router.post("/recalibrate/upload", response_model=UploadResult)
-async def recalibrate_upload(file: UploadFile = File(...), method: Method = Form("isotonic"), user: dict = Depends(auth.require_admin)):
+async def recalibrate_upload(
+    background: BackgroundTasks,
+    file: UploadFile = File(...),
+    method: Method = Form("isotonic"),
+    user: dict = Depends(auth.require_admin),
+):
     valid, check = await eu._check(file, label=True)
     if check.missing_columns or check.n_invalid or not valid:
         return UploadResult(check=check, message="ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด แก้แล้วอัปโหลดใหม่")
     result = _fit(eu.to_model_units(pd.DataFrame(valid)), method, user["tenant_id"])
+    background.add_task(batch_score.refresh_in_background)
     return UploadResult(check=check, result=result)
 
 
@@ -129,5 +138,7 @@ def recalibrate_history(user: dict = Depends(auth.current_user)):
 
 
 @router.delete("/recalibrate")
-def recalibrate_reset(user: dict = Depends(auth.require_admin)):
-    return {"tenant_id": user["tenant_id"], "removed": calibration.reset(user["tenant_id"])}
+def recalibrate_reset(background: BackgroundTasks, user: dict = Depends(auth.require_admin)):
+    removed = calibration.reset(user["tenant_id"])
+    background.add_task(batch_score.refresh_in_background)
+    return {"tenant_id": user["tenant_id"], "removed": removed}

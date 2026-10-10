@@ -171,17 +171,28 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
   )
 }
 
+// กลุ่มตัวเลือกแบบเลือกได้อย่างเดียว ตามแบบ radio group: Tab เข้ากลุ่มครั้งเดียว แล้วใช้ลูกศรเลื่อนเลือก
 export function Segmented({ options, value, onChange, label, size = 'md' }) {
+  const current = Math.max(0, options.findIndex(([v]) => String(v) === String(value)))
+  function onKeyDown(e) {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]
+    if (!step) return
+    e.preventDefault()
+    const next = (current + step + options.length) % options.length
+    onChange(options[next][0])
+    e.currentTarget.querySelectorAll('[role=radio]')[next]?.focus()
+  }
   return (
-    <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label={label}>
-      {options.map(([v, text]) => {
-        const active = String(v) === String(value)
+    <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+      {options.map(([v, text], i) => {
+        const active = i === current
         return (
           <button
             key={v}
             type="button"
             role="radio"
             aria-checked={active}
+            tabIndex={active ? 0 : -1}
             onClick={() => onChange(v)}
             className={`flex-1 cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
               size === 'sm' ? 'h-8' : 'h-10'

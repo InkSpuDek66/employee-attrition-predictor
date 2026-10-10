@@ -5,16 +5,16 @@ import { useEffect, useState } from 'react'
 export const LOW = 0.4
 export const HIGH = 0.7
 
-// สีกราฟ (recharts รับ class ไม่ได้) ชุดเดียวกับ token ใน index.css แยกตามธีม
+// สีแท่งกราฟ SHAP (ใส่เป็น style) ชุดเดียวกับ token ใน index.css แยกตามธีม
 export const CHART = {
-  light: { up: '#ef4444', down: '#0070f3', axis: '#71717a', label: '#09090b', grid: '#e4e4e7', hover: '#f4f4f5', bg: '#ffffff' },
-  dark: { up: '#f87171', down: '#3291ff', axis: '#a1a1aa', label: '#fafafa', grid: '#27272a', hover: '#1c1c1f', bg: '#111113' },
+  light: { up: '#ef4444', down: '#0070f3' },
+  dark: { up: '#f87171', down: '#3291ff' },
 }
 
 // เงิน: ถือว่า MonthlyIncome ใน IBM dataset เป็นดอลลาร์ (แนวเดียวกับ src/app_pages/whatif_page.py)
 // หน้าเว็บรับ/แสดงเป็นบาท แล้วหารด้วยอัตรานี้ก่อนส่งเข้าโมเดล ผู้ใช้ปรับไม่ได้และไม่เห็นดอลลาร์
-// ponytail: อัตราคงที่ในหน้าเว็บ ตาม DE-01 ควรย้ายไป config/financial_impact.json ให้ backend แปลงที่เดียว
-export const THB_PER_USD = 35
+// อัตราจริงอยู่ที่ src/business_rules.py (DE-01) backend ส่งมาตอน login ค่าด้านล่างเป็นค่าสำรองสำหรับ session เก่า
+export const THB_PER_USD = 35 // ค่าสำรอง: ค่าจริงมาจาก backend ตอน login (session.settings.thb_per_usd) มี test เช็กว่าตรงกัน
 export const INCOME_RANGE_USD = [1009, 19999] // ช่วง MonthlyIncome ใน data/raw (นอกช่วงนี้โมเดลไม่เคยเห็น)
 export const INCOME_MIN_BAHT = 15000 // ขั้นต่ำของช่อง/แถบเงินเดือน (ต่ำกว่าช่วง dataset ได้ แต่จะมีคำเตือน)
 export const baht = (v) => `${Math.round(v).toLocaleString()} บาท`
@@ -80,7 +80,14 @@ export function loadSession() {
     return null
   }
 }
+// คำขอของ session ปัจจุบันผูกกับ controller นี้ ออกจากระบบ = ยกเลิกคำขอที่ค้างทั้งหมด
+let sessionAbort = new AbortController()
+
 export function saveSession(session) {
+  if (!session) {
+    sessionAbort.abort()
+    sessionAbort = new AbortController()
+  }
   try {
     if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
     else sessionStorage.removeItem(SESSION_KEY)
@@ -90,11 +97,14 @@ export function saveSession(session) {
 }
 
 // ทุกคำขอแนบ token ถ้า backend ตอบ 401 (token หมดอายุ/backend restart) แจ้ง App ให้กลับไปหน้า login
+// แจ้งเฉพาะเมื่อ token ที่ใช้ยังเป็นของ session ปัจจุบัน (คำขอเก่าที่ตอบกลับหลัง logout ไม่ทำให้ขึ้น "หมดเวลา" ผิดจังหวะ)
 async function call(path, options = {}) {
   const token = loadSession()?.access_token
   const headers = { ...options.headers, ...(token && { Authorization: `Bearer ${token}` }) }
-  const res = await fetch(`/api${path}`, { ...options, headers })
-  if (res.status === 401 && token) dispatchEvent(new Event('session-expired'))
+  const signals = [options.signal, token && sessionAbort.signal].filter(Boolean)
+  const signal = signals.length > 1 && AbortSignal.any ? AbortSignal.any(signals) : signals[0]
+  const res = await fetch(`/api${path}`, { ...options, headers, signal })
+  if (res.status === 401 && token && token === loadSession()?.access_token) dispatchEvent(new Event('session-expired'))
   return res
 }
 

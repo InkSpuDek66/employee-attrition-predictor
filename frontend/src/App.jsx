@@ -1,22 +1,22 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import Calibrate from './Calibrate'
 import Login from './Login'
 import Mascot from './Mascot'
 import Overview from './Overview'
-import Upload from './Upload'
 import { inputClass, loadMascot, loadSession, saveMascot, saveSession, THB_PER_USD } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
-// SHAP Viewer ใช้ recharts (ก้อนใหญ่) โหลดแยกตอนเปิดใช้ หน้าแรกจะเปิดเร็วขึ้น
+// หน้าที่ไม่ได้ใช้ตอนเปิดเว็บ โหลดแยกเป็นไฟล์ย่อย หน้าแรกจะเปิดเร็วขึ้น
 const ShapViewer = lazy(() => import('./ShapViewer'))
+const Upload = lazy(() => import('./Upload'))
+const Calibrate = lazy(() => import('./Calibrate'))
 
 // หน้าหลัก: แต่ละคนเพิ่ม component ของตัวเอง (เช่น Intervention Tracker) เป็นแท็บใหม่ใน TABS
 // component ของเครื่องมือรายคนได้ prop:
 //   query = { id, tenant, n } ของพนักงานที่เลือก (n เพิ่มทุกครั้งที่กดโหลด ให้โหลดซ้ำได้, tenant = บริษัทของผู้ login)
 //   onRisk({ id, band, score, label } | { error, notFound }) = แจ้งตัวการ์ตูนใน sidebar
 //   onDone() = โหลดเสร็จ (สำเร็จหรือพัง) ให้ปุ่ม "โหลด" เลิกหมุน
-//   rate = บาทต่อ 1 ดอลลาร์ (ค่าคงที่ THB_PER_USD ใน theme.js), dark = ธีม (กราฟ recharts ต้องรู้เพื่อเลือกสี), who = ผู้ช่วยที่เลือก
+//   rate = บาทต่อ 1 ดอลลาร์ (backend ส่งมาตอน login, สำรองด้วย THB_PER_USD ใน theme.js), dark = ธีม (สีแท่งกราฟ SHAP เลือกตามธีม), who = ผู้ช่วยที่เลือก
 // แท็บ/รหัสพนักงานเก็บใน URL (?tab=whatif&id=5) แชร์ลิงก์ได้ และปุ่ม back ใช้ได้
 // ต้อง login ก่อน (Login.jsx) บริษัทมาจากผู้ใช้ ไม่ให้พิมพ์เอง (SEC-02)
 const TABS = [
@@ -58,10 +58,10 @@ export default function App() {
   }, [])
   const theme = { dark, onToggleTheme: toggleTheme }
   if (!session) return <Login onLogin={(s) => (saveSession(s), setSession(s), setExpired(false))} expired={expired} {...theme} />
-  return <Workspace user={session.user} onLogout={() => (saveSession(null), setSession(null), setExpired(false))} {...theme} />
+  return <Workspace user={session.user} settings={session.settings} onLogout={() => (saveSession(null), setSession(null), setExpired(false))} {...theme} />
 }
 
-function Workspace({ user, onLogout, dark, onToggleTheme }) {
+function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
   const tenant = user.tenant_id
   const tabs = TABS.filter((t) => !t.admin || user.role === 'admin') // แท็บ admin ไม่โชว์ให้ HR
   const [initial] = useState(fromUrl) // อ่าน URL ครั้งเดียวตอนเปิดหน้า
@@ -73,7 +73,7 @@ function Workspace({ user, onLogout, dark, onToggleTheme }) {
   const [employeeId, setEmployeeId] = useState(initial.id || '1')
   const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant, n: 1 } : null)
   const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
-  const rate = THB_PER_USD // คงที่ ผู้ใช้ไม่ต้องรู้ว่าโมเดลใช้ดอลลาร์เบื้องหลัง
+  const rate = settings?.thb_per_usd ?? THB_PER_USD // จาก backend (DE-01) ผู้ใช้ไม่ต้องรู้ว่าโมเดลใช้ดอลลาร์เบื้องหลัง
   const [risk, setRisk] = useState({}) // ความเสี่ยงล่าสุดแยกตามแท็บ
   const [who, setWho] = useState(loadMascot) // ผู้ช่วยที่เลือก ใช้ทั้ง sidebar และหน้าว่าง
   // handler คงที่ต่อแท็บ ใส่ใน deps ของ effect ได้โดยไม่ทำให้โหลดซ้ำ
@@ -249,14 +249,16 @@ function Workspace({ user, onLogout, dark, onToggleTheme }) {
         <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`}>
           <Overview rate={rate} onPick={pick} />
         </div>
-        <div hidden={tab !== 'import'}>
-          <Upload canSave={user.role === 'admin'} onSaved={refreshData} onPick={pick} />
-        </div>
-        {user.role === 'admin' && (
-          <div hidden={tab !== 'calibrate'}>
-            <Calibrate onChanged={refreshData} />
+        <Suspense fallback={tab === 'import' || tab === 'calibrate' ? <Skeleton className="h-96" /> : null}>
+          <div hidden={tab !== 'import'}>
+            <Upload canSave={user.role === 'admin'} onSaved={refreshData} onPick={pick} />
           </div>
-        )}
+          {user.role === 'admin' && (
+            <div hidden={tab !== 'calibrate'}>
+              <Calibrate onChanged={refreshData} />
+            </div>
+          )}
+        </Suspense>
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
         <Suspense fallback={<Skeleton className="h-96" />}>
           {TABS.filter((t) => t.Component).map(({ id, Component }) => (

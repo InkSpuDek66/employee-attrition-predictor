@@ -10,9 +10,9 @@ export function DownloadButton({ path, filename, children, onError }) {
     <button
       type="button"
       onClick={() => download(path, filename).catch((err) => onError(friendly(err)))}
-      className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-line px-4 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line px-4 py-2 text-left font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
     >
-      <Icon name="download" className="size-5" />
+      <Icon name="download" className="size-5 shrink-0" />
       {children}
     </button>
   )
@@ -176,7 +176,7 @@ export default function Upload({ canSave, onSaved, onPick }) {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Card icon="list" title="1. ดาวน์โหลดไฟล์ตัวอย่าง" subtitle="Excel ที่มีหัวคอลัมน์ครบ + แถวตัวอย่าง + ชีตคำอธิบายค่าที่รับ">
           <DownloadButton path="/employees/template" filename="employee_template.xlsx" onError={setError}>
-            ดาวน์โหลด employee_template.xlsx
+            ดาวน์โหลดไฟล์ตัวอย่าง (.xlsx)
           </DownloadButton>
           <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-muted-fg">
             <li>กรอกหนึ่งแถวต่อพนักงานหนึ่งคน รหัสพนักงานห้ามซ้ำ</li>
