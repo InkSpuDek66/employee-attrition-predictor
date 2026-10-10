@@ -36,7 +36,7 @@
   --color-band-high: #ef4444;
   --color-up: #ef4444;
   --color-down: #4589d6;
-  /* ชุดตัวการ์ตูนใน sidebar (ChibiCharacter.jsx) */
+  /* ชุดตัวการ์ตูนใน sidebar (mascot/ChibiCharacter.jsx) */
   --color-suit: #2f3b58;
   --color-suit-line: #45527a;
   --color-pants: #252f47;
@@ -80,8 +80,44 @@
   --color-blazer-line: #cfc6b2;
 }
 
+/* สีโลโก้ (logo/Logo.jsx) โหมดสว่าง = สีเดียวกับ logo/logo.svg, โหมดมืด = กรอบกรมท่า ตัวอักษร/ประตูสว่างขึ้น */
+:root {
+  --logo-tile: #ffffff;
+  --logo-glow: #a9d1fb;
+  --logo-ink: #1b4f9c;
+  --logo-arrow: #3a86e3;
+  --logo-door-a: #2b7ad4;
+  --logo-door-b: #1e62b6;
+  --logo-door-inner: #f2f7fe;
+  --logo-walker: #1d58b0;
+  --logo-exit: #a3cdf8;
+}
+.dark {
+  --logo-tile: #13233d;
+  --logo-glow: #2b6cb0;
+  --logo-ink: #e3efff;
+  --logo-arrow: #8cc2fa;
+  --logo-door-a: #4a90e2;
+  --logo-door-b: #2f6fc4;
+  --logo-door-inner: #dcecfd;
+  --logo-walker: #14427f;
+  --logo-exit: #e3efff;
+}
+
 body {
   @apply bg-canvas text-fg antialiased;
+}
+
+/* พื้นหลังจางๆ ของหน้า login: แสงฟ้าพาสเทลสองจุดบนพื้นสีเดิม (ใช้สีธีม โหมดมืดเปลี่ยนเอง) */
+.login-glow {
+  background:
+    radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%),
+    radial-gradient(38rem 30rem at 88% 92%, color-mix(in oklab, var(--color-accent) 16%, transparent), transparent 70%);
+}
+.dark .login-glow {
+  background:
+    radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%),
+    radial-gradient(38rem 30rem at 88% 92%, color-mix(in oklab, var(--color-accent) 10%, transparent), transparent 70%);
 }
 
 /* แตะปุ่มบนมือถือไม่ต้องรอ double-tap zoom */
@@ -106,7 +142,7 @@ input[type='range'] {
   }
 }
 
-/* ตัวการ์ตูนใน sidebar (Mascot.jsx) */
+/* ตัวการ์ตูนใน sidebar (mascot/Mascot.jsx) */
 .mascot-static,
 .mascot-static * {
   animation: none !important;

@@ -2,7 +2,7 @@
 // ใช้ /company-summary, /company-summary/departments, /company-summary/top-employees (คะแนนยังไม่ปรับเทียบ ใช้จัดลำดับ)
 import { useState } from 'react'
 import { featureLabel } from './featureLabels'
-import { AssistantHint, SorryState } from './Mascot'
+import { AssistantHint, SorryState } from './mascot/Mascot'
 import { api, baht, BAND, friendly, useApi } from './theme'
 import { Card, Icon, Segmented, Skeleton } from './ui'
 

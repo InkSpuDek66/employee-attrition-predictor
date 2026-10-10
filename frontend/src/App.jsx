@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import Logo from '../logo/Logo'
 import Login from './Login'
-import Mascot from './Mascot'
+import Mascot from './mascot/Mascot'
 import Overview from './Overview'
 import { inputClass, loadMascot, loadSession, saveMascot, saveSession, THB_PER_USD } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
@@ -140,9 +141,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
       {/* จอเตี้ย (แล็ปท็อปซูม 100%): sidebar เลื่อนได้ในตัว กล่องผู้ใช้ + ปุ่มออกจากระบบติดขอบล่างเสมอ */}
       <aside className="border-b border-line bg-card lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-center gap-2.5 px-4 py-4 lg:py-6">
-          <div className="grid size-9 place-items-center rounded-lg bg-primary text-on-primary">
-            <Icon name="trend" className="size-5" />
-          </div>
+          <Logo className="size-10 shrink-0" />
           <div className="leading-tight">
             <div className="whitespace-nowrap text-sm font-semibold text-fg" translate="no">
               Attrition Predictor
