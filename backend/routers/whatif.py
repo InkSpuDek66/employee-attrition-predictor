@@ -5,10 +5,12 @@
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ValidationError
 
-from routers.predict import load_calibration, resolve_employee, score
+import auth
+import calibration
+from routers.predict import resolve_employee, score
 from routers.shap import UNCALIBRATED_WARNING
 from schemas import EmployeeInput, EmployeeRef, Score
 
@@ -38,16 +40,18 @@ def _shown(s: Score) -> float:
 
 
 @router.post("/whatif", response_model=WhatIfResponse)
-def whatif(req: WhatIfRequest):
+def whatif(req: WhatIfRequest, user: dict = Depends(auth.current_user)):
     unknown = sorted(set(req.changes) - set(EmployeeInput.model_fields))
     if unknown:
         raise HTTPException(422, f"ไม่รู้จักฟีเจอร์: {unknown}")
-    record = load_calibration(req.tenant_id)
+    record = calibration.load(user["tenant_id"])  # บริษัทจาก token (DE-11)
     base = resolve_employee(req)
     try:
         changed = EmployeeInput(**{**base, **req.changes}).model_dump()
     except ValidationError as e:
-        raise HTTPException(422, f"ค่าที่เปลี่ยนไม่ถูกต้อง: {e.errors(include_url=False)}")
+        # ข้อความอ่านได้ เช่น "YearsSinceLastPromotion: ต้องไม่เกิน 6 ปี เมื่อเทียบกับจำนวนปีที่อยู่บริษัทนี้" (UX-04)
+        detail = "; ".join(f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors(include_url=False))
+        raise HTTPException(422, f"ค่าที่เปลี่ยนไม่ถูกต้อง: {detail}")
 
     before, after = score([base, changed], record)
     return WhatIfResponse(

@@ -158,6 +158,11 @@ CREATE TABLE IF NOT EXISTS company_risk_summary (
     expected_loss_total         double precision NOT NULL,
     high_risk_replacement_cost  double precision NOT NULL,
     top_factors                 jsonb NOT NULL,   -- [{feature, mean_abs_shap, share, actionable, recommendation}]
+    -- ค่าปรับเทียบที่ใช้คำนวณรอบนี้ (tenant_calibrations.calibrated_at) ว่าง = คะแนนดิบ (DE-11)
+    -- /company-summary ใช้ cache เฉพาะเมื่อตรงกับค่าปรับเทียบปัจจุบัน ปรับเทียบใหม่/ยกเลิกแล้ว cache เก่าจึงไม่ถูกใช้
+    calibrated_at               timestamptz,
     generated_at                timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS company_risk_summary_latest_idx ON company_risk_summary (tenant_id, department, generated_at DESC);
+-- volume ที่สร้างก่อนมีคอลัมน์นี้ (รันซ้ำได้)
+ALTER TABLE company_risk_summary ADD COLUMN IF NOT EXISTS calibrated_at timestamptz;

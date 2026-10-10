@@ -1,6 +1,7 @@
 # ruff: lint Python ใน CI (.github/workflows/ci.yml) รันในเครื่องด้วย `ruff check .`
 line-length = 120
-extend-exclude = ["notebooks"]
+# frontend/logo: สคริปต์แปลงโลโก้เป็น SVG ใช้ครั้งเดียว แอปไม่ได้ import (QA-05)
+extend-exclude = ["notebooks", "frontend/logo"]
 
 [lint]
 # เริ่มจากกฎที่จับบั๊กจริง (pyflakes + syntax/import error) ก่อน ค่อยเพิ่มกฎ style ทีหลังเมื่อทีมตกลงกัน

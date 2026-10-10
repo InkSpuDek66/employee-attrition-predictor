@@ -80,7 +80,7 @@ export function featureLabel(name) {
 // shown = ค่าที่แปลงแล้ว (featureValue หรือเงินบาท), value = ค่าดิบ (ใช้กับฟีเจอร์ที่ต้องดูค่าจริง)
 const PHRASES = {
   MonthlyIncome: (s) => `เงินเดือน ${s}`,
-  DistanceFromHome: (s) => `ระยะเดินทางไปทำงาน ${s}`, // คิดตามวันเข้าออฟฟิศแล้ว (WFH = เดินทางน้อยลง)
+  DistanceFromHome: (s) => `ระยะเดินทางไปทำงาน ${s}`, // คนที่ WFH หน้า SHAP ส่งระยะทางจริง + ค่าที่ปรับแล้วมาใน s (DE-18)
   OverTime: (s) => (s === 'ทำ' ? 'ทำงานล่วงเวลา (OT)' : 'ไม่ทำ OT'),
   OverTimeXDistance: (s, v) => (v > 0 ? `ทำ OT และบ้านห่างจากที่ทำงาน ${s}` : 'ไม่ทำ OT'),
   BusinessTravel: (s) => (s === 'ไม่ต้องไป' ? 'ไม่ต้องไปทำงานนอกสถานที่' : `ต้องไปทำงานนอกสถานที่${s}`),

@@ -9,6 +9,8 @@ ponytail: อ่านบริษัทเดียว (ibm_demo) ทั้ง 
 import json
 import os
 import sys
+import threading
+import time
 from functools import lru_cache
 
 import mlflow.xgboost
@@ -37,10 +39,53 @@ OFFICE_DAYS = "OfficeDaysPerWeek"
 FULL_WEEK = 5
 
 
+# DE-15: ข้อมูลพนักงานใน DB เปลี่ยนได้จากทางอื่น (src/db.py, SQL, worker อื่น) cache จึงเช็ก "เวอร์ชันข้อมูล"
+# (จำนวนแถว + updated_at ล่าสุด query เร็วมาก) ไม่เกินทุก DATA_CHECK_SECONDS วินาที ถ้าเปลี่ยนก็โหลดใหม่
+# ponytail: UPDATE ด้วย SQL ตรงที่ไม่แก้ updated_at จะไม่ถูกจับ ถ้าต้องแก้มือให้ SET updated_at = now() ด้วย
+DATA_CHECK_SECONDS = 5
+_seen = {"version": None, "checked": float("-inf")}
+_seen_lock = threading.Lock()
+
+
+def _data_version():
+    with db.connect() as conn:
+        return conn.execute(
+            "SELECT count(*), max(updated_at) FROM employees WHERE tenant_id = %s", (db.DEMO_TENANT,)
+        ).fetchone()
+
+
+def _refresh_if_changed():
+    if not db.url():
+        return
+    with _seen_lock:
+        now = time.monotonic()
+        if now - _seen["checked"] < DATA_CHECK_SECONDS:
+            return
+        _seen["checked"] = now
+        version = _data_version()
+        if version != _seen["version"]:
+            _load_employees.cache_clear()
+            _employee_features.cache_clear()
+            _seen["version"] = version
+
+
+def clear_cache():
+    """ล้าง cache ข้อมูลพนักงานทันที (หลังนำเข้าใน process นี้) คำขอถัดไปจะเช็กเวอร์ชันแล้วโหลดใหม่"""
+    with _seen_lock:
+        _load_employees.cache_clear()
+        _employee_features.cache_clear()
+        _seen.update(version=None, checked=float("-inf"))
+
+
 @lru_cache
-def raw_employees() -> pd.DataFrame:
+def _load_employees() -> pd.DataFrame:
     df = db.read_employees() if db.url() else load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
     return df if OFFICE_DAYS in df else df.assign(**{OFFICE_DAYS: FULL_WEEK})
+
+
+def raw_employees() -> pd.DataFrame:
+    _refresh_if_changed()
+    return _load_employees()
 
 
 def commute_adjusted(raw: pd.DataFrame) -> pd.DataFrame:
@@ -78,9 +123,14 @@ def to_features(raw: pd.DataFrame) -> pd.DataFrame:
     return X.iloc[: len(raw)][model().feature_names_in_]
 
 
-@lru_cache
 def employee_features() -> pd.DataFrame:
     """ฟีเจอร์ของพนักงานทุกคน index = EmployeeNumber"""
+    _refresh_if_changed()
+    return _employee_features()
+
+
+@lru_cache
+def _employee_features() -> pd.DataFrame:
     raw = raw_employees()
     return to_features(raw).set_index(raw["EmployeeNumber"])  # to_features ปรับระยะทางตามวันเข้าออฟฟิศให้แล้ว
 

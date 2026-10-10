@@ -28,6 +28,10 @@ class IntegrityError(Exception):
     ข้อความมีแค่ชื่อ constraint ไม่มีค่าในแถว (error ของ Postgres แนบทั้งแถวมา = ข้อมูลส่วนบุคคล ห้ามลง log)"""
 
 
+class SchemaOutdated(Exception):
+    """ตาราง/คอลัมน์ที่โค้ดใช้ยังไม่มีใน DB (volume เก่าที่ยังไม่ได้รัน 02-app-schema.sql ซ้ำ, QA-06)"""
+
+
 def connect():
     import psycopg  # import ตอนใช้ ให้เครื่องที่ไม่ใช้ DB ไม่ต้องลง psycopg
 
@@ -67,6 +71,8 @@ def upsert_employees(conn, df: pd.DataFrame, tenant_id: str, source: str) -> int
             cur.executemany(sql, rows)
     except psycopg.IntegrityError as e:
         raise IntegrityError(e.diag.constraint_name or type(e).__name__) from None
+    except (psycopg.errors.UndefinedColumn, psycopg.errors.UndefinedTable) as e:
+        raise SchemaOutdated(type(e).__name__) from None  # ข้อความของ Postgres อาจมีค่าในแถว ไม่ส่งต่อ
     return len(rows)
 
 

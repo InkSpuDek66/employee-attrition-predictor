@@ -46,6 +46,10 @@ NOT_ACTIONABLE = (
     "ไม่ใช่ปัจจัยที่บริษัทปรับได้โดยตรง ใช้ประกอบการเข้าใจกลุ่มเสี่ยงเท่านั้น"
     " ห้ามใช้เป็นเกณฑ์คัดเลือกหรือเลือกปฏิบัติ (ดู Fairness check README 6.4)"
 )
+# ข้อมูลส่วนตัว/protected attribute: แสดงในตารางได้ แต่หน้าเว็บห้ามยกเป็น "สาเหตุ" ของความเสี่ยง (UX-06)
+PERSONAL = ("Age", "Gender", "MaritalStatus")
+# ตัวเลขที่ IBM ไม่ได้อธิบายความหมาย HR ตีความไม่ได้ จึงไม่ยกเป็นเหตุผลเช่นกัน (UX-07)
+UNEXPLAINED = ("DailyRate", "HourlyRate", "MonthlyRate")
 
 
 def feature_group(column: str) -> str:
@@ -54,6 +58,16 @@ def feature_group(column: str) -> str:
         if column.startswith(nominal + "_"):
             return nominal
     return column
+
+
+def factor_kind(column: str) -> str:
+    """'personal' | 'unexplained' | 'actionable' (บริษัทปรับได้ มีคำแนะนำ) | 'background' (ประวัติ/ตำแหน่ง ปรับตรงๆ ไม่ได้)"""
+    group = feature_group(column)
+    if group in PERSONAL:
+        return "personal"
+    if group in UNEXPLAINED:
+        return "unexplained"
+    return "actionable" if group in RECOMMENDATIONS else "background"
 
 
 def factor_ranking(shap_values: np.ndarray, feature_names) -> pd.Series:

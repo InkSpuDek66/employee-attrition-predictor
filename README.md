@@ -316,8 +316,11 @@ replacement_cost_estimate = severance_pay (ถ้าเข้าเงื่อ�
 
 retain_cost_estimate = ต้นทุนโดยประมาณของมาตรการรักษาคน (เช่น ปรับเงินเดือน, ลด OT)
 
-ROI = replacement_cost_estimate - retain_cost_estimate
+expected_loss    = risk_score x replacement_cost_estimate
+expected_benefit = (risk_score ก่อน - risk_score หลังทำมาตรการ) x replacement_cost_estimate - retain_cost_estimate
+  ติดลบ = ต้นทุนมาตรการสูงกว่าความเสี่ยงที่ลดได้
 ```
+> สูตรเดิม `ROI = replacement_cost_estimate - retain_cost_estimate` สมมติว่าถ้าไม่ทำอะไรพนักงานจะลาออกแน่ ผลจึงเป็นบวกทั้ง 1,470 คน แม้คนที่คะแนนความเสี่ยง 1/100 ก็ได้ "คุ้ม 1.57 ล้านบาท" ([UX-15 รอบ 3](docs/reviews/round3_S.md#ux-15-ตัวเลข-ส่วนต่างถ้ารักษาไว้ได้-ชวนให้ตัดสินใจผิด)) ตอนนี้ `/financial-impact/{id}?risk_after=` รับคะแนนหลังทำมาตรการจากหน้า What-if แล้วคืน `expected_benefit` และปุ่มมาตรการสำเร็จรูปเลือกต้นทุนของมาตรการนั้นให้เอง
 > ตารางค่าชดเชยเก็บเป็น config แยกจากโค้ดโมเดล (`config/financial_impact.json`) เพื่อให้อัปเดตตามกฎหมายที่เปลี่ยนแปลงได้โดยไม่ต้อง retrain
 >
 > ที่ implement จริง: ค่าเริ่มต้นไม่รวมค่าชดเชยในต้นทุนหาคนแทน เพราะมาตรา 118 จ่ายเมื่อนายจ้างเลิกจ้าง ส่วนพนักงานที่ลาออกเองไม่ได้รับ เปิดได้ด้วย `include_severance` (เหตุผลเต็มอยู่ใน [รายงานร่าง Business Logic](docs/report_business_logic_draft_S.md) หัวข้อ 4.3)

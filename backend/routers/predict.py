@@ -6,8 +6,9 @@ ponytail: ยังไม่บันทึก attrition_predictions ลง DB (
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+import auth
 import calibration
 import model_store as ms
 from routers.shap import UNCALIBRATED_WARNING
@@ -21,13 +22,6 @@ router = APIRouter(tags=["predict"])
 class PredictResponse(Score):
     employee_id: Optional[int] = None
     warning: Optional[str] = None
-
-
-def load_calibration(tenant_id: Optional[str]):
-    try:
-        return calibration.load(tenant_id) if tenant_id else None
-    except ValueError as e:
-        raise HTTPException(422, str(e))
 
 
 def resolve_employee(ref: EmployeeRef) -> dict:
@@ -62,8 +56,8 @@ def score(records: list, calibration_record) -> list:
 
 
 @router.post("/predict", response_model=PredictResponse)
-def predict(req: EmployeeRef):
-    record = load_calibration(req.tenant_id)
+def predict(req: EmployeeRef, user: dict = Depends(auth.current_user)):
+    record = calibration.load(user["tenant_id"])  # บริษัทจาก token เหมือน /shap (DE-11) ไม่ใช่ tenant_id ใน request
     (result,) = score([resolve_employee(req)], record)
     return PredictResponse(
         **result.model_dump(),

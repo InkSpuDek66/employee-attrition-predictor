@@ -31,6 +31,17 @@ def test_estimate():
     assert out["expected_loss"].tolist() == pytest.approx((out["replacement_cost"] * [0.5, 0.1]).tolist())
     with pytest.raises(ValueError):
         br.estimate(employees, [0.5, 0.1], retention="nope")
+    assert "expected_benefit" not in out.columns  # ไม่ส่งคะแนนหลังทำมาตรการ = ไม่คำนวณ
+
+
+def test_expected_benefit_uses_risk_reduction():
+    """UX-15: ผลที่คาดว่าจะได้ = (คะแนนก่อน - หลัง) x ต้นทุนหาคนแทน - ต้นทุนมาตรการ คนที่แทบไม่เสี่ยงต้องติดลบ"""
+    employees = pd.DataFrame({"MonthlyIncome": [5000, 5000], "YearsAtCompany": [3, 3], "JobLevel": [3, 3]})
+    out = br.estimate(employees, [0.9, 0.007], retention="salary_raise_10pct", risk_scores_after=[0.5, 0.0])
+    replacement, retain = 5000 * 12 * 1.0, 5000 * 1.2
+    assert out["expected_loss_after"].tolist() == pytest.approx([0.5 * replacement, 0.0])
+    assert out["expected_benefit"].tolist() == pytest.approx([0.4 * replacement - retain, 0.007 * replacement - retain])
+    assert out["expected_benefit"].iloc[0] > 0 > out["expected_benefit"].iloc[1]
 
 
 def test_factor_ranking_groups_one_hot():

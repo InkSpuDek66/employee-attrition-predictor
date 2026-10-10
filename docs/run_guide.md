@@ -182,13 +182,21 @@ docker compose up -d postgres
 ```
 
 - ครั้งแรก (volume ใหม่) ตารางทั้ง 9 ตารางถูกสร้างอัตโนมัติ
-- ถ้าเคยรันก่อนมี schema (volume เก่า) ให้สร้างตารางเอง:
-
-  ```bash
-  docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U attrition -d attrition < docker/postgres/init/02-app-schema.sql
-  ```
-
+- ถ้ามี volume อยู่แล้ว ทำตามหัวข้อ "หลัง pull" ด้านล่าง
 - เช็กตาราง: `docker compose exec postgres psql -U attrition -d attrition -c "\dt"`
+
+### หลัง pull
+
+ไฟล์ใน `docker/postgres/init/` รันเองแค่ตอนสร้าง volume ใหม่ ถ้า pull แล้วไฟล์ในโฟลเดอร์นี้เปลี่ยน ต้องรันกับ DB ที่มีอยู่เองทุกครั้ง ไฟล์เขียนให้รันซ้ำได้ ไม่ลบข้อมูลเดิม
+
+```bash
+git diff --stat HEAD@{1} -- docker/postgres/init    # มีไฟล์ขึ้นมา = ต้องรันบรรทัดล่าง
+docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U attrition -d attrition < docker/postgres/init/02-app-schema.sql
+```
+
+ถ้าไม่รัน หน้าอื่นยังใช้ได้ แต่ปุ่ม "บันทึกเข้าระบบ" ในหน้านำเข้าจะได้ 503 "ฐานข้อมูลยังเป็นโครงสร้างรุ่นเก่า" (QA-06) และหน้าภาพรวมจะคำนวณสดทุกครั้งแทนการอ่านผลของ batch
+
+ถ้าโค้ด backend หรือ `src/` เปลี่ยนด้วย ให้ปิด backend (Terminal 1) แล้วรันใหม่ อย่าพึ่ง `--reload` เพราะมันไม่ดูไฟล์นอก `backend/` และระหว่างแก้งานตามรอบ 4 (10 ต.ค. 2026) backend ที่เปิดด้วย `--reload` ไม่ reload แม้แก้ไฟล์ใน `backend/`
 
 ### ใส่ข้อมูลและให้คะแนน
 
@@ -196,6 +204,8 @@ docker compose up -d postgres
 python src/db.py               # โหลด IBM dataset 1,470 คนเข้าตาราง employees (รันซ้ำได้)
 python backend/batch_score.py  # ให้คะแนนทุกคน บันทึกผลทำนาย SHAP ต้นทุน และสรุปบริษัท/แผนก
 ```
+
+- คะแนน ต้นทุน และสรุปเก็บทุกรอบ ส่วน SHAP เก็บครบทุกฟีเจอร์เฉพาะรอบล่าสุด รอบเก่าเหลือ 5 ปัจจัยที่มีผลมากสุดต่อคน (DE-16) DB จึงไม่โตรอบละราว 6 MB
 
 - หลังตั้ง `DATABASE_URL` แล้ว backend อ่านพนักงานจากตาราง `employees` (tenant `ibm_demo`) แทน CSV ต้อง restart backend
 - `batch_score.py` รันซ้ำได้ ทุกรอบเพิ่มผลชุดใหม่ ผลล่าสุดคือ `scored_at` มากสุด (Superset อ่านจากตารางพวกนี้)
@@ -209,11 +219,11 @@ python backend/batch_score.py  # ให้คะแนนทุกคน บั�
 ```bash
 .venv\Scripts\activate
 ruff check .
-python -m pytest backend                                 # ต้องตั้ง .env แล้ว (โหลดโมเดลจาก DagsHub)
+python -m pytest backend -rs                             # ต้องตั้ง .env แล้ว (โหลดโมเดลจาก DagsHub)
 cd frontend && npm run lint && npm test && npm run build
 ```
 
-CI บน GitHub รันชุดเดียวกันนี้ทุก PR
+test ของ DB (`backend/test_db.py`) ข้ามเองถ้าไม่ได้ตั้ง `DATABASE_URL` หรือ PostgreSQL ไม่ได้เปิด `-rs` จะบอกว่าข้ามข้อไหน CI บน GitHub รันชุดเดียวกันนี้ทุก PR รวม test ของ DB ด้วย (เปิด PostgreSQL และโหลดพนักงาน IBM ให้เอง, QA-01)
 
 ---
 

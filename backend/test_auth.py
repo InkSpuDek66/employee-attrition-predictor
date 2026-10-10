@@ -29,6 +29,8 @@ def login(username):
 def test_requires_login_and_rejects_bad_tokens():
     assert client.get("/shap/1").status_code == 401
     assert client.get("/shap/1", headers={"Authorization": "Bearer abc.def"}).status_code == 401
+    # SEC-16: อักษรนอก ASCII ใน token เคยทำให้ได้ 500
+    assert client.get("/auth/me", headers=[(b"authorization", "Bearer abc.ไทย".encode())]).status_code == 401
     expired = auth.issue_token("hr_demo", now=time.time() - auth.TOKEN_TTL - 1)
     assert client.get("/shap/1", headers={"Authorization": f"Bearer {expired}"}).status_code == 401
     assert client.post("/auth/login", json={"username": "hr_demo", "password": "wrong"}).status_code == 401

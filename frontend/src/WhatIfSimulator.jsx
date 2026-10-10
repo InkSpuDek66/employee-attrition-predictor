@@ -44,7 +44,8 @@ const GROUPS = [
     icon: 'trend',
     controls: [
       { field: 'JobLevel', type: 'select', options: [1, 2, 3, 4, 5].map((v) => [v, JOB_LEVELS[v]]), wide: true },
-      { field: 'YearsSinceLastPromotion', type: 'range', min: 0, max: 15, step: 1 },
+      // UX-04: ไม่ได้เลื่อนตำแหน่งนานกว่าที่อยู่บริษัทไม่ได้ (backend ตอบ 422) แถบจึงหยุดที่ YearsAtCompany ของคนนั้น
+      { field: 'YearsSinceLastPromotion', type: 'range', min: 0, max: 15, step: 1, maxFrom: 'YearsAtCompany' },
       { field: 'TrainingTimesLastYear', type: 'range', min: 0, max: 6, step: 1 },
     ],
   },
@@ -137,7 +138,8 @@ function MoneyControl({ field, base, value, rate, onChange }) {
 
 // wide = กว้างเต็มแถว (ตัวเลือกยาวๆ เช่น ระดับตำแหน่ง จะได้อยู่แถวเดียว ไม่ทำให้กล่องข้างๆ สูงตาม)
 // hint = คำอธิบายสั้นใต้ชื่อช่อง (ช่องที่ชื่ออาจเข้าใจผิด)
-function Control({ field, type, options, base, value, onChange, unit, wide, hint, ...range }) {
+// maxFrom คิด max ที่จุดเรียกแล้ว แยกออกจาก range ไม่ให้หลุดไปเป็น attribute ของ <input>
+function Control({ field, type, options, base, value, onChange, unit, wide, hint, maxFrom: _maxFrom, ...range }) {
   const withUnit = (v) => (unit ? `${v.toLocaleString()} ${unit}` : v.toLocaleString())
   const changed = value !== base
   const optionText = (v) => options?.find(([o]) => String(o) === String(v))?.[1] ?? v
@@ -174,13 +176,29 @@ function Control({ field, type, options, base, value, onChange, unit, wide, hint
   )
 }
 
-function Stat({ label, value, tone }) {
-  const tones = { red: 'text-risk-high', blue: 'text-accent', green: 'text-risk-low' }
+function Stat({ label, value, tone, sub }) {
+  const tones = { red: 'text-risk-high', blue: 'text-accent', green: 'text-risk-low', muted: 'text-muted-fg' }
   return (
     <div className="rounded-lg border border-line bg-canvas p-4">
       <div className="text-xs font-medium text-muted-fg">{label}</div>
       <div className={`mt-1 text-2xl font-semibold tabular-nums ${tones[tone]}`}>{value}</div>
+      {sub && <div className="mt-1 text-xs text-muted-fg">{sub}</div>}
     </div>
+  )
+}
+
+// UX-15: ผลที่คาดว่าจะได้ = ความเสี่ยงที่ลดได้ - ต้นทุนมาตรการ (backend คิดให้เมื่อส่ง risk_after) ติดลบ = ไม่คุ้ม บอกตรงๆ
+function BenefitStat({ impact, money }) {
+  const label = 'ผลที่คาดว่าจะได้'
+  if (impact.expected_benefit == null) return <Stat label={label} value="—" tone="muted" sub="ลองกดมาตรการหรือปรับค่าด้านบนก่อน" />
+  const worth = impact.expected_benefit >= 0
+  return (
+    <Stat
+      label={label}
+      value={money(impact.expected_benefit)}
+      tone={worth ? 'green' : 'red'}
+      sub={worth ? 'ความเสี่ยงที่ลดได้มากกว่าต้นทุนมาตรการ' : 'ต้นทุนสูงกว่าความเสี่ยงที่ลดได้'}
+    />
   )
 }
 
@@ -242,14 +260,15 @@ function BandToast({ kind }) {
 }
 
 // มาตรการสำเร็จรูป: กดทีเดียวปรับหลายช่อง (ค่าเป็นหน่วยของโมเดล: เงินเดือนเป็นดอลลาร์)
+// retention = มาตรการใน config/financial_impact.json ที่ใช้คิดต้นทุน กดแล้วการ์ดต้นทุนเปลี่ยนตาม (UX-15 ข้อ 2 / UX-03)
 const PRESETS = [
-  { label: 'ปิด OT', apply: () => ({ OverTime: 'No' }) },
-  { label: 'ขึ้นเงินเดือน 10%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.1, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 10) }) },
-  { label: 'ขึ้นเงินเดือน 20%', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 20) }) },
-  { label: 'เลื่อนตำแหน่ง', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0 }) },
+  { label: 'ปิด OT', retention: 'reduce_overtime', apply: () => ({ OverTime: 'No' }) },
+  { label: 'ขึ้นเงินเดือน 10%', retention: 'salary_raise_10pct', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.1, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 10) }) },
+  { label: 'ขึ้นเงินเดือน 20%', retention: 'salary_raise_20pct', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 20) }) },
+  { label: 'เลื่อนตำแหน่ง', retention: 'training_and_promotion_track', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0 }) },
   { label: 'งดงานนอกสถานที่', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
   { label: 'ให้ WFH 3 วัน', apply: (b) => ({ OfficeDaysPerWeek: Math.min(b.OfficeDaysPerWeek ?? 5, 2) }) },
-  { label: 'อบรมเพิ่ม', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
+  { label: 'อบรมเพิ่ม', retention: 'training_and_promotion_track', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
   { label: 'ให้สิทธิ์ซื้อหุ้น', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
 ]
 const CONTROL = Object.fromEntries(GROUPS.flatMap((g) => g.controls.map((c) => [c.field, c])))
@@ -332,19 +351,24 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
   }, [loaded, changes, onRisk])
 
   // ต้นทุน Retain vs Replace ของพนักงานคนนี้ (คิดจากข้อมูลเดิม ไม่ใช่ค่าที่ปรับ)
+  // ปรับค่าแล้วส่งคะแนนหลังปรับไปด้วย backend คิด "ผลที่คาดว่าจะได้" ให้ (UX-15) ยังไม่ปรับ = ไม่ส่ง
+  const riskAfter = result && Object.keys(result.changes_applied).length ? scoreOf(result.after) : null
   useEffect(() => {
     if (!loaded?.base) return
+    const ctrl = new AbortController()
     const params = new URLSearchParams()
     if (retention) params.set('retention', retention)
-    if (loaded.tenant) params.set('tenant_id', loaded.tenant)
-    api(`/financial-impact/${loaded.id}?${params}`).then(setImpact, (err) => setError(friendly(err)))
-  }, [loaded, retention])
+    if (riskAfter != null) params.set('risk_after', riskAfter)
+    api(`/financial-impact/${loaded.id}?${params}`, { signal: ctrl.signal }).then(setImpact, (err) => err.name !== 'AbortError' && setError(friendly(err)))
+    return () => ctrl.abort()
+  }, [loaded, retention, riskAfter])
 
   // ค่าเท่าค่าเดิมไหม (เงินเดือนเทียบเป็นบาทปัดเต็ม เพราะเก็บดอลลาร์ทศนิยม)
   const isBase = (field, v) =>
     field === 'MonthlyIncome' ? Math.round(v * rate) === Math.round(loaded.base[field] * rate) : v === loaded.base[field]
 
   function applyPreset(p) {
+    if (p.retention) setRetention(p.retention)
     const patch = p.apply(loaded.base)
     setChanges((c) => {
       const next = { ...c, ...patch }
@@ -446,7 +470,14 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                       c.type === 'money' ? (
                         <MoneyControl key={c.field} {...c} rate={rate} base={loaded.base[c.field]} value={current(c.field)} onChange={(v) => setValue(c.field, v)} />
                       ) : (
-                        <Control key={c.field} {...c} base={loaded.base[c.field]} value={current(c.field)} onChange={(v) => setValue(c.field, v)} />
+                        <Control
+                          key={c.field}
+                          {...c}
+                          {...(c.maxFrom && { max: Math.min(c.max, loaded.base[c.maxFrom]), hint: `ไม่เกินจำนวนปีที่อยู่บริษัทนี้ (${loaded.base[c.maxFrom]} ปี)` })}
+                          base={loaded.base[c.field]}
+                          value={current(c.field)}
+                          onChange={(v) => setValue(c.field, v)}
+                        />
                       )
                     ))}
                   </div>
@@ -465,7 +496,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
               <div className="grid gap-3 sm:grid-cols-3">
                 <Stat label="ต้นทุนถ้าต้องหาคนแทน" value={money(impact.replacement_cost)} tone="red" />
                 <Stat label={`ต้นทุนมาตรการ: ${impact.retention_label}`} value={money(impact.retain_cost)} tone="blue" />
-                <Stat label="ส่วนต่างถ้ารักษาไว้ได้" value={money(impact.net_benefit_if_retained)} tone="green" />
+                <BenefitStat impact={impact} money={money} />
               </div>
               {/* บอกที่มาของตัวเลข กันคนเข้าใจผิดว่าเป็นต้นทุนจริงของบริษัท (สูตรใน src/business_rules.py) */}
               <div className="mt-3 space-y-1 rounded-lg bg-muted px-4 py-3 text-xs text-muted-fg">
@@ -476,6 +507,11 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 </p>
                 <p>
                   <b className="text-fg">ต้นทุนมาตรการ</b> = เงินเดือน × {(impact.retain_cost / impact.monthly_income).toFixed(1)} เดือน
+                </p>
+                <p>
+                  <b className="text-fg">ผลที่คาดว่าจะได้</b> = มูลค่าความเสี่ยงที่ลดลง (ก่อน − หลังปรับ) − ต้นทุนมาตรการ
+                  {impact.expected_benefit != null &&
+                    ` = ${money(impact.expected_loss)} − ${money(impact.expected_loss_after)} − ${money(impact.retain_cost)}`}
                 </p>
                 <p>ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท</p>
               </div>
@@ -511,6 +547,13 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
               <div aria-live="polite">
                 <DeltaBadge delta={delta} />
               </div>
+              {/* DE-18: ผลของ WFH มาจากสูตรประมาณ (ระยะทาง × วันเข้าออฟฟิศ / 5) โมเดลไม่เคยเรียนเรื่องนี้ บอกไว้ใกล้ตัวเลข */}
+              {'OfficeDaysPerWeek' in result.changes_applied && (
+                <p className="flex items-start gap-1.5 text-xs text-muted-fg">
+                  <Icon name="info" className="size-4 shrink-0" />
+                  ผลของ WFH เป็นการประมาณจากระยะเดินทางที่ลดลงตามวันเข้าออฟฟิศ โมเดลไม่ได้เรียนเรื่อง WFH โดยตรง ใช้ประกอบการคิด ไม่ใช่ตัวเลขยืนยัน
+                </p>
+              )}
               <button
                 type="button"
                 onClick={saveScenario}

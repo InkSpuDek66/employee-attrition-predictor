@@ -3,7 +3,8 @@ financial_impact_estimates, company_risk_summary, model_runs) ให้ Superset
 
 ต้องตั้ง DATABASE_URL และโหลดพนักงานก่อน (python src/db.py) แล้วรัน:
     python backend/batch_score.py
-รันซ้ำได้ ทุกรอบเพิ่มผลชุดใหม่ (ผลล่าสุด = scored_at / generated_at มากสุด) ไม่ลบของเก่า
+รันซ้ำได้ ทุกรอบเพิ่มผลชุดใหม่ (ผลล่าสุด = scored_at / generated_at มากสุด) คะแนน/ต้นทุน/สรุปเก็บทุกรอบ
+ส่วน SHAP เก็บครบทุกฟีเจอร์เฉพาะรอบล่าสุด รอบเก่าเหลือ SHAP_KEEP_OLD อันดับแรกต่อคน (DE-16)
 ponytail: ให้คะแนนเฉพาะ tenant ibm_demo ตาม model_store ทำทุก tenant เมื่อแยกข้อมูลตามบริษัท (SEC-02)
 """
 
@@ -18,6 +19,9 @@ import company_summary as cs  # noqa: E402
 import db  # noqa: E402
 
 TENANT = db.DEMO_TENANT
+# DE-16: 1 รอบของ 1,470 คน = SHAP 73,500 แถว (~6 MB) ถ้าเก็บครบทุกรอบ DB โตราว 2 GB/ปีเมื่อรันทุกวัน
+# รอบเก่าเก็บแค่ 5 ปัจจัยที่มีผลมากสุดต่อคน (พอให้ Superset ดูแนวโน้มเหตุผลย้อนหลัง) ตกลงตัวเลขกับ Nanthamon อีกครั้ง
+SHAP_KEEP_OLD = 5
 log = logging.getLogger(__name__)
 _lock = threading.Lock()
 _pending = threading.Event()
@@ -28,7 +32,7 @@ def run(conn) -> int:
     employees = ms.raw_employees().set_index("EmployeeNumber").loc[X.index]
     raw = ms.risk_scores(X)
     record = calibration.load(TENANT)
-    shown = calibration.apply(record, raw) if record else raw
+    shown = calibration.apply(record, raw) if record else raw  # คะแนนที่หน้าเว็บแสดง ใช้ทั้งตารางผลทำนายและสรุป (DE-11)
     shap_values = ms.explainer()(X).values
     version = ms.MODEL_VERSION
 
@@ -47,6 +51,17 @@ def run(conn) -> int:
                 (TENANT, int(e), version, float(r), float(s) if record else None, business_rules.risk_band(s))
                 for e, r, s in zip(X.index, raw, shown)
             ],
+        )
+        # DE-16: SHAP ของรอบก่อนๆ เหลือเฉพาะปัจจัยที่มีผลมากสุดต่อคน (รอบนี้ยังไม่ได้ใส่ จึงไม่ถูกลบ)
+        cur.execute(
+            "DELETE FROM shap_explanations s USING ("
+            "  SELECT x.prediction_id, x.feature_name,"
+            "         row_number() OVER (PARTITION BY x.prediction_id ORDER BY abs(x.shap_value) DESC) AS rank"
+            "  FROM shap_explanations x JOIN attrition_predictions p USING (prediction_id)"
+            "  WHERE p.tenant_id = %s AND p.scored_at < now()"
+            ") old "
+            "WHERE s.prediction_id = old.prediction_id AND s.feature_name = old.feature_name AND old.rank > %s",
+            (TENANT, SHAP_KEEP_OLD),
         )
         cur.execute(
             "SELECT employee_id, prediction_id FROM attrition_predictions WHERE tenant_id = %s AND scored_at = now()",
@@ -72,16 +87,18 @@ def run(conn) -> int:
                     copy.write_row((p, option, m.replacement_cost, m.retain_cost, severance, m.expected_loss))
 
         names = list(X.columns)
-        # คะแนนดิบ (ไม่ปรับเทียบ) ให้ตรงกับ /company-summary ที่อ่าน cache นี้
-        summaries = [{"department": None, **cs.summarize(shap_values, names, raw, employees)}]
-        summaries += cs.by_department(shap_values, names, raw, employees, top_n=5)
+        # คะแนนชุดเดียวกับที่หน้าเว็บแสดง (ปรับเทียบถ้ามี) จำนวนเสี่ยงสูงจึงตรงกับตาราง attrition_predictions (DE-11)
+        summaries = [{"department": None, **cs.summarize(shap_values, names, shown, employees)}]
+        summaries += cs.by_department(shap_values, names, shown, employees, top_n=5)
+        calibrated_at = record["calibrated_at"] if record else None
         cur.executemany(
             "INSERT INTO company_risk_summary (tenant_id, department, model_version, n_employees, mean_risk_score, "
-            "risk_bands, expected_loss_total, high_risk_replacement_cost, top_factors) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "risk_bands, expected_loss_total, high_risk_replacement_cost, top_factors, calibrated_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             [
                 (TENANT, s["department"], version, s["n_employees"], s["mean_risk_score"], json.dumps(s["risk_bands"]),
-                 s["expected_loss_total"], s["high_risk_replacement_cost"], json.dumps(s["top_factors"], ensure_ascii=False))
+                 s["expected_loss_total"], s["high_risk_replacement_cost"], json.dumps(s["top_factors"], ensure_ascii=False),
+                 calibrated_at)
                 for s in summaries
             ],
         )
