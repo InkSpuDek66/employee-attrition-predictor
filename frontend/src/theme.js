@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 // ค่าคงที่และ helper ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
 
 // เกณฑ์ระดับตาม README 6.1 ชุดเดียวกับ src/business_rules.py (MEDIUM_RISK / HIGH_RISK) แก้ต้องแก้คู่กัน
@@ -118,4 +119,26 @@ export async function api(path, options) {
   const res = await call(path, options)
   if (!res.ok) throw await fail(res)
   return res.json().catch(() => null)
+}
+
+// โหลดหลาย endpoint พร้อมกัน ผูกผลกับ key ของคำขอ (key เปลี่ยน = กำลังโหลดใหม่) ไม่ต้อง setState ใน effect ตอนเริ่ม
+export function useApi(paths) {
+  const key = paths.join('|')
+  const [res, setRes] = useState({ key: null })
+  useEffect(() => {
+    const ctrl = new AbortController()
+    Promise.all(key.split('|').map((p) => api(p, { signal: ctrl.signal }))).then(
+      (data) => setRes({ key, data }),
+      (err) => err.name !== 'AbortError' && setRes({ key, error: friendly(err) }),
+    )
+    return () => ctrl.abort()
+  }, [key])
+  return { loading: res.key !== key, data: res.data, error: res.error }
+}
+
+export function postFile(path, file, fields = {}) {
+  const form = new FormData()
+  form.append('file', file)
+  for (const [k, v] of Object.entries(fields)) form.append(k, v)
+  return api(path, { method: 'POST', body: form })
 }

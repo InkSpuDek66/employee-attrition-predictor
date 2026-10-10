@@ -67,10 +67,12 @@ COLUMNS = [
     ("HourlyRate", "อัตราค่าจ้างรายชั่วโมง", "ตามข้อมูล IBM (โมเดลต้องใช้)"),
     ("MonthlyRate", "อัตราค่าจ้างรายเดือน", "ตามข้อมูล IBM (โมเดลต้องใช้)"),
 ]
-THAI = {f: th for f, th, _ in COLUMNS}
-HINT = {f: hint for f, _, hint in COLUMNS}
+# ผลจริงว่าลาออกหรือยัง ใช้เฉพาะไฟล์ปรับเทียบ (/recalibrate/upload) ไฟล์นำเข้าปกติมีก็ได้ไม่มีก็ได้ (ไม่ได้บันทึก)
+LABEL = ("Attrition", "ลาออกแล้วหรือยัง", "ลาออก / ยังอยู่")
+THAI = {f: th for f, th, _ in COLUMNS + [LABEL]}
+HINT = {f: hint for f, _, hint in COLUMNS + [LABEL]}
 # รับได้ทั้งหัวคอลัมน์ไทยและชื่อคอลัมน์ IBM (ไฟล์ที่ export จากระบบเดิม)
-HEADER_TO_FIELD = {th: f for f, th, _ in COLUMNS} | {f: f for f, _, _ in COLUMNS}
+HEADER_TO_FIELD = {th: f for f, th, _ in COLUMNS + [LABEL]} | {f: f for f, _, _ in COLUMNS + [LABEL]}
 
 # ค่าภาษาไทย -> ค่าที่โมเดลรู้จัก (รับค่าภาษาอังกฤษแบบ IBM ได้ด้วย)
 THAI_VALUES = {
@@ -78,6 +80,7 @@ THAI_VALUES = {
     "MaritalStatus": {"โสด": "Single", "สมรส": "Married", "แต่งงาน": "Married", "หย่า": "Divorced"},
     "OverTime": {"ทำ": "Yes", "ไม่ทำ": "No", "ใช่": "Yes", "ไม่ใช่": "No"},
     "BusinessTravel": {"ไม่เดินทาง": "Non-Travel", "นานๆ ครั้ง": "Travel_Rarely", "นานๆครั้ง": "Travel_Rarely", "บ่อย": "Travel_Frequently"},
+    "Attrition": {"ลาออก": "Yes", "ลาออกแล้ว": "Yes", "ยังอยู่": "No", "ยังทำงานอยู่": "No"},
 }
 
 
@@ -98,6 +101,7 @@ class ValidateResponse(BaseModel):
     errors_truncated: int
     preview: list[dict]
     saved: bool = False
+    saved_ids: list[int] = []  # รหัสพนักงานที่เพิ่งบันทึก (ไม่เกิน 20 คนแรก) ให้หน้าเว็บกดไปดูได้
     note: str = "ตรวจไฟล์อย่างเดียว ยังไม่ได้บันทึกเข้าระบบ"
 
 
@@ -143,8 +147,16 @@ def _clean(value):
     return value
 
 
-async def _check(file: UploadFile):
-    """ตรวจไฟล์ คืน (ผลตรวจ, แถวที่ถูกต้องเป็นชื่อคอลัมน์ IBM เงินเดือนยังเป็นบาท)"""
+def to_model_units(rows: pd.DataFrame) -> pd.DataFrame:
+    """เงินเดือนบาท -> หน่วยของโมเดล (USD จำนวนเต็ม) ก่อนบันทึก/ให้คะแนน"""
+    rows = rows.copy()
+    rows["MonthlyIncome"] = (rows["MonthlyIncome"].astype(float) / THB_PER_USD).round().clip(lower=1).astype(int)
+    return rows
+
+
+async def _check(file: UploadFile, label: bool = False):
+    """ตรวจไฟล์ คืน (แถวที่ถูกต้องเป็นชื่อคอลัมน์ IBM เงินเดือนยังเป็นบาท, ผลตรวจ)
+    label=True: ต้องมีคอลัมน์ "ลาออกแล้วหรือยัง" ทุกแถว (ไฟล์ปรับเทียบ) และใส่ Attrition = Yes/No ในแถวที่คืน"""
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
         raise HTTPException(413, "ไฟล์ใหญ่เกิน 5 MB")
@@ -156,7 +168,7 @@ async def _check(file: UploadFile):
     df.columns = headers
     mapped = {h: HEADER_TO_FIELD[h] for h in headers if h in HEADER_TO_FIELD}
     present = set(mapped.values())
-    missing = [THAI[f] for f, _, _ in COLUMNS if f not in present]
+    missing = [THAI[f] for f, _, _ in COLUMNS + ([LABEL] if label else []) if f not in present]
     unknown = [h for h in headers if h not in HEADER_TO_FIELD and not h.startswith("Unnamed")]
 
     errors: list[RowError] = []
@@ -167,10 +179,15 @@ async def _check(file: UploadFile):
         row = {mapped[h]: _clean(v) for h, v in raw.items() if h in mapped}
         if all(v is None for v in row.values()):
             continue  # แถวว่างท้ายไฟล์
+        shown = dict(row)  # ค่าตามที่ผู้ใช้กรอก (ภาษาไทย) ไว้โชว์ในตัวอย่าง ก่อนแปลงเป็นค่าของโมเดล
         for field, table in THAI_VALUES.items():
             if isinstance(row.get(field), str):
                 row[field] = table.get(row[field], row[field])
         row_errors = []
+
+        attrition = row.pop("Attrition", None)  # ไม่ใช่ฟีเจอร์ของโมเดล แยกออกก่อนตรวจ
+        if label and "Attrition" in present and attrition not in ("Yes", "No"):
+            row_errors.append(RowError(row=excel_row, column=LABEL[1], message="ว่างอยู่ ต้องกรอก" if attrition is None else f"ค่าไม่ถูกต้อง ต้องเป็น: {LABEL[2]}"))
 
         emp_id = row.pop("EmployeeNumber", None)
         try:
@@ -197,9 +214,9 @@ async def _check(file: UploadFile):
         else:
             n_valid += 1
             if checked:  # None = ผ่านแต่ขาดทั้งคอลัมน์ (บอกใน missing_columns) บันทึกไม่ได้
-                valid.append(checked.model_dump() | {"EmployeeNumber": emp_id})  # ค่าที่แปลงชนิดแล้ว ("41" -> 41)
+                valid.append(checked.model_dump() | {"EmployeeNumber": emp_id} | ({"Attrition": attrition} if label else {}))  # ค่าที่แปลงชนิดแล้ว ("41" -> 41)
             if len(preview) < 5:
-                preview.append({THAI["EmployeeNumber"]: emp_id} | {THAI[f]: row.get(f) for f, _, _ in COLUMNS[1:9]})
+                preview.append({THAI["EmployeeNumber"]: str(emp_id)} | {THAI[f]: shown.get(f) for f, _, _ in COLUMNS[1:9]})
 
     n_rows = n_valid + len({e.row for e in errors})
     return valid, ValidateResponse(
@@ -230,8 +247,7 @@ async def import_employees(
     valid, result = await _check(file)
     if result.missing_columns or result.n_invalid or not valid:
         raise HTTPException(422, "ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด กด \"ตรวจไฟล์\" แล้วแก้ให้ครบก่อนบันทึก")
-    rows = pd.DataFrame(valid)
-    rows["MonthlyIncome"] = (rows["MonthlyIncome"].astype(float) / THB_PER_USD).round().clip(lower=1).astype(int)
+    rows = to_model_units(pd.DataFrame(valid))
     try:
         with db.connect() as conn:
             existing = {r[0] for r in conn.execute("SELECT employee_id FROM employees WHERE tenant_id = %s", (user["tenant_id"],))}
@@ -243,14 +259,19 @@ async def import_employees(
     ms.employee_features.cache_clear()
     n_updated = len(existing & set(rows["EmployeeNumber"]))
     return result.model_copy(
-        update={"saved": True, "note": f"บันทึกแล้ว: เพิ่มใหม่ {len(rows) - n_updated:,} คน อัปเดต {n_updated:,} คน"}
+        update={
+            "saved": True,
+            "note": f"บันทึกแล้ว: เพิ่มใหม่ {len(rows) - n_updated:,} คน อัปเดต {n_updated:,} คน",
+            "saved_ids": [int(i) for i in rows["EmployeeNumber"].head(20)],
+        }
     )
 
 
-def _example_rows(n: int = 2) -> list[dict]:
+def _example_rows(n: int = 2, label: bool = False) -> list[dict]:
     """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือน × 35 เป็นบาท ให้ดูเป็นตัวอย่างเท่านั้น)"""
     raw = ms.raw_employees().head(n)
     back = {
+        "Attrition": {"Yes": "ลาออก", "No": "ยังอยู่"},
         "Gender": {"Male": "ชาย", "Female": "หญิง"},
         "MaritalStatus": {"Single": "โสด", "Married": "สมรส", "Divorced": "หย่า"},
         "OverTime": {"Yes": "ทำ", "No": "ไม่ทำ"},
@@ -259,7 +280,7 @@ def _example_rows(n: int = 2) -> list[dict]:
     rows = []
     for rec in raw.to_dict("records"):
         out = {}
-        for field, th, _ in COLUMNS:
+        for field, th, _ in COLUMNS + ([LABEL] if label else []):
             v = rec[field]
             out[th] = round(v * THB_PER_USD / 100) * 100 if field == "MonthlyIncome" else back.get(field, {}).get(v, v)
         rows.append(out)
@@ -269,12 +290,14 @@ def _example_rows(n: int = 2) -> list[dict]:
 @router.get("/employees/template")
 def download_template(n_examples: Optional[int] = 2):
     """ไฟล์ Excel ตัวอย่าง: ชีต "พนักงาน" (หัวคอลัมน์ + แถวตัวอย่าง) และชีต "คำอธิบาย" """
+    return template_response(_example_rows(max(0, min(n_examples or 0, 5))), COLUMNS, "employee_template.xlsx")
+
+
+def template_response(rows: list[dict], columns: list, filename: str) -> StreamingResponse:
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as xw:
-        pd.DataFrame(_example_rows(max(0, min(n_examples or 0, 5))), columns=[th for _, th, _ in COLUMNS]).to_excel(
-            xw, sheet_name="พนักงาน", index=False
-        )
-        pd.DataFrame([{"คอลัมน์": th, "ต้องกรอก": "ต้อง", "ค่าที่รับ": hint} for _, th, hint in COLUMNS]).to_excel(
+        pd.DataFrame(rows, columns=[th for _, th, _ in columns]).to_excel(xw, sheet_name="พนักงาน", index=False)
+        pd.DataFrame([{"คอลัมน์": th, "ต้องกรอก": "ต้อง", "ค่าที่รับ": hint} for _, th, hint in columns]).to_excel(
             xw, sheet_name="คำอธิบาย", index=False
         )
         roles = EmployeeInput.model_fields["JobRole"].annotation.__args__
@@ -286,5 +309,5 @@ def download_template(n_examples: Optional[int] = 2):
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=employee_template.xlsx"},
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )

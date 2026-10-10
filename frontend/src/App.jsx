@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import Calibrate from './Calibrate'
 import Login from './Login'
 import Mascot from './Mascot'
 import Overview from './Overview'
@@ -22,6 +23,7 @@ const TABS = [
   { id: 'overview', icon: 'chart', label: 'ภาพรวมบริษัท', short: 'ภาพรวม', hint: 'ใครเสี่ยงลาออก และเพราะอะไร' },
   { id: 'shap', icon: 'search', label: 'SHAP Viewer', short: 'SHAP', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
   { id: 'whatif', icon: 'sliders', label: 'What-if Simulator', short: 'What-if', hint: 'ถ้าปรับเงื่อนไข ความเสี่ยงจะเปลี่ยนไหม', Component: WhatIfSimulator },
+  { id: 'calibrate', icon: 'scale', label: 'ปรับเทียบโมเดล', short: 'ปรับเทียบ', hint: 'ปรับคะแนนให้ตรงกับอัตราลาออกจริงของบริษัท', admin: true },
   { id: 'import', icon: 'upload', label: 'นำเข้าข้อมูล', short: 'นำเข้า', hint: 'อัปโหลดรายชื่อพนักงานของบริษัท' },
 ]
 const PER_EMPLOYEE = TABS.filter((t) => t.Component).map((t) => t.id)
@@ -61,8 +63,13 @@ export default function App() {
 
 function Workspace({ user, onLogout, dark, onToggleTheme }) {
   const tenant = user.tenant_id
+  const tabs = TABS.filter((t) => !t.admin || user.role === 'admin') // แท็บ admin ไม่โชว์ให้ HR
   const [initial] = useState(fromUrl) // อ่าน URL ครั้งเดียวตอนเปิดหน้า
-  const [tab, setTab] = useState(initial.tab)
+  const [wantedTab, setTab] = useState(initial.tab)
+  const tab = tabs.some((t) => t.id === wantedTab) ? wantedTab : 'overview' // HR เปิดลิงก์แท็บ admin = ไปหน้าภาพรวม
+  // ข้อมูลเปลี่ยน (ปรับเทียบ/นำเข้าพนักงาน) = เพิ่มเลขนี้ หน้าภาพรวม/SHAP/What-if โหลดใหม่ด้วยคะแนนล่าสุด
+  const [dataVersion, setDataVersion] = useState(0)
+  const refreshData = () => setDataVersion((v) => v + 1)
   const [employeeId, setEmployeeId] = useState(initial.id || '1')
   const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant, n: 1 } : null)
   const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
@@ -130,7 +137,8 @@ function Workspace({ user, onLogout, dark, onToggleTheme }) {
         ข้ามไปเนื้อหาหลัก
       </a>
       {/* Sidebar (จอใหญ่) / แถบบน (มือถือ) */}
-      <aside className="border-b border-line bg-card lg:fixed lg:border-b-0 lg:border-r lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col">
+      {/* จอเตี้ย (แล็ปท็อปซูม 100%): sidebar เลื่อนได้ในตัว กล่องผู้ใช้ + ปุ่มออกจากระบบติดขอบล่างเสมอ */}
+      <aside className="border-b border-line bg-card lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-center gap-2.5 px-4 py-4 lg:py-6">
           <div className="grid size-9 place-items-center rounded-lg bg-primary text-on-primary">
             <Icon name="trend" className="size-5" />
@@ -145,11 +153,15 @@ function Workspace({ user, onLogout, dark, onToggleTheme }) {
         </div>
 
         {/* มือถือ: 4 ช่องเท่ากัน ไอคอนบนชื่อสั้น เห็นครบทุกแท็บไม่ต้องเลื่อน / จอใหญ่: รายการแนวตั้งใน sidebar */}
-        <nav className="grid grid-cols-4 gap-1 px-2 pb-2 lg:flex lg:flex-col lg:px-3 lg:pb-0" aria-label="เครื่องมือ">
+        <nav
+          className="grid gap-1 px-2 pb-2 lg:flex lg:flex-col lg:px-3 lg:pb-0"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+          aria-label="เครื่องมือ"
+        >
           <div className="hidden px-2 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-muted-fg/70 lg:block">
             เครื่องมือวิเคราะห์
           </div>
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const active = tab === t.id
             return (
               <button
@@ -173,7 +185,15 @@ function Workspace({ user, onLogout, dark, onToggleTheme }) {
           <Mascot risk={risk[tab]} who={who} onChoose={(v) => (setWho(v), saveMascot(v))} />
         </div>
 
-        <div className="flex items-center gap-3 border-t border-line px-4 py-3 lg:px-5">
+        <div className="hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
+          โมเดล{' '}
+          <span className="font-medium text-fg" translate="no">
+            attrition-xgboost-P
+          </span>
+          <br />
+          คะแนนใช้จัดลำดับความเสี่ยง ไม่ใช่คำตัดสิน
+        </div>
+        <div className="flex items-center gap-3 border-t border-line bg-card px-4 py-3 lg:sticky lg:bottom-0 lg:px-5">
           <div className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-fg">
             <Icon name="user" className="size-5" />
           </div>
@@ -192,14 +212,6 @@ function Workspace({ user, onLogout, dark, onToggleTheme }) {
           </button>
         </div>
 
-        <div className="hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
-          โมเดล{' '}
-          <span className="font-medium text-fg" translate="no">
-            attrition-xgboost-P
-          </span>
-          <br />
-          คะแนนใช้จัดลำดับความเสี่ยง ไม่ใช่คำตัดสิน
-        </div>
       </aside>
 
       <main id="main" className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
@@ -234,16 +246,21 @@ function Workspace({ user, onLogout, dark, onToggleTheme }) {
           )}
         </header>
 
-        <div hidden={tab !== 'overview'}>
+        <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`}>
           <Overview rate={rate} onPick={pick} />
         </div>
         <div hidden={tab !== 'import'}>
-          <Upload canSave={user.role === 'admin'} />
+          <Upload canSave={user.role === 'admin'} onSaved={refreshData} onPick={pick} />
         </div>
+        {user.role === 'admin' && (
+          <div hidden={tab !== 'calibrate'}>
+            <Calibrate onChanged={refreshData} />
+          </div>
+        )}
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
         <Suspense fallback={<Skeleton className="h-96" />}>
           {TABS.filter((t) => t.Component).map(({ id, Component }) => (
-            <div key={id} hidden={tab !== id}>
+            <div key={`${id}-${dataVersion}`} hidden={tab !== id}>
               <Component query={query} rate={rate} dark={dark} who={who} tenant={tenant} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
             </div>
           ))}

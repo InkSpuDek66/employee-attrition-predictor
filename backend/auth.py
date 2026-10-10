@@ -127,7 +127,7 @@ class RateLimit:
 login_limit = RateLimit(10)  # กันเดารหัสผ่าน
 LIMITS = {  # ใช้ใน main.py
     "whatif": RateLimit(240),  # หน้า What-if เรียกทุกครั้งที่ปรับค่า
-    "recalibrate": RateLimit(10),
+    "recalibrate": RateLimit(30),  # รวมดูประวัติ/ดาวน์โหลดไฟล์ตัวอย่างในแท็บปรับเทียบ
     "import": RateLimit(20),
 }
 

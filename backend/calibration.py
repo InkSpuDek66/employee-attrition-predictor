@@ -66,6 +66,36 @@ def save(tenant_id: str, method: str, params: dict, n_samples: int, positive_rat
     return record
 
 
+def history(tenant_id: str, limit: int = 10) -> list[dict]:
+    """ผลปรับเทียบล่าสุดก่อน (ไม่มี DB = มีแค่ครั้งล่าสุดจากไฟล์ JSON)"""
+    if not db.url():
+        record = load(tenant_id)
+        return [record] if record else []
+    _path(tenant_id)
+    with db.connect() as conn:
+        rows = conn.execute(
+            "SELECT method, n_samples, positive_rate, metrics, calibrated_at FROM tenant_calibrations "
+            "WHERE tenant_id = %s ORDER BY calibrated_at DESC LIMIT %s",
+            (tenant_id, limit),
+        ).fetchall()
+    return [
+        {"tenant_id": tenant_id, "method": m, "n_samples": n, "positive_rate": p, "metrics": met, "calibrated_at": at.isoformat()}
+        for m, n, p, met, at in rows
+    ]
+
+
+def reset(tenant_id: str) -> int:
+    """ยกเลิกการปรับเทียบทั้งหมดของบริษัท กลับไปใช้คะแนนของโมเดลกลาง คืนจำนวนที่ลบ"""
+    path = _path(tenant_id)
+    if db.url():
+        with db.connect() as conn:
+            return conn.execute("DELETE FROM tenant_calibrations WHERE tenant_id = %s", (tenant_id,)).rowcount
+    if os.path.exists(path):
+        os.remove(path)
+        return 1
+    return 0
+
+
 def load(tenant_id: str):
     path = _path(tenant_id)
     if db.url():

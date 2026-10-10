@@ -66,7 +66,7 @@ def test_import_saves_new_employee_in_baht(real_db):
     try:
         r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
         assert r.status_code == 200, r.text
-        assert r.json()["saved"] is True and "เพิ่มใหม่ 1" in r.json()["note"]
+        assert r.json()["saved"] is True and "เพิ่มใหม่ 1" in r.json()["note"] and r.json()["saved_ids"] == [NEW_ID]
         assert ms.employee_record(NEW_ID)["MonthlyIncome"] == 2000  # 70,000 บาท / 35
         assert client.get(f"/shap/{NEW_ID}").status_code == 200
     finally:
@@ -89,3 +89,15 @@ def test_import_db_check_rejects_whole_file_without_logging_row(real_db, caplog)
     r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
     assert r.status_code == 422 and ms.employee_record(NEW_ID) is None
     assert "employees_age_check" in caplog.text and str(NEW_ID) not in caplog.text  # log แค่ชื่อ constraint
+
+
+def test_calibration_history_and_reset_in_db(real_db):
+    with db.connect() as conn:  # เก็บของจริงที่อาจมีอยู่ไว้ คืนค่าหลัง test
+        before = conn.execute("SELECT count(*) FROM tenant_calibrations WHERE tenant_id = %s", (db.DEMO_TENANT,)).fetchone()[0]
+    if before:
+        pytest.skip("บริษัทตัวอย่างมีผลปรับเทียบจริงอยู่ ไม่ลบทิ้งใน test")
+    calibration.save(db.DEMO_TENANT, "platt", {"coef": 1.0, "intercept": 0.0}, 60, 0.2, {})
+    calibration.save(db.DEMO_TENANT, "isotonic", {"x": [0, 1], "y": [0, 1]}, 80, 0.25, {})
+    assert [h["method"] for h in calibration.history(db.DEMO_TENANT)] == ["isotonic", "platt"]
+    assert calibration.reset(db.DEMO_TENANT) == 2
+    assert calibration.history(db.DEMO_TENANT) == [] and calibration.load(db.DEMO_TENANT) is None
