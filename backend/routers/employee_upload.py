@@ -274,8 +274,10 @@ async def import_employees(
 
 
 def _example_rows(n: int = 2, label: bool = False) -> list[dict]:
-    """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือน × 35 เป็นบาท ให้ดูเป็นตัวอย่างเท่านั้น)"""
-    raw = ms.raw_employees().head(n)
+    """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือน × 35 เป็นบาท ให้ดูเป็นตัวอย่างเท่านั้น)
+    label=True (ไฟล์ปรับเทียบ): เอาเฉพาะคนที่รู้ผลจริงแล้ว พนักงานที่นำเข้าเองยังไม่มีผลลาออก ใส่ไปจะทำให้ไฟล์ไม่ผ่าน"""
+    raw = ms.raw_employees()
+    raw = (raw[raw["Attrition"].isin(["Yes", "No"])] if label else raw).head(n)
     back = {
         "Attrition": {"Yes": "ลาออก", "No": "ยังอยู่"},
         "Gender": {"Male": "ชาย", "Female": "หญิง"},

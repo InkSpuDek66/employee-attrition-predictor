@@ -121,7 +121,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
                 <button
                   type="button"
                   onClick={() => (setUsername(a.username), setPassword(a.password), (demo.current.open = false))}
-                  className="w-full cursor-pointer rounded-lg border border-line bg-card px-3 py-2.5 text-left transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="lift w-full cursor-pointer rounded-lg border border-line bg-card px-3 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                     <span className="font-medium text-fg">{a.role}</span>

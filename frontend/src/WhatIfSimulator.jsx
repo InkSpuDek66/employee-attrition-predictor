@@ -409,7 +409,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                     key={p.label}
                     type="button"
                     onClick={() => applyPreset(p)}
-                    className="h-9 cursor-pointer rounded-full border border-line bg-card px-3.5 text-sm font-medium text-fg transition-colors duration-150 hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className="lift h-9 cursor-pointer rounded-full border border-line bg-card px-3.5 text-sm font-medium text-fg hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   >
                     + {p.label}
                   </button>

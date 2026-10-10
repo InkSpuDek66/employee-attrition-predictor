@@ -119,9 +119,10 @@ export function NotFoundState({ who, message }) {
   )
 }
 
-export default function Mascot({ risk, who, onChoose }) {
-  const mood = risk?.notFound ? 'NotFound' : risk?.error ? 'Sorry' : (risk?.band ?? 'none')
-  const m = MOOD[mood]
+// say = { n, text, sub } ข้อความชั่วคราวหลังผู้ใช้ทำอะไรสำเร็จ (บันทึก/ปรับเทียบ/ดาวน์โหลด) ทำท่าดีใจแทนท่าตามความเสี่ยง
+export default function Mascot({ risk, who, onChoose, say }) {
+  const mood = say ? 'Low' : risk?.notFound ? 'NotFound' : risk?.error ? 'Sorry' : (risk?.band ?? 'none')
+  const m = say ?? MOOD[mood]
   const Character = CHARACTERS[who]
 
   return (
@@ -134,12 +135,12 @@ export default function Mascot({ risk, who, onChoose }) {
         className="cursor-pointer rounded-xl p-1 transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
         {/* key: เปลี่ยนระดับ/ตัวการ์ตูนแล้วเล่นท่าเข้าใหม่ */}
-        <Character key={`${who}-${mood}`} mood={mood} />
+        <Character key={`${who}-${mood}-${say?.n ?? 0}`} mood={mood} />
       </button>
       <Bubble className="mt-2" live>
         <div className="text-sm font-semibold text-fg">{m.text}</div>
         <div className="text-xs text-muted-fg">{m.sub}</div>
-        {risk?.band && (
+        {risk?.band && !say && (
           <div className="mt-1 text-[11px] tabular-nums text-muted-fg/80">
             พนักงาน #{risk.id} · {risk.label} {Math.round(risk.score * 100)}
           </div>

@@ -128,7 +128,7 @@ export function Alert({ tone = 'error', children }) {
 
 // โครงสีเทากะพริบระหว่างโหลด กันหน้ากระโดด (CLS)
 export function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse rounded-xl bg-muted ${className}`} />
+  return <div className={`skeleton rounded-xl ${className}`} />
 }
 
 export function CountUp({ value, format = Math.round }) {

@@ -36,6 +36,9 @@
   --color-band-high: #ef4444;
   --color-up: #ef4444;
   --color-down: #4589d6;
+  /* กราฟที่มีหลายชุดข้อมูล (ช่อง 1 ฟ้า, ช่อง 2 ส้ม ตามลำดับชุดสีที่ตรวจตาบอดสีแล้ว) */
+  --color-chart-1: #2a78d6;
+  --color-chart-2: #eb6834;
   /* ชุดตัวการ์ตูนใน sidebar (mascot/ChibiCharacter.jsx) */
   --color-suit: #2f3b58;
   --color-suit-line: #45527a;
@@ -72,6 +75,8 @@
   --color-band-high: #f87171;
   --color-up: #f87171;
   --color-down: #7ab4f5;
+  --color-chart-1: #3987e5;
+  --color-chart-2: #d95926;
   /* ชุดตัวการ์ตูนเป็นโทนครีม/ขาว ให้ตัดกับพื้นมืด */
   --color-suit: #efe6d2;
   --color-suit-line: #c8b995;
@@ -113,6 +118,35 @@ body {
   background:
     radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%),
     radial-gradient(42rem 32rem at 88% 92%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%);
+}
+/* หน้าหลัก: แสงฟ้าพาสเทลมุมขวาบนกับซ้ายล่าง จางกว่าหน้า login (ไม่แย่งสายตาจากข้อมูล) */
+.app-glow {
+  background:
+    radial-gradient(40rem 28rem at 100% 0%, color-mix(in oklab, var(--color-primary) 22%, transparent), transparent 70%),
+    radial-gradient(36rem 26rem at 0% 100%, color-mix(in oklab, var(--color-primary) 16%, transparent), transparent 70%);
+}
+.dark .app-glow {
+  background:
+    radial-gradient(40rem 28rem at 100% 0%, color-mix(in oklab, var(--color-primary) 7%, transparent), transparent 70%),
+    radial-gradient(36rem 26rem at 0% 100%, color-mix(in oklab, var(--color-primary) 5%, transparent), transparent 70%);
+}
+/* กล่องรอโหลด: แถบแสงวิ่งผ่านแทนการกะพริบ */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-muted) 0%, color-mix(in oklab, var(--color-card) 70%, var(--color-muted)) 50%, var(--color-muted) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+/* ของที่กดได้: ยกขึ้นนิดๆ + เงาอ่อนตอนชี้เมาส์ */
+.lift {
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -4px color-mix(in oklab, var(--color-accent) 25%, transparent);
 }
 .dark .login-glow {
   background:

@@ -22,12 +22,13 @@ async function downloadCsv(department) {
   URL.revokeObjectURL(url)
 }
 
-export function CsvButton({ department }) {
+export function CsvButton({ department, onDone = () => {} }) {
   const [state, setState] = useState('') // '' | 'busy' | ข้อความ error
   async function go() {
     setState('busy')
     try {
       await downloadCsv(department)
+      onDone()
       setState('')
     } catch (err) {
       setState(friendly(err))
@@ -62,7 +63,7 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
             <button
               type="button"
               onClick={() => onPick(e.employee_id)}
-              className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="lift flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <span className="w-5 text-right text-xs tabular-nums text-muted-fg">{i + 1}</span>
               <span className="min-w-0 flex-1">
@@ -137,7 +138,7 @@ function BandBar({ bands, total }) {
   )
 }
 
-export default function Overview({ rate, onPick }) {
+export default function Overview({ rate, onPick, onCsv }) {
   const [department, setDepartment] = useState('')
   const q = new URLSearchParams({ top_n: 5, ...(department && { department }) })
   const { loading, data, error } = useApi([`/company-summary?${q}`, '/company-summary/departments'])
@@ -180,7 +181,7 @@ export default function Overview({ rate, onPick }) {
           icon="user"
           title="พนักงานเสี่ยงสูงสุด 10 คน"
           subtitle="กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง"
-          action={<CsvButton department={department} />}
+          action={<CsvButton department={department} onDone={onCsv} />}
         >
           <TopRiskList department={department} onPick={onPick} />
         </Card>

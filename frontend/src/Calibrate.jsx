@@ -1,9 +1,10 @@
 // ปรับเทียบโมเดลกับข้อมูลลาออกจริงของบริษัท (README 6.5 Model Localization) เฉพาะผู้ดูแลระบบ
 // ใช้ /recalibrate/template, /recalibrate/upload, /recalibrate/history, DELETE /recalibrate
 // onChanged() = คะแนนทั้งระบบเปลี่ยน ให้หน้าอื่นโหลดใหม่
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, friendly, postFile, useApi } from './theme'
 import { Alert, Card, Icon, Segmented, Skeleton } from './ui'
+import { AssistantHint } from './mascot/Mascot'
 import { CheckDetails, Count, DownloadButton, DropZone } from './Upload'
 
 const METHODS = [
@@ -44,6 +45,97 @@ function Status({ latest, onReset, resetting }) {
   )
 }
 
+// กราฟสูตรแปลงคะแนน: แกนนอน = คะแนนเดิม, แกนตั้ง = หลังปรับ (0–100)
+// เส้นทึบ = สูตรที่ได้, เส้นประ = ถ้าไม่ปรับ, จุด = อัตราลาออกจริงในไฟล์ตามช่วงคะแนน (ชี้/โฟกัสเพื่อดูรายละเอียด)
+// วาดตามความกว้างจริงของกล่อง (1 หน่วย = 1px) ไม่ยืด SVG ตัวหนังสือ/เส้นจึงคมและขนาดตรงตามที่ตั้ง
+const PAD = { l: 32, r: 8, t: 8, b: 34 }
+const TICKS = [0, 0.2, 0.4, 0.6, 0.8, 1]
+
+function LegendItem({ children, mark }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {mark}
+      {children}
+    </span>
+  )
+}
+
+function CalibrationChart({ curve, bins }) {
+  const box = useRef(null)
+  const [width, setWidth] = useState(0)
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => setWidth(Math.round(e.contentRect.width)))
+    ro.observe(box.current)
+    return () => ro.disconnect()
+  }, [])
+  const [hover, setHover] = useState(null)
+  const W = Math.min(width || 560, 640)
+  const H = Math.round(Math.min(280, Math.max(200, W * 0.5)))
+  const cx = (v) => PAD.l + v * (W - PAD.l - PAD.r)
+  const cy = (v) => H - PAD.b - v * (H - PAD.t - PAD.b)
+  const line = curve.map((p, i) => `${i ? 'L' : 'M'}${cx(p.before).toFixed(1)} ${cy(p.after).toFixed(1)}`).join('')
+  return (
+    <figure>
+      <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-fg">
+        <LegendItem mark={<span className="h-0.5 w-4 bg-chart-1" />}>สูตรหลังปรับ</LegendItem>
+        <LegendItem mark={<span className="size-2 rounded-full bg-chart-2" />}>ลาออกจริงในไฟล์ (ตามช่วงคะแนน)</LegendItem>
+        <LegendItem mark={<span className="w-4 border-t border-dashed border-muted-fg" />}>ถ้าไม่ปรับ</LegendItem>
+      </div>
+      <div ref={box} className="relative w-full">
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="block overflow-visible" role="img" aria-label="กราฟเทียบคะแนนเดิมกับคะแนนหลังปรับเทียบ">
+          {TICKS.map((t) => (
+            <g key={t} className="text-[11px] tabular-nums">
+              <line x1={cx(0)} x2={cx(1)} y1={cy(t)} y2={cy(t)} className="stroke-line" strokeWidth="1" shapeRendering="crispEdges" />
+              <text x={PAD.l - 8} y={cy(t) + 4} textAnchor="end" className="fill-muted-fg">
+                {t * 100}
+              </text>
+              <text x={cx(t)} y={H - PAD.b + 16} textAnchor="middle" className="fill-muted-fg">
+                {t * 100}
+              </text>
+            </g>
+          ))}
+          <text x={(cx(0) + cx(1)) / 2} y={H - 2} textAnchor="middle" className="fill-muted-fg text-[11px]">
+            คะแนนเดิมของโมเดล →
+          </text>
+          <line x1={cx(0)} y1={cy(0)} x2={cx(1)} y2={cy(1)} className="stroke-muted-fg" strokeWidth="1" strokeDasharray="3 3" />
+          <path d={line} fill="none" className="stroke-chart-1" strokeWidth="2" strokeLinejoin="round" />
+          {bins.map((b) => (
+            <g
+              key={b.score}
+              tabIndex={0}
+              role="img"
+              aria-label={`คะแนนเดิมประมาณ ${Math.round(b.score * 100)} ลาออกจริง ${Math.round(b.rate * 100)}% จาก ${b.n} คน`}
+              onMouseEnter={() => setHover(b)}
+              onMouseLeave={() => setHover(null)}
+              onFocus={() => setHover(b)}
+              onBlur={() => setHover(null)}
+              className="cursor-default outline-none [&:focus-visible>circle:last-child]:stroke-accent"
+            >
+              <circle cx={cx(b.score)} cy={cy(b.rate)} r="12" fill="transparent" />
+              <circle cx={cx(b.score)} cy={cy(b.rate)} r="4" className="fill-chart-2 stroke-card" strokeWidth="2" />
+            </g>
+          ))}
+        </svg>
+        {hover && (
+          <div
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md border border-line bg-card px-2 py-1 text-xs tabular-nums shadow-sm"
+            style={{ left: cx(hover.score), top: cy(hover.rate) - 10 }}
+          >
+            <div className="font-medium text-fg">คะแนนเดิม ~{Math.round(hover.score * 100)}</div>
+            <div className="text-muted-fg">
+              ลาออกจริง {Math.round(hover.rate * 100)}% · {hover.n} คน
+            </div>
+          </div>
+        )}
+      </div>
+      <figcaption className="mt-2 text-xs text-muted-fg">
+        แกนตั้ง = คะแนนหลังปรับ · จุดสีส้มอยู่ใต้เส้นประ = ช่วงนั้นโมเดลให้คะแนนสูงกว่าความจริง อยู่เหนือ = ต่ำกว่าความจริง
+        เส้นทึบคือสูตรที่ดึงคะแนนเข้าหาจุดสีส้ม
+      </figcaption>
+    </figure>
+  )
+}
+
 function Result({ r }) {
   const better = r.brier_before > 0 ? 1 - r.brier_after / r.brier_before : 0
   return (
@@ -63,6 +155,13 @@ function Result({ r }) {
         </div>
       </div>
 
+      {r.curve?.length > 0 && (
+        <>
+          <h3 className="mb-2 mt-5 text-sm font-semibold text-fg">สูตรแปลงคะแนน</h3>
+          <CalibrationChart curve={r.curve} bins={r.bins ?? []} />
+        </>
+      )}
+
       <h3 className="mb-2 mt-5 text-sm font-semibold text-fg">คะแนนเดิมเท่านี้ หลังปรับเป็นเท่าไหร่</h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {r.examples.map((e) => (
@@ -81,7 +180,8 @@ function Result({ r }) {
   )
 }
 
-export default function Calibrate({ onChanged }) {
+// onChanged(reset) = คะแนนทั้งระบบเปลี่ยน (reset = true ตอนยกเลิกการปรับเทียบ)
+export default function Calibrate({ who, onChanged }) {
   const [version, setVersion] = useState(0)
   const history = useApi([`/recalibrate/history?v=${version}`]) // v เปลี่ยน = โหลดประวัติใหม่
   const [file, setFile] = useState(null)
@@ -91,9 +191,9 @@ export default function Calibrate({ onChanged }) {
   const [res, setRes] = useState(null)
   const [error, setError] = useState('')
 
-  function changed() {
+  function changed(reset = false) {
     setVersion((v) => v + 1)
-    onChanged()
+    onChanged(reset)
   }
 
   async function run() {
@@ -118,7 +218,7 @@ export default function Calibrate({ onChanged }) {
     try {
       await api('/recalibrate', { method: 'DELETE' })
       setRes(null)
-      changed()
+      changed(true)
     } catch (err) {
       setError(friendly(err))
     } finally {
@@ -193,6 +293,12 @@ export default function Calibrate({ onChanged }) {
           </Card>
         )}
       </div>
+
+      {!history.loading && items.length === 0 && !res && (
+        <AssistantHint who={who} title="ยังไม่เคยปรับเทียบเลยนะ">
+          ลองกด “ข้อมูลทดลอง 300 คน” แล้วอัปโหลดไฟล์นั้นกลับเข้ามา จะเห็นว่าคะแนนเปลี่ยนไปยังไง ยกเลิกทีหลังได้เสมอ
+        </AssistantHint>
+      )}
 
       {items.length > 0 && (
         <Card icon="clock" title="ประวัติการปรับเทียบ" subtitle="ระบบใช้ครั้งล่าสุด (แถวบนสุด)">
