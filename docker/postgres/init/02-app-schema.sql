@@ -1,4 +1,4 @@
--- Schema ของแอป (database `attrition`) ตาม README หัวข้อ 5 และ docs/review_data_engineering_S.md DE-04
+-- Schema ของแอป (database `attrition`) ตาม README หัวข้อ 5 และ docs/reviews/round1-2_data_engineering_S.md DE-04
 -- docker compose รันไฟล์นี้อัตโนมัติเฉพาะตอนสร้าง volume ใหม่ ถ้ามี volume อยู่แล้วให้รันเอง:
 --   docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U attrition -d attrition < docker/postgres/init/02-app-schema.sql
 -- รันซ้ำได้ (IF NOT EXISTS) ยังไม่มี migration tool ถ้าแก้คอลัมน์ของตารางที่มีอยู่แล้วต้องเขียน ALTER แยก

@@ -8,7 +8,7 @@
 | ผู้ตรวจ | Claude Code (AI, Claude Opus 5.5) รับบท senior data engineer ตามคำขอของ Saphondanai |
 | ผู้ดูแลเอกสาร | Saphondanai (ถามหรือแย้งได้ที่ Saphondanai) |
 | สถานะ | รอทีมยืนยันผู้รับผิดชอบและกำหนดเสร็จ |
-| เอกสารชุดเดียวกัน | Data Engineering (ไฟล์นี้) · [Security](review_security_S.md) · [UX/UI](review_ux_ui_S.md) |
+| เอกสารชุดเดียวกัน | Data Engineering (ไฟล์นี้) · [Security](round1-2_security_S.md) · [UX/UI](round1-2_ux_ui_S.md) |
 
 **วิธีใช้เอกสารนี้**
 
@@ -17,7 +17,7 @@
 3. แก้เสร็จแล้วให้ติ๊ก checkbox ในหัวข้อ 7 พร้อมใส่ commit hash
 4. ถ้าไม่เห็นด้วยกับข้อไหน ให้เขียนเหตุผลไว้ใน [8. ความเห็นทีม](#8-ความเห็นทีม) แล้ว commit ไม่ต้องแก้เนื้อหาของข้อนั้นเอง
 
-> ผู้รับผิดชอบที่ระบุในเอกสารนี้เป็นข้อเสนอ อ้างอิงจาก [TASKS.md](../TASKS.md) และผู้เขียนไฟล์ใน git log ทีมต้องยืนยันกันอีกครั้งก่อนเริ่มแก้
+> ผู้รับผิดชอบที่ระบุในเอกสารนี้เป็นข้อเสนอ อ้างอิงจาก [TASKS.md](../../TASKS.md) และผู้เขียนไฟล์ใน git log ทีมต้องยืนยันกันอีกครั้งก่อนเริ่มแก้
 > บัญชี git ที่ใช้อ้างอิง: `Ink-SPU` = Saphondanai, `NungUmSudNaRak` (commit ขึ้นต้น Dev007) = Puripat (อนุมานจาก commit ที่ตรงกับงานของ Puripat ใน TASKS.md)
 
 ---
@@ -64,11 +64,11 @@
 
 ### ขั้นตอนที่ทำ
 
-1. เก็บบริบท: อ่าน [README.md](../README.md) (สถาปัตยกรรม, data model, business rules), [TASKS.md](../TASKS.md) (ใครทำอะไร) และ `git log` (ใครเขียนไฟล์ไหน)
+1. เก็บบริบท: อ่าน [README.md](../../README.md) (สถาปัตยกรรม, data model, business rules), [TASKS.md](../../TASKS.md) (ใครทำอะไร) และ `git log` (ใครเขียนไฟล์ไหน)
 2. อ่านโค้ดตลอดเส้นทาง ข้อมูล → โมเดล → API: ทุกไฟล์ใน `src/`, `backend/`, `backend/routers/`, `config/`, `docker-compose.yml`, `docker/`, `.github/workflows/ci.yml`, `requirements.txt`, `.env.example`, `.gitignore`
 3. ตรวจ notebook เฉพาะจุด: ดูใน `04_tuning_P.ipynb` และ `04_tuning_S.ipynb` ว่า Optuna ประเมินผลด้วยข้อมูลชุดไหน (เช็ก leakage จาก test set)
 4. ดู frontend เฉพาะจุดที่เกี่ยวกับข้อมูล: คือการเรียก API และหน่วยของเงินเดือนใน `WhatIfSimulator.jsx` กับหน้า Streamlit
-5. รันสคริปต์ตรวจในเครื่อง (`.venv`) โดยเทรนโมเดลซ้ำตามสูตรใน [src/train.py](../src/train.py) ได้ test AUC 0.814 ตรงกับ `attrition-xgboost-P` v1 บน DagsHub (รอบ 2 โหลด v1 มาเทียบแล้ว คะแนนตรงกันทุกแถว ต่างกัน 0.0 ตัวเลขทุกตัวในรายงานนี้จึงเป็นของ v1 จริง) จากนั้นวัด:
+5. รันสคริปต์ตรวจในเครื่อง (`.venv`) โดยเทรนโมเดลซ้ำตามสูตรใน [src/train.py](../../src/train.py) ได้ test AUC 0.814 ตรงกับ `attrition-xgboost-P` v1 บน DagsHub (รอบ 2 โหลด v1 มาเทียบแล้ว คะแนนตรงกันทุกแถว ต่างกัน 0.0 ตัวเลขทุกตัวในรายงานนี้จึงเป็นของ v1 จริง) จากนั้นวัด:
    - ช่วงความเชื่อมั่นของ AUC (bootstrap 10,000 รอบ)
    - คะแนนแบบ in-sample เทียบกับ out-of-fold
    - ผลเมื่อเงินเดือนเป็นหน่วยบาท
@@ -98,20 +98,20 @@
 | :--- | :--- |
 | ไม่ได้รัน pytest หรือ CI และไม่ได้เปิด docker compose | เสร็จ: CI บน GitHub ผ่านทุก step ที่ `45f926a`, ในเครื่อง ruff ผ่าน และ pytest ผ่าน 17 test (ที่ `fc4a969`) · ค้าง: ไม่ได้เปิด docker compose ในเครื่องเอง เพราะ CI ทำขั้นนี้ให้ทุกครั้งแล้ว (step "Start PostgreSQL + MLflow" ผ่าน) |
 | ไม่ได้อ่าน notebook อื่นนอกจาก 04 | เสร็จ: อ่าน 05, 05_shap_P, 06, 07 แล้ว · ค้าง: ยังไม่ได้อ่าน 01–03 (cleaning และการทดลองแรก ซึ่งถูกรวมเป็น `src/clean_pipeline.py` แล้ว) |
-| ไม่ได้ตรวจ UI/UX | เสร็จ: อยู่ใน[รายงาน UX/UI](review_ux_ui_S.md) |
+| ไม่ได้ตรวจ UI/UX | เสร็จ: อยู่ใน[รายงาน UX/UI](round1-2_ux_ui_S.md) |
 | ไม่ได้ตรวจรายงานร่างใน `docs/` | เสร็จ: ตรวจแล้ว ผลอยู่ใน DE-09 · ค้าง: ไม่ได้ตรวจสำนวนภาษาหรือโครงของรายงาน ตรวจเฉพาะความถูกต้องของตัวเลขและข้อความทางเทคนิค |
-| ไม่ได้ทำ security review / fairness metric | เสร็จ: security อยู่ใน[รายงาน Security](review_security_S.md) · เสร็จ: fairness เบื้องต้น อยู่ใน DS-04 · ค้าง: ยังไม่ใช่ Fairness check เต็มรูปแบบตาม README 6.4 (ยังไม่ได้ใช้ Fairlearn, ยังไม่ได้ตั้งเกณฑ์ที่ยอมรับได้ และยังไม่ได้ลองวิธีลดความลำเอียง) ซึ่งเป็นงานของ Yanisa + Nanthamon ใน TASKS.md |
+| ไม่ได้ทำ security review / fairness metric | เสร็จ: security อยู่ใน[รายงาน Security](round1-2_security_S.md) · เสร็จ: fairness เบื้องต้น อยู่ใน DS-04 · ค้าง: ยังไม่ใช่ Fairness check เต็มรูปแบบตาม README 6.4 (ยังไม่ได้ใช้ Fairlearn, ยังไม่ได้ตั้งเกณฑ์ที่ยอมรับได้ และยังไม่ได้ลองวิธีลดความลำเอียง) ซึ่งเป็นงานของ Yanisa + Nanthamon ใน TASKS.md |
 
 ---
 
 ## 3. จุดที่ทำได้ดี (ควรรักษาไว้)
 
-- Tune โดยไม่แตะ test set: Optuna ใช้ CV บน train เท่านั้น ([04_tuning_S.ipynb](../notebooks/04_tuning_S.ipynb)) จึงไม่มี leakage จากขั้น tuning
-- ตัวเลขธุรกิจแยกออกจากโค้ด: อยู่ใน [config/financial_impact.json](../config/financial_impact.json) แก้ตามกฎหมายได้โดยไม่ต้อง retrain
-- ตรวจ input ที่ขอบระบบ: `/predict` และ `/whatif` ใช้ Pydantic `Literal` กับ `extra="forbid"` ค่าผิดจะได้ 422 ทันที ([backend/schemas.py](../backend/schemas.py))
-- pipeline รันได้ครบตั้งแต่ต้นจนจบ: CI เทรนโมเดลใหม่จากข้อมูลดิบทุกครั้ง ([ci.yml](../.github/workflows/ci.yml)) รอบ 2 ยืนยันว่า run ของ `45f926a` ผ่านทุก step (ruff → docker compose → train.py → pytest 17 test → lint/build frontend) แต่โมเดลที่ได้ไม่ได้เหมือนกันทุกเครื่อง (ดู DE-08)
+- Tune โดยไม่แตะ test set: Optuna ใช้ CV บน train เท่านั้น ([04_tuning_S.ipynb](../../notebooks/04_tuning_S.ipynb)) จึงไม่มี leakage จากขั้น tuning
+- ตัวเลขธุรกิจแยกออกจากโค้ด: อยู่ใน [config/financial_impact.json](../../config/financial_impact.json) แก้ตามกฎหมายได้โดยไม่ต้อง retrain
+- ตรวจ input ที่ขอบระบบ: `/predict` และ `/whatif` ใช้ Pydantic `Literal` กับ `extra="forbid"` ค่าผิดจะได้ 422 ทันที ([backend/schemas.py](../../backend/schemas.py))
+- pipeline รันได้ครบตั้งแต่ต้นจนจบ: CI เทรนโมเดลใหม่จากข้อมูลดิบทุกครั้ง ([ci.yml](../../.github/workflows/ci.yml)) รอบ 2 ยืนยันว่า run ของ `45f926a` ผ่านทุก step (ruff → docker compose → train.py → pytest 17 test → lint/build frontend) แต่โมเดลที่ได้ไม่ได้เหมือนกันทุกเครื่อง (ดู DE-08)
 - **ระเบียบวิธีใน notebook 05–07 ดี (ตรวจรอบ 2):**
-  - resample เฉพาะ fold ที่ใช้เทรน ([07_imbalance_S.ipynb](../notebooks/07_imbalance_S.ipynb)) จึงไม่มี leakage แบบ SMOTE ก่อนแบ่งข้อมูล
+  - resample เฉพาะ fold ที่ใช้เทรน ([07_imbalance_S.ipynb](../../notebooks/07_imbalance_S.ipynb)) จึงไม่มี leakage แบบ SMOTE ก่อนแบ่งข้อมูล
   - threshold ตรึงจาก OOF ของ train แล้วใช้ test ครั้งเดียว
   - notebook 06 ตรวจความลำเอียงของตัวเองด้วย nested threshold และเลือกค่าด้วยกฎ 1-SE
   - การสาธิต calibration ใน 07 ใช้ OOF ภายใน fold ซึ่งถูกต้อง
@@ -132,9 +132,9 @@
 
 | ที่ | ตีความว่า |
 | :--- | :--- |
-| [config/financial_impact.json:3](../config/financial_impact.json#L3) | "ไม่ได้ระบุสกุลเงิน ไม่ใช่บาท" และถ้าเป็นข้อมูลบริษัทไทย "ตัวเลขจะเป็นบาทตามข้อมูลที่อัปโหลด" |
-| [src/app_pages/whatif_page.py:6](../src/app_pages/whatif_page.py#L6) (Streamlit ทดสอบ) | เป็นดอลลาร์ แปลงด้วย 35 บาท/ดอลลาร์ |
-| [frontend/src/WhatIfSimulator.jsx:7](../frontend/src/WhatIfSimulator.jsx#L7) (React) | slider 1,000–20,000 ไม่มีหน่วย |
+| [config/financial_impact.json:3](../../config/financial_impact.json#L3) | "ไม่ได้ระบุสกุลเงิน ไม่ใช่บาท" และถ้าเป็นข้อมูลบริษัทไทย "ตัวเลขจะเป็นบาทตามข้อมูลที่อัปโหลด" |
+| [src/app_pages/whatif_page.py:6](../../src/app_pages/whatif_page.py#L6) (Streamlit ทดสอบ) | เป็นดอลลาร์ แปลงด้วย 35 บาท/ดอลลาร์ |
+| [frontend/src/WhatIfSimulator.jsx:7](../../frontend/src/WhatIfSimulator.jsx#L7) (React) | slider 1,000–20,000 ไม่มีหน่วย |
 | `/predict`, `/whatif`, `/recalibrate` | รับค่าไปใช้ตรง ๆ ไม่แปลง |
 
 **หลักฐาน (รันจริง):**
@@ -149,7 +149,7 @@
 - เรื่องนี้ชนกับ README 6.5 Model Localization ตรง ๆ ซึ่งเป็นฟีเจอร์หลักที่โปรเจกต์นำเสนอ
 
 **วิธีแก้:**
-1. ตกลงหน่วยไว้ที่เดียว: เขียนใน [docs/dataset.md](dataset.md) (data dictionary) ว่าโมเดลรับ `MonthlyIncome` ในหน่วย IBM (สมมติเป็น USD)
+1. ตกลงหน่วยไว้ที่เดียว: เขียนใน [docs/dataset.md](../dataset.md) (data dictionary) ว่าโมเดลรับ `MonthlyIncome` ในหน่วย IBM (สมมติเป็น USD)
 2. ย้ายอัตราแลกเปลี่ยนเข้า config: เช่น `"income": {"model_unit": "USD", "thb_per_usd": 35}` ใน `config/financial_impact.json`
 3. แปลงหน่วยครั้งเดียวที่ขอบระบบ (API): ให้ API รับเงินเดือนเป็นบาท แล้วแปลงก่อนเข้าโมเดล หน้าจอทุกหน้า (React, Streamlit) และ `/recalibrate` ใช้ค่าจาก config ตัวเดียวกัน ห้ามมีตัวเลข 35 กระจายหลายที่
 4. เช็กช่วงค่า (range guard): ถ้าค่าอยู่นอกช่วงที่โมเดลเคยเห็นตอนเทรน ให้ใส่ `warning` ใน response ไม่ต้อง reject
@@ -168,7 +168,7 @@
 
 ระดับ: สูง
 
-**ปัญหา:** [backend/routers/recalibrate.py:21](../backend/routers/recalibrate.py#L21) รับ `records: list[dict]` แล้วเช็กแค่ว่ามีคอลัมน์ครบและ `Attrition` เป็น Yes/No ไม่ได้ตรวจค่าทีละแถวเหมือน `/predict`
+**ปัญหา:** [backend/routers/recalibrate.py:21](../../backend/routers/recalibrate.py#L21) รับ `records: list[dict]` แล้วเช็กแค่ว่ามีคอลัมน์ครบและ `Attrition` เป็น Yes/No ไม่ได้ตรวจค่าทีละแถวเหมือน `/predict`
 
 **หลักฐาน (รันจริง ผ่าน `clean_data` → `add_features` → โมเดล แบบเดียวกับที่ endpoint ทำ):**
 
@@ -185,7 +185,7 @@
 - หลักของ DE คือ fail loud at the boundary: ข้อมูลผิดต้องถูกปฏิเสธพร้อมบอกเหตุผลตั้งแต่ตอนเข้าระบบ ไม่ใช่ปล่อยให้ไปพังเงียบ ๆ ข้างใน
 
 **วิธีแก้:**
-1. เพิ่ม schema สำหรับข้อมูลที่มี label ใน [backend/schemas.py](../backend/schemas.py) โดยต่อยอดจาก `EmployeeInput` ตัวเดิม
+1. เพิ่ม schema สำหรับข้อมูลที่มี label ใน [backend/schemas.py](../../backend/schemas.py) โดยต่อยอดจาก `EmployeeInput` ตัวเดิม
    ```python
    class LabeledEmployee(EmployeeInput):
        # CSV ของ IBM มีคอลัมน์ noise (EmployeeNumber, Over18 ฯลฯ) ติดมาด้วย จึงไม่ใช้ extra="forbid" ตรงนี้
@@ -193,7 +193,7 @@
        Attrition: Literal["Yes", "No"]
    ```
 2. ใน `recalibrate.py` เปลี่ยนเป็น `records: list[LabeledEmployee] = Field(min_length=MIN_ROWS)` แล้วสร้าง DataFrame ด้วย `pd.DataFrame([r.model_dump() for r in req.records])` จากนั้นลบโค้ดเช็กคอลัมน์และเช็ก Attrition แบบเขียนเอง เพราะ Pydantic ทำให้แล้ว และจะบอกได้ด้วยว่าผิดที่แถวไหน ฟิลด์ไหน
-3. เพิ่ม test ใน [backend/test_api.py](../backend/test_api.py) ว่าค่าหมวดหมู่ที่สะกดผิดหรือมีเว้นวรรคเกินต้องได้ 422
+3. เพิ่ม test ใน [backend/test_api.py](../../backend/test_api.py) ว่าค่าหมวดหมู่ที่สะกดผิดหรือมีเว้นวรรคเกินต้องได้ 422
 
 > ถ้าอยากให้ระบบตัดเว้นวรรคให้เองแทนการปฏิเสธ ต้องเขียน `field_validator(..., mode="before")` ที่ strip string ก่อน เพราะ `str_strip_whitespace` ของ Pydantic ไม่มีผลกับฟิลด์ `Literal` (ทดสอบกับ Pydantic 2.13.5 แล้ว)
 
@@ -208,9 +208,9 @@
 ระดับ: สูง
 
 **ปัญหา:**
-- MLflow เก็บแค่ `XGBClassifier` เปล่า ๆ ([src/train.py:43](../src/train.py#L43))
-- ตอนเสิร์ฟ [backend/model_store.py:50-57](../backend/model_store.py#L50-L57) import `clean_data`/`add_features` จากโค้ด ปัจจุบัน ใน `src/` และต้องต่อ CSV ทั้ง 1,470 แถวเข้าไปทุก request เพื่อให้ one-hot ได้คอลัมน์ครบ
-- `MODEL_URI` ถูก hardcode เป็น `/1` อยู่ 3 ที่: [model_store.py:23](../backend/model_store.py#L23), [shap_explain.py:22](../src/shap_explain.py#L22) และ [ci.yml](../.github/workflows/ci.yml)
+- MLflow เก็บแค่ `XGBClassifier` เปล่า ๆ ([src/train.py:43](../../src/train.py#L43))
+- ตอนเสิร์ฟ [backend/model_store.py:50-57](../../backend/model_store.py#L50-L57) import `clean_data`/`add_features` จากโค้ด ปัจจุบัน ใน `src/` และต้องต่อ CSV ทั้ง 1,470 แถวเข้าไปทุก request เพื่อให้ one-hot ได้คอลัมน์ครบ
+- `MODEL_URI` ถูก hardcode เป็น `/1` อยู่ 3 ที่: [model_store.py:23](../../backend/model_store.py#L23), [shap_explain.py:22](../../src/shap_explain.py#L22) และ [ci.yml](../../.github/workflows/ci.yml)
 
 **ทำไมต้องแก้:**
 - เกิด training-serving skew ได้ง่าย: ถ้าใครแก้สูตรใน `feature_pipeline.py` (เช่น `AvgSatisfaction`) ชื่อคอลัมน์ยังเหมือนเดิม โมเดล v1 จะได้ค่าคนละความหมายกับตอนเทรนโดยไม่มี error
@@ -225,7 +225,7 @@
 - B. มาตรฐานกว่า (งานเยอะกว่า)
   1. ห่อเป็น sklearn `Pipeline(ColumnTransformer(OneHotEncoder(...)), XGBClassifier)` หรือ `mlflow.pyfunc`
   2. SHAP ยังใช้ `TreeExplainer(pipe[-1])` กับ `pipe[:-1].transform(X)` ได้ แต่ชื่อคอลัมน์จะเปลี่ยน จึงต้องแก้ `company_summary.feature_group` ด้วย
-  3. ข้อควรระวัง: ทางนี้เก็บโมเดลด้วย cloudpickle ซึ่งตอนโหลดรันโค้ดที่ฝังในไฟล์ได้ ถ้ามีคน register โมเดลอันตรายเข้า registry ก็จะรันโค้ดบน backend ได้ ดู [SEC-05 ในรายงาน Security](review_security_S.md#sec-05-ความเสี่ยงจากไฟล์โมเดล-model-supply-chain) ซึ่งเป็นอีกเหตุผลที่แนะนำทางเลือก A
+  3. ข้อควรระวัง: ทางนี้เก็บโมเดลด้วย cloudpickle ซึ่งตอนโหลดรันโค้ดที่ฝังในไฟล์ได้ ถ้ามีคน register โมเดลอันตรายเข้า registry ก็จะรันโค้ดบน backend ได้ ดู [SEC-05 ในรายงาน Security](round1-2_security_S.md#sec-05-ความเสี่ยงจากไฟล์โมเดล-model-supply-chain) ซึ่งเป็นอีกเหตุผลที่แนะนำทางเลือก A
 - ทั้งสองทาง: ให้ใช้ alias ของ MLflow แทนเลข version ตายตัว: `MlflowClient().set_registered_model_alias("attrition-xgboost-P", "champion", <version>)` แล้วตั้ง `MODEL_URI=models:/attrition-xgboost-P@champion` ต่อไปจะเปลี่ยนโมเดลได้โดยไม่ต้องแก้โค้ดหรือ CI
 
 > การเปลี่ยนขั้นเตรียมข้อมูลต้อง register โมเดล version ใหม่ ควรทำพร้อม DE-01 จะได้ register รอบเดียว
@@ -247,7 +247,7 @@
 - ข้อมูลพนักงานยังอ่านจาก CSV ส่วน PostgreSQL ใน docker-compose มีแค่ database ของ MLflow
 - README หัวข้อ 9 วางไว้ว่า Superset จะ query PostgreSQL ตรง แต่ยังไม่มีตาราง `attrition_predictions`, `shap_explanations`, `company_risk_summary`
 - มีสองแผนที่ขัดกันเรื่อง database: README และ TASKS.md วาง dev DB บน Supabase/Neon แต่ docker-compose self-host PostgreSQL
-- `/company-summary` คำนวณ SHAP ใหม่ทั้ง 1,470 แถว ทุก request ([backend/routers/company_summary.py:50-52](../backend/routers/company_summary.py#L50-L52))
+- `/company-summary` คำนวณ SHAP ใหม่ทั้ง 1,470 แถว ทุก request ([backend/routers/company_summary.py:50-52](../../backend/routers/company_summary.py#L50-L52))
 
 **ทำไมต้องแก้:**
 - Superset เรียก FastAPI ไม่ได้ ต้องมีตารางใน DB ให้ query ถ้าไม่มี batch job งาน Superset ของ Nanthamon (wk8–9) จะติด
@@ -277,8 +277,8 @@
 ระดับ: กลาง
 
 **ปัญหา:**
-- [requirements.txt](../requirements.txt) มี 21 แพ็กเกจแต่ไม่ระบุเวอร์ชันเลย
-- [docker/mlflow/Dockerfile:3](../docker/mlflow/Dockerfile#L3) pin `mlflow v3.16.1` และมี comment ว่า "ต้องตรงกับ client" แต่ฝั่ง client ไม่ได้ pin
+- [requirements.txt](../../requirements.txt) มี 21 แพ็กเกจแต่ไม่ระบุเวอร์ชันเลย
+- [docker/mlflow/Dockerfile:3](../../docker/mlflow/Dockerfile#L3) pin `mlflow v3.16.1` และมี comment ว่า "ต้องตรงกับ client" แต่ฝั่ง client ไม่ได้ pin
 
 **ทำไมต้องแก้:**
 - คนที่ติดตั้งทีหลังหรือ CI จะได้เวอร์ชันใหม่กว่า ทำให้ MLflow client กับ server ไม่ตรงกัน
@@ -315,7 +315,7 @@
 
 **วิธีแก้:**
 1. เลือกอย่างใดอย่างหนึ่ง
-   - (ก) ลบ `data/processed/` ออก (สร้างใหม่ได้ด้วย `python src/clean_pipeline.py`) แล้วแก้ [data/README.md](../data/README.md) ให้ตรง
+   - (ก) ลบ `data/processed/` ออก (สร้างใหม่ได้ด้วย `python src/clean_pipeline.py`) แล้วแก้ [data/README.md](../../data/README.md) ให้ตรง
    - (ข) เก็บไว้ แต่เขียนใน `data/README.md` ว่าเป็นตัวอย่างผลลัพธ์ ไม่ได้ใช้เทรน
 2. ใน `train.py` เพิ่ม `mlflow.log_input(mlflow.data.from_pandas(df, source=<raw path>, name="ibm-hr-raw"))` หรืออย่างน้อยให้ tag `data_sha256` ทำร่วมกับ DE-03 ได้ ข้อมูล 1,470 แถวยังไม่จำเป็นต้องใช้ DVC
 
@@ -366,9 +366,9 @@ bootstrap 95% CI ของ test AUC = 0.73 – 0.88 (10,000 รอบ ใช้�
 
 ระดับ: กลาง (เพิ่มในรอบ 2)
 
-**ปัญหา:** [src/train.py](../src/train.py) ตั้ง `random_state=42` และ `n_jobs=4` ไว้ แต่โมเดลที่ได้ยังขึ้นกับจำนวน thread และระบบปฏิบัติการ ขณะที่เอกสารหลายที่เขียนว่าเทรนใหม่แล้วได้ผลเดิม
-- [docs/mlflow_setup.md:87](mlflow_setup.md#L87) "ผลเหมือนเดิมเพราะใช้ seed คงที่"
-- [src/train.py:5](../src/train.py#L5) "ค่าที่ได้ควรตรงกับ notebook 04"
+**ปัญหา:** [src/train.py](../../src/train.py) ตั้ง `random_state=42` และ `n_jobs=4` ไว้ แต่โมเดลที่ได้ยังขึ้นกับจำนวน thread และระบบปฏิบัติการ ขณะที่เอกสารหลายที่เขียนว่าเทรนใหม่แล้วได้ผลเดิม
+- [docs/mlflow_setup.md:87](../mlflow_setup.md#L87) "ผลเหมือนเดิมเพราะใช้ seed คงที่"
+- [src/train.py:5](../../src/train.py#L5) "ค่าที่ได้ควรตรงกับ notebook 04"
 - notebook 07 หัวข้อ 5 ที่เทรนใหม่แล้วเขียนว่า "= attrition-xgboost-P v1"
 
 **หลักฐาน (รอบ 2 รันจริง):**
@@ -409,16 +409,16 @@ bootstrap 95% CI ของ test AUC = 0.73 – 0.88 (10,000 รอบ ใช้�
 
 | ไฟล์:บรรทัด | เขียนว่า | ของจริง | แก้โดย |
 | :--- | :--- | :--- | :--- |
-| [report_business_logic_draft_S.md:141](report_business_logic_draft_S.md#L141) | พนักงาน 1,470 คน "High 170 / Medium 313 / Low 987" | v1 ได้ 185 / 274 / 1011 และตารางรายแผนกในไฟล์เดียวกัน (บรรทัด 193–195) ก็รวมได้ 185 / 274 / 1011 | Saphondanai |
-| [report_business_logic_draft_S.md:177](report_business_logic_draft_S.md#L177) | "เมื่อบริษัทไทยใช้ข้อมูลของตัวเอง ตัวเลขจะเป็นบาทโดยอัตโนมัติ" | จริงเฉพาะตัวเลขเงิน ส่วนคะแนนความเสี่ยงจะผิดเพราะโมเดลเห็นเงินเดือนบาทเกินช่วงที่เคยเห็น (DE-01) ต้องเพิ่มข้อจำกัดนี้ | Saphondanai |
-| [report_backend_draft_P.md:58](report_backend_draft_P.md#L58) | ตัวอย่าง `/shap/1` `"risk_score": 0.713` | v1 ได้ 0.691 (ตรงกับตัวอย่าง `/predict` ใน `report_business_logic_draft_S.md:218`) | Puripat |
-| [report_backend_draft_P.md:119](report_backend_draft_P.md#L119) | โมเดลเป็น "ตัวทดลองใน MLflow ในเครื่อง" | ทีมเลือก v1 บน DagsHub เป็นโมเดลสุดท้ายแล้ว (TASKS.md) | Puripat |
-| [report_backend_draft_P.md:120](report_backend_draft_P.md#L120) | `/company-summary` ใช้ "ตารางคำแนะนำชั่วคราว" | ใช้ `src/company_summary.py` แล้ว | Puripat |
-| [report_backend_draft_P.md:23](report_backend_draft_P.md#L23) | ใช้โค้ดชุดเดียวกัน "ป้องกันปัญหา training/serving skew" | ป้องกันได้แค่บางส่วน ยังมี DE-01, DE-02, DE-03 | Puripat |
-| [report_backend_draft_P.md:111](report_backend_draft_P.md#L111) | "Frontend แสดงระดับ ต่ำ/ปานกลาง/สูง แทนเปอร์เซ็นต์" | แสดง "xx / 100" ด้วย และ SHAP Viewer ใช้เกณฑ์คนละชุดกับ API ([UX-01, UX-05](review_ux_ui_S.md)) | Puripat |
-| [mlflow_setup.md:3](mlflow_setup.md#L3) | "โค้ดทุกส่วน … ชี้ MLflow ผ่าน `src/mlflow_setup.py`" | `src/shap_explain.py` และ notebook `05_shap_P` ใช้ sqlite แบบ hardcode (H-02) | Saphondanai |
-| [mlflow_setup.md:87](mlflow_setup.md#L87) | "ผลเหมือนเดิมเพราะใช้ seed คงที่" | ไม่จริง (DE-08) | Saphondanai |
-| [README.md:167](../README.md#L167) | ลาออก 238 คน | 237 คน (H-05) | Saphondanai |
+| [report_business_logic_draft_S.md:141](../report_business_logic_draft_S.md#L141) | พนักงาน 1,470 คน "High 170 / Medium 313 / Low 987" | v1 ได้ 185 / 274 / 1011 และตารางรายแผนกในไฟล์เดียวกัน (บรรทัด 193–195) ก็รวมได้ 185 / 274 / 1011 | Saphondanai |
+| [report_business_logic_draft_S.md:177](../report_business_logic_draft_S.md#L177) | "เมื่อบริษัทไทยใช้ข้อมูลของตัวเอง ตัวเลขจะเป็นบาทโดยอัตโนมัติ" | จริงเฉพาะตัวเลขเงิน ส่วนคะแนนความเสี่ยงจะผิดเพราะโมเดลเห็นเงินเดือนบาทเกินช่วงที่เคยเห็น (DE-01) ต้องเพิ่มข้อจำกัดนี้ | Saphondanai |
+| [report_backend_draft_P.md:58](../report_backend_draft_P.md#L58) | ตัวอย่าง `/shap/1` `"risk_score": 0.713` | v1 ได้ 0.691 (ตรงกับตัวอย่าง `/predict` ใน `report_business_logic_draft_S.md:218`) | Puripat |
+| [report_backend_draft_P.md:119](../report_backend_draft_P.md#L119) | โมเดลเป็น "ตัวทดลองใน MLflow ในเครื่อง" | ทีมเลือก v1 บน DagsHub เป็นโมเดลสุดท้ายแล้ว (TASKS.md) | Puripat |
+| [report_backend_draft_P.md:120](../report_backend_draft_P.md#L120) | `/company-summary` ใช้ "ตารางคำแนะนำชั่วคราว" | ใช้ `src/company_summary.py` แล้ว | Puripat |
+| [report_backend_draft_P.md:23](../report_backend_draft_P.md#L23) | ใช้โค้ดชุดเดียวกัน "ป้องกันปัญหา training/serving skew" | ป้องกันได้แค่บางส่วน ยังมี DE-01, DE-02, DE-03 | Puripat |
+| [report_backend_draft_P.md:111](../report_backend_draft_P.md#L111) | "Frontend แสดงระดับ ต่ำ/ปานกลาง/สูง แทนเปอร์เซ็นต์" | แสดง "xx / 100" ด้วย และ SHAP Viewer ใช้เกณฑ์คนละชุดกับ API ([UX-01, UX-05](round1-2_ux_ui_S.md)) | Puripat |
+| [mlflow_setup.md:3](../mlflow_setup.md#L3) | "โค้ดทุกส่วน … ชี้ MLflow ผ่าน `src/mlflow_setup.py`" | `src/shap_explain.py` และ notebook `05_shap_P` ใช้ sqlite แบบ hardcode (H-02) | Saphondanai |
+| [mlflow_setup.md:87](../mlflow_setup.md#L87) | "ผลเหมือนเดิมเพราะใช้ seed คงที่" | ไม่จริง (DE-08) | Saphondanai |
+| [README.md:167](../../README.md#L167) | ลาออก 238 คน | 237 คน (H-05) | Saphondanai |
 
 **ตรวจแล้วถูกต้อง:**
 - `dataset.md`: 1,470 แถว × 35 คอลัมน์, ~228 KB
@@ -482,7 +482,7 @@ bootstrap 95% CI ของ test AUC = 0.73 – 0.88 (10,000 รอบ ใช้�
 
 **ปัญหา:**
 - `Gender`, `Age`, `MaritalStatus_*` เป็นส่วนหนึ่งของ 50 ฟีเจอร์ที่โมเดลใช้ (ยืนยันจากรายชื่อคอลัมน์) แต่ Fairness check ตาม README 6.4 ยังไม่ได้ทำ
-- [src/train.py:43](../src/train.py#L43) `input_example=Xte.head(3)` คือการอัปโหลดข้อมูลพนักงาน 3 แถวขึ้น DagsHub และยืนยันแล้วว่าคนนอกที่ไม่ได้ login ดาวน์โหลดไฟล์นี้ได้ เพราะ repo บน DagsHub เป็นสาธารณะ (ดู [SEC-12 ในรายงาน Security](review_security_S.md#sec-12-repo-บน-dagshub-เป็นสาธารณะ-ดาวน์โหลดโมเดลและข้อมูลตัวอย่างได้โดยไม่ต้อง-login))
+- [src/train.py:43](../../src/train.py#L43) `input_example=Xte.head(3)` คือการอัปโหลดข้อมูลพนักงาน 3 แถวขึ้น DagsHub และยืนยันแล้วว่าคนนอกที่ไม่ได้ login ดาวน์โหลดไฟล์นี้ได้ เพราะ repo บน DagsHub เป็นสาธารณะ (ดู [SEC-12 ในรายงาน Security](round1-2_security_S.md#sec-12-repo-บน-dagshub-เป็นสาธารณะ-ดาวน์โหลดโมเดลและข้อมูลตัวอย่างได้โดยไม่ต้อง-login))
 - `/recalibrate` ไม่มี auth ใครรู้ `tenant_id` ก็เขียนทับได้ และผล calibration เก็บเป็นไฟล์ JSON ใน `backend/calibrations/` ถ้าสร้าง container ใหม่ก็หาย
 
 **ทำไมสำคัญ:**
@@ -551,7 +551,7 @@ bootstrap 95% CI ของ test AUC = 0.73 – 0.88 (10,000 รอบ ใช้�
 **ข้อเสนอ (สำหรับ Fairness check ใน TASKS.md):**
 1. ใช้ตัวเลขนี้เป็นจุดตั้งต้น ทำซ้ำด้วย Fairlearn `MetricFrame` โดยใช้ TPR (equal opportunity) เป็นเกณฑ์หลัก เพราะอัตราลาออกจริงต่างกันตามกลุ่ม
 2. ทดลองโมเดลที่ตัด `Gender` (และ `MaritalStatus`) ออก แล้วเทียบ AUC กับ TPR รายกลุ่ม การเปลี่ยนนี้เป็นการเปลี่ยนโมเดล จึงต้องตัดสินใจร่วมกับเจ้าของโมเดล
-3. ในรายงานและ UI เขียนเตือนการใช้งาน เช่น "โมเดลจับคนลาออกกลุ่มอายุ 40 ขึ้นไปได้น้อยกว่า อย่าใช้การที่คนนั้นไม่ติดกลุ่มเสี่ยงเป็นเหตุผลว่าไม่ต้องดูแล" (ผูกกับ [UX-06](review_ux_ui_S.md#ux-06-แสดงเพศ-อายุ-สถานภาพ-เป็น-เหตุผล-ของความเสี่ยง))
+3. ในรายงานและ UI เขียนเตือนการใช้งาน เช่น "โมเดลจับคนลาออกกลุ่มอายุ 40 ขึ้นไปได้น้อยกว่า อย่าใช้การที่คนนั้นไม่ติดกลุ่มเสี่ยงเป็นเหตุผลว่าไม่ต้องดูแล" (ผูกกับ [UX-06](round1-2_ux_ui_S.md#ux-06-แสดงเพศ-อายุ-สถานภาพ-เป็น-เหตุผล-ของความเสี่ยง))
 
 **เสร็จเมื่อ:** Fairness check ของทีมมีตาราง TPR รายกลุ่มพร้อม CI, มีผลการทดลองตัด protected attribute และมีข้อความเตือนในรายงานและ UI
 
@@ -566,11 +566,11 @@ bootstrap 95% CI ของ test AUC = 0.73 – 0.88 (10,000 รอบ ใช้�
 | ID | เรื่อง | ทำไม | วิธีแก้ | ผู้รับผิดชอบ |
 | :--- | :--- | :--- | :--- | :--- |
 | H-01 | มี `sys.path.append`/`insert` ใน 9 ไฟล์ | import พังเมื่อรันจากโฟลเดอร์อื่น และ linter เตือน E402 ทั้งโปรเจกต์ | เพิ่ม `pyproject.toml` แล้วใช้ `pip install -e .` (ทำเมื่อมีเวลา) | Saphondanai + Puripat |
-| H-02 | [src/shap_explain.py:27](../src/shap_explain.py#L27) hardcode sqlite URI | ไม่ผ่าน `mlflow_setup` จึงไม่เห็นโมเดลบน DagsHub | เรียก `mlflow_setup.setup()` แทน | Puripat |
+| H-02 | [src/shap_explain.py:27](../../src/shap_explain.py#L27) hardcode sqlite URI | ไม่ผ่าน `mlflow_setup` จึงไม่เห็นโมเดลบน DagsHub | เรียก `mlflow_setup.setup()` แทน | Puripat |
 | H-03 | CI เทรนโมเดลแต่ไม่มีเกณฑ์คุณภาพ และไม่มี test ของ clean/feature pipeline | โมเดลแย่ลงแล้ว CI ก็ยังเขียว | ให้ `train.py` exit ≠ 0 ถ้า AUC < 0.75 และเพิ่ม test ว่าไม่มี NaN, มีคอลัมน์ครบ 50 และค่าหมวดหมู่ใหม่ต้อง error | Saphondanai (CI) + Puripat (test ของ feature) |
-| H-04 | [load_raw_data](../src/clean_pipeline.py#L51-L59) แอบดาวน์โหลดจาก Kaggle เองถ้าไม่มีไฟล์ | backend ไม่ควรมีผลข้างเคียงทางเครือข่ายแบบที่ไม่รู้ตัว | แยกเป็น `download_raw_data()` เรียกเฉพาะตอน setup ส่วน `load_raw_data` ให้ error ชัด ๆ ถ้าไม่มีไฟล์ | Saphondanai + Puripat |
-| H-05 | [README.md:3-14](../README.md#L3-L14) ยังเขียนว่า "v0.1 ยังไม่มีโค้ด" และ [README.md:167](../README.md#L167) บอกว่าลาออก 238 คน แต่ข้อมูลจริงมี 237 คน (16.1%) | คนตรวจงานอ่านแล้วสับสน และตัวเลขไม่ตรงกับข้อมูล | อัปเดตสถานะ, เวอร์ชัน และตัวเลข | Saphondanai |
-| H-06 | `/recalibrate` ใช้ isotonic เป็นค่าเริ่มต้น และขั้นต่ำแค่ 50 แถว ([recalibrate.py:14-19](../backend/routers/recalibrate.py#L14-L19)) | isotonic กับข้อมูลน้อย overfit ง่าย และ `brier_after` วัดบนข้อมูลชุดเดียวกับที่ fit | ใช้ `platt` เป็นค่าเริ่มต้นเมื่อข้อมูลน้อย หรือวัด brier ด้วย CV | Puripat |
+| H-04 | [load_raw_data](../../src/clean_pipeline.py#L51-L59) แอบดาวน์โหลดจาก Kaggle เองถ้าไม่มีไฟล์ | backend ไม่ควรมีผลข้างเคียงทางเครือข่ายแบบที่ไม่รู้ตัว | แยกเป็น `download_raw_data()` เรียกเฉพาะตอน setup ส่วน `load_raw_data` ให้ error ชัด ๆ ถ้าไม่มีไฟล์ | Saphondanai + Puripat |
+| H-05 | [README.md:3-14](../../README.md#L3-L14) ยังเขียนว่า "v0.1 ยังไม่มีโค้ด" และ [README.md:167](../../README.md#L167) บอกว่าลาออก 238 คน แต่ข้อมูลจริงมี 237 คน (16.1%) | คนตรวจงานอ่านแล้วสับสน และตัวเลขไม่ตรงกับข้อมูล | อัปเดตสถานะ, เวอร์ชัน และตัวเลข | Saphondanai |
+| H-06 | `/recalibrate` ใช้ isotonic เป็นค่าเริ่มต้น และขั้นต่ำแค่ 50 แถว ([recalibrate.py:14-19](../../backend/routers/recalibrate.py#L14-L19)) | isotonic กับข้อมูลน้อย overfit ง่าย และ `brier_after` วัดบนข้อมูลชุดเดียวกับที่ fit | ใช้ `platt` เป็นค่าเริ่มต้นเมื่อข้อมูลน้อย หรือวัด brier ด้วย CV | Puripat |
 | H-07 | notebook (รอบ 2) 1. ใน 05 "CV F1" ของค่าที่ Optuna เลือกวัดบน fold ชุดเดียวกับที่ใช้จูน (06 แก้ส่วน threshold แล้ว แต่ส่วนการจูนยังเอนเอียง) 2. `05_shap_P` รันได้เฉพาะเครื่องที่มี `mlflow.db` เพราะผ่าน `shap_explain.py` ที่ hardcode sqlite 3. ใน 07 หัวข้อ 5 เทรนใหม่แทนการโหลด v1 | ตัวเลข CV ดูดีกว่าจริงเล็กน้อย, notebook ของเพื่อนรันซ้ำบนเครื่องอื่นไม่ได้, ตัวเลขที่นำเสนออาจไม่ใช่ของ v1 เมื่อรันบนเครื่องอื่น | 1. ใช้ test หรือ nested CV เป็นตัวเลขหลักตอนเทียบโมเดล (รายงานร่างทำอยู่แล้ว) 2. แก้ตาม H-02 3. ให้ 07 โหลด v1 (DE-08) | Saphondanai (05, 07) + Puripat (05_shap_P) |
 
 ---

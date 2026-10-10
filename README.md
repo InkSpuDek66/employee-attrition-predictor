@@ -251,7 +251,7 @@ IBM HR Analytics Employee Attrition & Performance (Kaggle Open Dataset)
 
 - ทดลองตัดฟีเจอร์ที่อาจไม่ transfer ข้ามวัฒนธรรม คือ `BusinessTravel` (โครงสร้างการเดินทางธุรกิจแบบอเมริกัน) และ `StockOptionLevel` (พบน้อยในบริษัท/SME ไทย) ใน `notebooks/04_tuning_S.ipynb` โดยตั้งกติกาก่อนดูผลว่าจะตัดถ้า CV PR-AUC ลดไม่เกิน 0.01 ผลคือลดลง 0.02–0.035 จึงคงไว้ในโมเดลสุดท้าย แล้วจัดการด้วย recalibration และคำแนะนำแบบไทยแทน (เช่น `StockOptionLevel` แนะนำเป็นการสมทบกองทุนสำรองเลี้ยงชีพ) ผลเต็มอยู่ใน [รายงานร่าง Business Logic](docs/report_business_logic_draft_S.md) หัวข้อ 2
 - โมเดลสุดท้าย (`attrition-xgboost-P` v1) ใช้คอลัมน์เดิมทั้งหมด ยกเว้น 4 คอลัมน์ที่ไม่มีข้อมูล (`EmployeeCount`, `StandardHours`, `Over18`, `EmployeeNumber`) บวกฟีเจอร์ใหม่ 3 ตัว (`OverTimeXDistance`, `AvgSatisfaction`, `TenureRatio`) รวม 50 คอลัมน์หลัง one-hot
-- ข้อจำกัดที่ยังค้างอยู่คือ IBM ไม่ระบุสกุลเงินของ `MonthlyIncome` ถ้าบริษัทไทยส่งเงินเดือนเป็นบาท คะแนนความเสี่ยงจะผิด รอทีมตกลงหน่วยกลาง (DE-01 ใน [review Data Engineering](docs/review_data_engineering_S.md))
+- ข้อจำกัดที่ยังค้างอยู่คือ IBM ไม่ระบุสกุลเงินของ `MonthlyIncome` ถ้าบริษัทไทยส่งเงินเดือนเป็นบาท คะแนนความเสี่ยงจะผิด รอทีมตกลงหน่วยกลาง (DE-01 ใน [review Data Engineering](docs/reviews/round1-2_data_engineering_S.md))
 - ดู [6.5 Model Localization](#65-model-localization-เพื่อให้ใช้ในไทยได้จริง) สำหรับกลไก recalibrate โมเดลด้วยข้อมูลจริงของบริษัทที่ใช้งาน
 
 ---
@@ -328,7 +328,7 @@ ROI = replacement_cost_estimate - retain_cost_estimate
   ระหว่างกลุ่มตาม protected attribute (เพศ, ช่วงอายุ) ด้วย Fairlearn
   -> threshold ที่ยอมรับได้จะกำหนดใน Backend & Analysis phase (wk6–7)
 ```
-> ยังไม่ได้ทำ ตัวเลขตั้งต้นจากคะแนน out-of-fold อยู่ใน DS-04 ของ [review Data Engineering](docs/review_data_engineering_S.md) (โมเดลจับคนลาออกอายุ 40 ปีขึ้นไปได้ไม่ถึงครึ่ง ขณะที่กลุ่มอายุ 18–29 จับได้ 79%)
+> ยังไม่ได้ทำ ตัวเลขตั้งต้นจากคะแนน out-of-fold อยู่ใน DS-04 ของ [review Data Engineering](docs/reviews/round1-2_data_engineering_S.md) (โมเดลจับคนลาออกอายุ 40 ปีขึ้นไปได้ไม่ถึงครึ่ง ขณะที่กลุ่มอายุ 18–29 จับได้ 79%)
 
 ### 6.5 Model Localization (เพื่อให้ใช้ในไทยได้จริง)
 ```
@@ -345,7 +345,7 @@ Deploy-time (per-tenant):
 ```
 > ตราบใดที่บริษัทยังไม่ได้ recalibrate ระบบต้องแสดงคำเตือนกำกับ risk_score ว่า "ยังไม่ได้ปรับเทียบกับข้อมูลจริงของบริษัท — ใช้ SHAP (ทิศทางของปัจจัย) ประกอบการตัดสินใจมากกว่าเชื่อตัวเลขตรงๆ" เพื่อความโปร่งใส
 >
-> ที่ implement จริง: `POST /recalibrate` รองรับ Platt scaling และ isotonic regression เรียกได้เฉพาะผู้ดูแลระบบและปรับได้เฉพาะบริษัทของตัวเอง endpoint ที่คืนคะแนนใช้บริษัทของผู้ login และแนบคำเตือนข้างบนเมื่อบริษัทยังไม่ได้ปรับเทียบ ผลการปรับเทียบเก็บในตาราง `tenant_calibrations` (ไม่ต่อ DB = ไฟล์ JSON) login ตอนนี้เป็นบัญชีทดลอง จึงห้ามใช้กับข้อมูลจริง (ดู [review Security](docs/review_security_S.md))
+> ที่ implement จริง: `POST /recalibrate` รองรับ Platt scaling และ isotonic regression เรียกได้เฉพาะผู้ดูแลระบบและปรับได้เฉพาะบริษัทของตัวเอง endpoint ที่คืนคะแนนใช้บริษัทของผู้ login และแนบคำเตือนข้างบนเมื่อบริษัทยังไม่ได้ปรับเทียบ ผลการปรับเทียบเก็บในตาราง `tenant_calibrations` (ไม่ต่อ DB = ไฟล์ JSON) login ตอนนี้เป็นบัญชีทดลอง จึงห้ามใช้กับข้อมูลจริง (ดู [review Security](docs/reviews/round1-2_security_S.md))
 
 ### 6.6 Company-wide Aggregate Summary
 ```
@@ -391,7 +391,7 @@ Deploy-time (per-tenant):
 | แผน | GET | `/dashboard/summary` | ข้อมูลสรุปสำหรับ Superset/React dashboard |
 | แผน | GET | `/calibration-status/{tenant_id}` | ตรวจสอบว่าบริษัทนี้ recalibrate โมเดลแล้วหรือยัง |
 
-> ทุก endpoint ต้อง login (`backend/auth.py` ครอบทุก router ใน `main.py`) ไม่มี token ได้ 401 ส่ง `tenant_id` ของบริษัทอื่นได้ 403 มี rate limit และเพดานขนาด body (SEC-01/02/03) แต่บัญชียังเป็นบัญชีทดลองที่เขียนไว้ในโค้ด จึงรันได้เฉพาะในเครื่องกับข้อมูลสมมติ ก่อน deploy ต้องมีระบบผู้ใช้จริง (ตาราง users + hash รหัสผ่าน) ตามที่ทีมตกลงใน SEC-01 ([review Security](docs/review_security_S.md))
+> ทุก endpoint ต้อง login (`backend/auth.py` ครอบทุก router ใน `main.py`) ไม่มี token ได้ 401 ส่ง `tenant_id` ของบริษัทอื่นได้ 403 มี rate limit และเพดานขนาด body (SEC-01/02/03) แต่บัญชียังเป็นบัญชีทดลองที่เขียนไว้ในโค้ด จึงรันได้เฉพาะในเครื่องกับข้อมูลสมมติ ก่อน deploy ต้องมีระบบผู้ใช้จริง (ตาราง users + hash รหัสผ่าน) ตามที่ทีมตกลงใน SEC-01 ([review Security](docs/reviews/round1-2_security_S.md))
 
 ---
 

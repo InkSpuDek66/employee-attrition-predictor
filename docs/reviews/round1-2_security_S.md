@@ -8,7 +8,7 @@
 | ผู้ตรวจ | Claude Code (AI, Claude Opus 5.5) รับบท senior security engineer ตามคำขอของ Saphondanai |
 | ผู้ดูแลเอกสาร | Saphondanai (ถามหรือแย้งได้ที่ Saphondanai) |
 | สถานะ | รอทีมยืนยันผู้รับผิดชอบและกำหนดเสร็จ |
-| เอกสารชุดเดียวกัน | [Data Engineering](review_data_engineering_S.md) · Security (ไฟล์นี้) · [UX/UI](review_ux_ui_S.md) |
+| เอกสารชุดเดียวกัน | [Data Engineering](round1-2_data_engineering_S.md) · Security (ไฟล์นี้) · [UX/UI](round1-2_ux_ui_S.md) |
 
 **วิธีใช้เอกสารนี้**
 
@@ -17,7 +17,7 @@
 3. แก้เสร็จแล้วให้ติ๊ก checkbox พร้อมใส่ commit hash
 4. ถ้าไม่เห็นด้วยกับข้อไหน ให้เขียนเหตุผลไว้ใน [7. ความเห็นทีม](#7-ความเห็นทีม)
 
-> ผู้รับผิดชอบที่ระบุในเอกสารนี้เป็นข้อเสนอ อ้างอิงจาก [TASKS.md](../TASKS.md) และผู้เขียนไฟล์ใน git log ทีมต้องยืนยันกันอีกครั้ง
+> ผู้รับผิดชอบที่ระบุในเอกสารนี้เป็นข้อเสนอ อ้างอิงจาก [TASKS.md](../../TASKS.md) และผู้เขียนไฟล์ใน git log ทีมต้องยืนยันกันอีกครั้ง
 > บัญชี git ที่ใช้อ้างอิง: `Ink-SPU` = Saphondanai, `NungUmSudNaRak` (commit ขึ้นต้น Dev007) = Puripat (อนุมานจาก commit ที่ตรงกับงานของ Puripat ใน TASKS.md)
 
 ---
@@ -124,23 +124,23 @@
 
 ## 3. จุดที่ทำได้ดี (ควรรักษาไว้)
 
-- **ไม่มี secret ใน git:** `.env` อยู่ใน `.gitignore` และตรวจ history แล้วไม่เคยถูก commit ส่วน [.env.example](../.env.example) ใช้แค่ placeholder
+- **ไม่มี secret ใน git:** `.env` อยู่ใน `.gitignore` และตรวจ history แล้วไม่เคยถูก commit ส่วน [.env.example](../../.env.example) ใช้แค่ placeholder
 - **GitHub ช่วยกันอีกชั้น (ตรวจรอบ 2):** เปิด secret scanning และ push protection ไว้ (มี alert 0 รายการ), สิทธิ์เริ่มต้นของ workflow เป็น `read`, ไม่มี deploy key และ CI ไม่ได้ใช้ secret ใด ๆ
 - **dependency ยังไม่มีช่องโหว่ที่รู้จัก (ตรวจรอบ 2):** `pip-audit` 195 แพ็กเกจ และ `npm audit` 106 แพ็กเกจ ผลเป็น 0 ทั้งคู่ ณ วันตรวจ
-- **token แยกรายคน:** [docs/mlflow_setup.md](mlflow_setup.md) ให้แต่ละคนสร้าง DagsHub token ของตัวเองและห้ามแชร์
+- **token แยกรายคน:** [docs/mlflow_setup.md](../mlflow_setup.md) ให้แต่ละคนสร้าง DagsHub token ของตัวเองและห้ามแชร์
 - **service ไม่เปิดสู่ network ภายนอก:**
-  - [docker-compose.yml](../docker-compose.yml) bind PostgreSQL/MLflow ที่ `127.0.0.1` เท่านั้น
+  - [docker-compose.yml](../../docker-compose.yml) bind PostgreSQL/MLflow ที่ `127.0.0.1` เท่านั้น
   - บังคับให้ตั้ง `POSTGRES_PASSWORD`
   - MLflow ตั้ง `--allowed-hosts` กัน DNS rebinding
 - **ตรวจ input ที่ขอบระบบ:**
-  - `EmployeeInput` ใช้ `Literal` + `extra="forbid"` ([schemas.py](../backend/schemas.py))
-  - `tenant_id` ผ่าน regex กัน path traversal ([calibration.py:17](../backend/calibration.py#L17)) และมี test ครอบ (รอบ 2 ยิงจริงด้วย `tenant_id="../x"` ได้ 422)
+  - `EmployeeInput` ใช้ `Literal` + `extra="forbid"` ([schemas.py](../../backend/schemas.py))
+  - `tenant_id` ผ่าน regex กัน path traversal ([calibration.py:17](../../backend/calibration.py#L17)) และมี test ครอบ (รอบ 2 ยิงจริงด้วย `tenant_id="../x"` ได้ 422)
 - **frontend ปลอดภัยจาก XSS:** React escape output ให้เอง และไม่มี `dangerouslySetInnerHTML`
 - **ค่า default ปลอดภัย:**
   - uvicorn bind `127.0.0.1` เป็นค่าเริ่มต้น
   - Vite proxy ทำให้ไม่ต้องเปิด CORS ช่วงพัฒนา
   - โมเดลโหลดผ่าน `mlflow.xgboost` ซึ่งเป็น native format ไม่ใช่ pickle
-- **ตรวจแล้วไม่ใช่ปัญหา:** [docs/model_lab_S/index.html](model_lab_S/index.html) ใช้ `innerHTML` แต่ข้อมูลมาจาก `results.json` ที่ทีมสร้างเอง ไม่ใช่ input จากผู้ใช้
+- **ตรวจแล้วไม่ใช่ปัญหา:** [docs/model_lab_S/index.html](../model_lab_S/index.html) ใช้ `innerHTML` แต่ข้อมูลมาจาก `results.json` ที่ทีมสร้างเอง ไม่ใช่ input จากผู้ใช้
 
 ---
 
@@ -153,13 +153,13 @@
 ระดับ: ตอนนี้ กลาง, ก่อน deploy สูง (ตรงกับ OWASP API1 Broken Object Level Authorization + API3 Broken Object Property Level Authorization)
 
 **ปัญหา:**
-- ทุก endpoint ใน [backend/main.py](../backend/main.py) ไม่มีการยืนยันตัวตน (authentication) และไม่มีการตรวจสิทธิ์ (authorization)
+- ทุก endpoint ใน [backend/main.py](../../backend/main.py) ไม่มีการยืนยันตัวตน (authentication) และไม่มีการตรวจสิทธิ์ (authorization)
 - `employee_id` เป็นเลขเรียง (EmployeeNumber 1–2068 มีจริง 1,470 เลข) จึงไล่เลขได้
 - หลาย endpoint คืนข้อมูลเกินกว่าที่หน้าจอใช้:
 
 | Endpoint | สิ่งที่คืน |
 | :--- | :--- |
-| `POST /whatif` | `employee` ทั้งก้อน ([whatif.py:31](../backend/routers/whatif.py#L31)) รวม `Age`, `Gender`, `MaritalStatus`, `MonthlyIncome`, คะแนนความพึงพอใจ, ผลประเมิน |
+| `POST /whatif` | `employee` ทั้งก้อน ([whatif.py:31](../../backend/routers/whatif.py#L31)) รวม `Age`, `Gender`, `MaritalStatus`, `MonthlyIncome`, คะแนนความพึงพอใจ, ผลประเมิน |
 | `GET /shap/{id}?top_n=100` | ค่าของทุกฟีเจอร์ของคนนั้น |
 | `GET /financial-impact/{id}` | `monthly_income`, `years_at_company`, `job_level` |
 
@@ -180,9 +180,9 @@
 
 **วิธีแก้ (เรียงจากงานน้อยไปมาก):**
 1. ตัดข้อมูลที่ไม่จำเป็นออกจาก response (ทำได้ทันที ไม่ต้องรอ auth)
-   - ให้ `/whatif` คืนเฉพาะฟิลด์ที่ปรับได้ใน What-if ([WhatIfSimulator.jsx:6-25](../frontend/src/WhatIfSimulator.jsx#L6-L25) ใช้แค่ชุดนี้)
+   - ให้ `/whatif` คืนเฉพาะฟิลด์ที่ปรับได้ใน What-if ([WhatIfSimulator.jsx:6-25](../../frontend/src/WhatIfSimulator.jsx#L6-L25) ใช้แค่ชุดนี้)
    - ให้ `/shap` ไม่คืนค่าจริงของ protected attribute (Gender, Age, MaritalStatus)
-   - ข้อควรระวัง: หน้า Streamlit [whatif_page.py](../src/app_pages/whatif_page.py) เรียกฟังก์ชัน `whatif` ตรง ๆ และใช้ `result.employee` ทั้งก้อน ต้องเปลี่ยนไปใช้ `resolve_employee` ของ `routers/predict.py` แทน
+   - ข้อควรระวัง: หน้า Streamlit [whatif_page.py](../../src/app_pages/whatif_page.py) เรียกฟังก์ชัน `whatif` ตรง ๆ และใช้ `result.employee` ทั้งก้อน ต้องเปลี่ยนไปใช้ `resolve_employee` ของ `routers/predict.py` แทน
 2. ใส่ authentication ที่ระดับ router: ใช้ FastAPI dependency ตัวเดียว ครอบทุก router ใน `main.py` เช่น `app.include_router(predict.router, dependencies=[Depends(require_user)])`
    - ขั้นต่ำสำหรับ demo: login ด้วย username/password ของ HR แล้วได้ token (JWT หรือ session)
    - ห้ามใส่ API key ไว้ใน frontend: เพราะทุกคนที่เปิดเว็บเห็นได้
@@ -206,9 +206,9 @@
 ระดับ: ตอนนี้ กลาง, ก่อน deploy สูง (ตรงกับ OWASP API1 และ API5 Broken Function Level Authorization)
 
 **ปัญหา:**
-- `tenant_id` มาจากผู้ใช้เองผ่าน body หรือ query ([schemas.py:65](../backend/schemas.py#L65), `/shap`, `/financial-impact`)
-- หน้า React มีช่องให้พิมพ์ "รหัสบริษัท" เอง ([ShapViewer.jsx:59-62](../frontend/src/ShapViewer.jsx#L59-L62), [WhatIfSimulator.jsx:138-141](../frontend/src/WhatIfSimulator.jsx#L138-L141))
-- `POST /recalibrate` เขียนทับไฟล์ calibration ของ `tenant_id` ใดก็ได้ ([recalibrate.py](../backend/routers/recalibrate.py))
+- `tenant_id` มาจากผู้ใช้เองผ่าน body หรือ query ([schemas.py:65](../../backend/schemas.py#L65), `/shap`, `/financial-impact`)
+- หน้า React มีช่องให้พิมพ์ "รหัสบริษัท" เอง ([ShapViewer.jsx:59-62](../../frontend/src/ShapViewer.jsx#L59-L62), [WhatIfSimulator.jsx:138-141](../../frontend/src/WhatIfSimulator.jsx#L138-L141))
+- `POST /recalibrate` เขียนทับไฟล์ calibration ของ `tenant_id` ใดก็ได้ ([recalibrate.py](../../backend/routers/recalibrate.py))
 - ข้อมูลพนักงานเป็น CSV ชุดเดียว ไม่ได้ผูกกับ tenant
 
 **หลักฐาน (รอบ 2 ยิงจริง):**
@@ -231,7 +231,7 @@
 
 **วิธีแก้:**
 1. เอา `tenant_id` มาจากตัวตนที่ login แล้ว (claim ใน token จาก SEC-01) ไม่รับจาก request อีก
-2. ลบช่อง "รหัสบริษัท" ออกจาก UI (ผูกกับ UX-11 ใน [รายงาน UX/UI](review_ux_ui_S.md))
+2. ลบช่อง "รหัสบริษัท" ออกจาก UI (ผูกกับ UX-11 ใน [รายงาน UX/UI](round1-2_ux_ui_S.md))
 3. ให้ `/recalibrate` เรียกได้เฉพาะ role admin ของ tenant นั้น
 4. ตอนย้ายไป DB (DE-04) ทุกตารางที่เป็นข้อมูลของบริษัทต้องมีคอลัมน์ `tenant_id` และทุก query ต้องกรองด้วยค่านี้
 
@@ -251,7 +251,7 @@
 ระดับ: ตอนนี้ ต่ำ, ก่อน deploy กลาง (ตรงกับ OWASP API4 Unrestricted Resource Consumption)
 
 **ปัญหา:**
-- `records: list[dict] = Field(min_length=MIN_ROWS)` กำหนดแค่ขั้นต่ำ ไม่มีขั้นสูง ([recalibrate.py:21](../backend/routers/recalibrate.py#L21)) และ FastAPI/uvicorn ไม่จำกัดขนาด body ให้เอง
+- `records: list[dict] = Field(min_length=MIN_ROWS)` กำหนดแค่ขั้นต่ำ ไม่มีขั้นสูง ([recalibrate.py:21](../../backend/routers/recalibrate.py#L21)) และ FastAPI/uvicorn ไม่จำกัดขนาด body ให้เอง
 - ทุก endpoint ไม่มี rate limit
 
 **หลักฐาน:**
@@ -279,7 +279,7 @@
 ระดับ: ตอนนี้ ต่ำ, ก่อน deploy กลาง ตามหลัก least privilege คือให้สิทธิ์น้อยที่สุดเท่าที่งานต้องใช้
 
 **ปัญหา:**
-- [backend/model_store.py:21](../backend/model_store.py#L21) import `mlflow_setup` ซึ่ง [load `.env` ทั้งไฟล์](../src/mlflow_setup.py#L17)
+- [backend/model_store.py:21](../../backend/model_store.py#L21) import `mlflow_setup` ซึ่ง [load `.env` ทั้งไฟล์](../../src/mlflow_setup.py#L17)
 - process ที่เสิร์ฟ API จึงถือ `MLFLOW_TRACKING_PASSWORD` ซึ่งเป็น DagsHub token ส่วนตัว ที่มีสิทธิ์ Write ไฟล์เดียวกับที่ใช้เทรน
 
 **ทำไมต้องแก้:**
@@ -290,7 +290,7 @@
 **วิธีแก้:**
 1. ตอน deploy ใช้บัญชีหรือ token แยกสำหรับ backend ที่มีสิทธิ์อ่านอย่างเดียว และห้ามใช้ token ส่วนตัวของสมาชิก
 2. หรือ bake ไฟล์โมเดลเข้า Docker image ตอน build ให้ backend ไม่ต้องต่อ MLflow ตอนรันเลย
-3. เพิ่มในเอกสาร [docs/mlflow_setup.md](mlflow_setup.md) ว่าห้ามใส่ token ส่วนตัวใน environment ของ Render
+3. เพิ่มในเอกสาร [docs/mlflow_setup.md](../mlflow_setup.md) ว่าห้ามใส่ token ส่วนตัวใน environment ของ Render
 
 **เสร็จเมื่อ:** environment ของ backend ที่ deploy ไม่มี token ที่เขียนได้ และเอกสารระบุวิธีไว้
 
@@ -332,9 +332,9 @@
 ระดับ: ตอนนี้ ต่ำ, ก่อน deploy กลาง (ตรงกับ OWASP A06 Vulnerable and Outdated Components)
 
 **ปัญหา:**
-- [requirements.txt](../requirements.txt) ไม่ pin เวอร์ชันและไม่มี hash (ตรงกับ DE-05)
+- [requirements.txt](../../requirements.txt) ไม่ pin เวอร์ชันและไม่มี hash (ตรงกับ DE-05)
 - ไม่มีการสแกนช่องโหว่ใน CI และ Dependabot alerts กับ Dependabot security updates ปิดอยู่ (ตรวจรอบ 2 ผ่าน `gh api`)
-- [ci.yml](../.github/workflows/ci.yml) ไม่มีบล็อก `permissions:` ตอนนี้ปลอดภัยเพราะค่า default ของ repo เป็น `read` (ตรวจรอบ 2) แต่ถ้าใครไปเปลี่ยนค่า default workflow จะได้สิทธิ์ write ทันที
+- [ci.yml](../../.github/workflows/ci.yml) ไม่มีบล็อก `permissions:` ตอนนี้ปลอดภัยเพราะค่า default ของ repo เป็น `read` (ตรวจรอบ 2) แต่ถ้าใครไปเปลี่ยนค่า default workflow จะได้สิทธิ์ write ทันที
 - actions อ้างด้วย tag (`@v4`) ไม่ใช่ commit SHA และ repo อนุญาตให้ใช้ action ได้ทุกตัว (`allowed_actions: all`)
 
 **หลักฐาน (รอบ 2):**
@@ -371,7 +371,7 @@
 **ปัญหา:**
 - `gh api repos/InkSpuDek66/employee-attrition-predictor/branches/main/protection` ตอบว่า "Branch not protected" และ repo ไม่มี ruleset ใด ๆ
 - collaborator มี 4 บัญชี (admin 1, write 3) ทุกคน push ตรงเข้า `main` ได้, force-push ทับ history ได้ และลบ branch ได้
-- CI ใน [ci.yml](../.github/workflows/ci.yml) รันหลัง push ก็จริง แต่ไม่ได้บังคับว่าต้องผ่านก่อนโค้ดจะเข้า `main`
+- CI ใน [ci.yml](../../.github/workflows/ci.yml) รันหลัง push ก็จริง แต่ไม่ได้บังคับว่าต้องผ่านก่อนโค้ดจะเข้า `main`
 - repo เป็น public
 
 **ทำไมต้องแก้:**
@@ -384,7 +384,7 @@
 2. Require a pull request before merging (จะตั้ง approval เป็น 0 หรือ 1 ก็ได้ตามที่ทีมตกลง)
 3. Require status checks to pass: เลือก 2 job ของ CI คือ "Python lint + train + backend tests (MLflow ใน docker compose)" และ "Frontend lint + build"
 
-แล้วเขียนขั้นตอนทำงานผ่าน PR ไว้ใน [CONTRIBUTING.md](../CONTRIBUTING.md) (ทีมเคย merge ผ่าน PR #1 มาแล้ว จึงไม่ใช่ขั้นตอนใหม่)
+แล้วเขียนขั้นตอนทำงานผ่าน PR ไว้ใน [CONTRIBUTING.md](../../CONTRIBUTING.md) (ทีมเคย merge ผ่าน PR #1 มาแล้ว จึงไม่ใช่ขั้นตอนใหม่)
 
 **เสร็จเมื่อ:** `gh api repos/InkSpuDek66/employee-attrition-predictor/rulesets` แสดง ruleset ที่ `active` และการ push ตรงเข้า `main` ถูกปฏิเสธ
 
@@ -394,7 +394,7 @@
 
 ### SEC-12 repo บน DagsHub เป็นสาธารณะ ดาวน์โหลดโมเดลและข้อมูลตัวอย่างได้โดยไม่ต้อง login
 
-ระดับ: ตอนนี้ ต่ำ, ถ้าใช้ข้อมูลจริง สูง เพิ่มในรอบ 2 และผูกกับ DS-03 ใน[รายงาน DE](review_data_engineering_S.md#ds-03-pdpa-fairness-และความปลอดภัย)
+ระดับ: ตอนนี้ ต่ำ, ถ้าใช้ข้อมูลจริง สูง เพิ่มในรอบ 2 และผูกกับ DS-03 ใน[รายงาน DE](round1-2_data_engineering_S.md#ds-03-pdpa-fairness-และความปลอดภัย)
 
 **ปัญหา:** repo `InkSpuDek66/employee-attrition-predictor` บน DagsHub เป็น public (`private: false` เป็น mirror ของ GitHub) MLflow ที่ผูกกับ repo นี้จึงเปิดให้คนนอกอ่านได้ด้วย
 
@@ -410,12 +410,12 @@
 **ทำไมต้องแก้:**
 - ตอนนี้ข้อมูลเป็น IBM synthetic ที่เปิดเผยบน Kaggle อยู่แล้ว ความเสียหายจริงจึงต่ำ
 - แต่ทุกอย่างที่ log ขึ้น MLflow ของทีมจะเป็นสาธารณะทันที ถ้าวันหนึ่งมีคนลองกับข้อมูลบริษัทจริง ข้อมูลจะหลุดทันที
-- [.env.example](../.env.example) เตือนว่า "ห้ามใช้กับข้อมูลพนักงานจริง" แต่ไม่ได้บอกเหตุผลว่าเพราะเป็นสาธารณะ
+- [.env.example](../../.env.example) เตือนว่า "ห้ามใช้กับข้อมูลพนักงานจริง" แต่ไม่ได้บอกเหตุผลว่าเพราะเป็นสาธารณะ
 - โมเดลที่ดาวน์โหลดได้ยังเปิดให้ query แบบ offline ได้ไม่จำกัด ซึ่งเสี่ยงต่อการอนุมานข้อมูลที่ใช้เทรน (membership inference) เมื่อเป็นข้อมูลจริง
 
 **วิธีแก้:**
-1. เปลี่ยน `input_example` ใน [train.py:43](../src/train.py#L43) เป็นแถวสังเคราะห์ (ตาม DS-03) ตอน register version ถัดไป
-2. เขียนใน [docs/mlflow_setup.md](mlflow_setup.md) และ `.env.example` ให้ชัดว่า "MLflow บน DagsHub ของทีมเป็นสาธารณะ ทุก run, โมเดล และ artifact คนนอกดาวน์โหลดได้"
+1. เปลี่ยน `input_example` ใน [train.py:43](../../src/train.py#L43) เป็นแถวสังเคราะห์ (ตาม DS-03) ตอน register version ถัดไป
+2. เขียนใน [docs/mlflow_setup.md](../mlflow_setup.md) และ `.env.example` ให้ชัดว่า "MLflow บน DagsHub ของทีมเป็นสาธารณะ ทุก run, โมเดล และ artifact คนนอกดาวน์โหลดได้"
 3. ถ้าจะใช้ข้อมูลจริง ให้ใช้ self-host (docker-compose ที่มีอยู่แล้ว) หรือ DagsHub repo แบบ private เท่านั้น ซึ่งตรงกับแนวคิด "self-host ข้อมูลไม่ออกนอกบริษัท"
 4. (เก็บงาน) ลบ experiment `connection-test` ที่ไม่ได้ใช้แล้ว
 
@@ -433,7 +433,7 @@
 
 **ปัญหา:**
 - `streamlit config show` ยืนยันว่า `server.address` ไม่ได้ตั้งค่าไว้ ซึ่งแปลว่า Streamlit รับการเชื่อมต่อจากทุก network interface (มันจะแสดง "Network URL" ตอนรัน)
-- คำสั่งใน [src/test_app.py:6](../src/test_app.py#L6) ไม่ได้กำหนด address
+- คำสั่งใน [src/test_app.py:6](../../src/test_app.py#L6) ไม่ได้กำหนด address
 - หน้าทดสอบนี้แสดงข้อมูลพนักงานใน dataset รวมถึงผลจริงว่าลาออกหรือไม่
 
 **ทำไมต้องแก้:** ถ้ารันบน Wi-Fi ของมหาวิทยาลัย ใครอยู่ใน network เดียวกันก็เปิดหน้านี้ได้ เป็นนิสัยที่อันตรายถ้าวันหนึ่งใช้กับข้อมูลจริง
@@ -447,9 +447,9 @@
 ระดับ: ต่ำ
 
 **ปัญหา:**
-- [recalibrate.py:49](../backend/routers/recalibrate.py#L49) ส่งข้อความ exception ดิบ (`{e}`) กลับไปให้ผู้ใช้
-- [whatif.py:50](../backend/routers/whatif.py#L50) ส่ง error ของ Pydantic ทั้งก้อน
-- [main.py:10](../backend/main.py#L10) เปิด `/docs` และ `/openapi.json` ตามค่า default
+- [recalibrate.py:49](../../backend/routers/recalibrate.py#L49) ส่งข้อความ exception ดิบ (`{e}`) กลับไปให้ผู้ใช้
+- [whatif.py:50](../../backend/routers/whatif.py#L50) ส่ง error ของ Pydantic ทั้งก้อน
+- [main.py:10](../../backend/main.py#L10) เปิด `/docs` และ `/openapi.json` ตามค่า default
 
 **หลักฐาน (รอบ 2 ยิงจริง):**
 - ส่ง `MonthlyIncome="abc"` ไปที่ `/recalibrate` ได้ข้อความ `ข้อมูลไม่ตรงรูปแบบ: unsupported operand type(s) for /: 'str' and 'int'` ซึ่งเป็น error ภายในของ Python ที่บอกว่าโค้ดทำการหารตรงไหน
@@ -804,7 +804,7 @@ print("top-10% riskiest -> Low band after attack", int((ca[top] < .4).sum()))
 
 ### 6. ต้นทุนของ SHAP ทั้งบริษัท (ประเมิน DoS)
 
-ใช้โมเดลที่เทรนซ้ำในเครื่องตามสูตร `train.py` (ดูภาคผนวกของ[รายงาน DE](review_data_engineering_S.md#ภาคผนวก-สคริปต์ตรวจซ้ำ))
+ใช้โมเดลที่เทรนซ้ำในเครื่องตามสูตร `train.py` (ดูภาคผนวกของ[รายงาน DE](round1-2_data_engineering_S.md#ภาคผนวก-สคริปต์ตรวจซ้ำ))
 ```python
 import time, shap
 t = time.perf_counter(); shap.TreeExplainer(model)(X); print(time.perf_counter() - t)  # ≈ 0.14 วินาที (1,470 แถว)

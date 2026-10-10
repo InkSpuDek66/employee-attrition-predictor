@@ -7,7 +7,7 @@
 | ผู้ตรวจ | Claude Code (AI, Claude Opus 5.5) รับบท senior UX/UI designer ตามคำขอของ Saphondanai |
 | ผู้ดูแลเอกสาร | Saphondanai (ถามหรือแย้งได้ที่ Saphondanai) |
 | สถานะ | รอทีมยืนยันผู้รับผิดชอบและกำหนดเสร็จ |
-| เอกสารชุดเดียวกัน | [Data Engineering](review_data_engineering_S.md) · [Security](review_security_S.md) · UX/UI (ไฟล์นี้) |
+| เอกสารชุดเดียวกัน | [Data Engineering](round1-2_data_engineering_S.md) · [Security](round1-2_security_S.md) · UX/UI (ไฟล์นี้) |
 
 **วิธีใช้เอกสารนี้**
 
@@ -16,7 +16,7 @@
 3. แก้เสร็จแล้วให้ติ๊ก checkbox พร้อมใส่ commit hash
 4. ถ้าไม่เห็นด้วยกับข้อไหน ให้เขียนเหตุผลไว้ใน [7. ความเห็นทีม](#7-ความเห็นทีม)
 
-> ผู้รับผิดชอบที่ระบุในเอกสารนี้เป็นข้อเสนอ อ้างอิงจาก [TASKS.md](../TASKS.md) และผู้เขียนไฟล์ใน git log ทีมต้องยืนยันกันอีกครั้ง
+> ผู้รับผิดชอบที่ระบุในเอกสารนี้เป็นข้อเสนอ อ้างอิงจาก [TASKS.md](../../TASKS.md) และผู้เขียนไฟล์ใน git log ทีมต้องยืนยันกันอีกครั้ง
 > บัญชี git ที่ใช้อ้างอิง: `Ink-SPU` = Saphondanai, `NungUmSudNaRak` (commit ขึ้นต้น Dev007) = Puripat (อนุมานจาก commit ที่ตรงกับงานของ Puripat ใน TASKS.md)
 
 ---
@@ -82,19 +82,19 @@
 
 ## 3. จุดที่ทำได้ดี (ควรรักษาไว้)
 
-- ภาษาไทยทั้งหน้า: และตั้ง `<html lang="th">` ([index.html](../frontend/index.html)) ทำให้ screen reader อ่านเป็นภาษาไทย
+- ภาษาไทยทั้งหน้า: และตั้ง `<html lang="th">` ([index.html](../../frontend/index.html)) ทำให้ screen reader อ่านเป็นภาษาไทย
 - **ฟอร์มเข้าถึงได้:** ทุก input ถูกครอบด้วย `<label>`, error มี `role="alert"` และยังเก็บ focus ring ของ browser ไว้
 - มีตารางคู่กับกราฟ SHAP: คนที่แยกสีไม่ออกหรือใช้ screen reader ยังอ่านทิศทางจากข้อความได้
 - **What-if ลื่น:**
   - debounce 300ms + `AbortController` ไม่ยิง API ซ้อน
   - ไฮไลต์ช่องที่ถูกปรับ (`.changed`) และมีปุ่มคืนค่าเดิม
-  - ไม่ให้ปรับข้อมูลส่วนตัว เช่น อายุ เพศ ([WhatIfSimulator.jsx:4](../frontend/src/WhatIfSimulator.jsx#L4))
+  - ไม่ให้ปรับข้อมูลส่วนตัว เช่น อายุ เพศ ([WhatIfSimulator.jsx:4](../../frontend/src/WhatIfSimulator.jsx#L4))
 - **ซื่อตรงกับผู้ใช้:** มีคำเตือนว่ายังไม่ปรับเทียบ, SHAP ไม่ใช่เหตุและผล, และค่าชดเชยมาตรา 118 ไม่นับเมื่อลาออกเอง
 - **หน้า Streamlit ทดสอบมีหลายอย่างที่ควรย้ายเข้า React:**
-  - อธิบาย AUC เป็นภาษาคน ("จัดลำดับถูก 81 จาก 100 คู่") และเตือนว่า accuracy ดูดีเกินจริง ([model_page.py:18-28](../src/app_pages/model_page.py#L18-L28))
-  - มีปุ่มมาตรการสำเร็จรูป ([whatif_page.py:118-124](../src/app_pages/whatif_page.py#L118-L124))
-  - เตือนเมื่อเงินเดือนอยู่นอกช่วงที่โมเดลเคยเห็น ([whatif_page.py:176-181](../src/app_pages/whatif_page.py#L176-L181))
-  - แนะนำว่า "ใช้เป็นหัวข้อเริ่มคุยกับพนักงาน แล้วยืนยันจากการพูดคุย" ([common.py:173-174](../src/app_pages/common.py#L173-L174))
+  - อธิบาย AUC เป็นภาษาคน ("จัดลำดับถูก 81 จาก 100 คู่") และเตือนว่า accuracy ดูดีเกินจริง ([model_page.py:18-28](../../src/app_pages/model_page.py#L18-L28))
+  - มีปุ่มมาตรการสำเร็จรูป ([whatif_page.py:118-124](../../src/app_pages/whatif_page.py#L118-L124))
+  - เตือนเมื่อเงินเดือนอยู่นอกช่วงที่โมเดลเคยเห็น ([whatif_page.py:176-181](../../src/app_pages/whatif_page.py#L176-L181))
+  - แนะนำว่า "ใช้เป็นหัวข้อเริ่มคุยกับพนักงาน แล้วยืนยันจากการพูดคุย" ([common.py:173-174](../../src/app_pages/common.py#L173-L174))
 
 ---
 
@@ -107,9 +107,9 @@
 ระดับ: สูง (Nielsen #4 Consistency and standards)
 
 **ปัญหา:**
-- [ShapViewer.jsx:6-15](../frontend/src/ShapViewer.jsx#L6-L15) ตัดระดับเองที่ฝั่ง frontend ด้วยเกณฑ์ 0.3 / 0.6 (มี comment ว่า "ponytail … ปรับเมื่อทีมตกลง")
-- What-if ใช้ `risk_band` จาก API ซึ่งมาจาก [business_rules.py:22-23](../src/business_rules.py#L22-L23) เกณฑ์ 0.4 / 0.7 ตาม README หัวข้อ 6.1
-- ทั้งสอง panel อยู่บนหน้าเดียวกัน ([App.jsx](../frontend/src/App.jsx))
+- [ShapViewer.jsx:6-15](../../frontend/src/ShapViewer.jsx#L6-L15) ตัดระดับเองที่ฝั่ง frontend ด้วยเกณฑ์ 0.3 / 0.6 (มี comment ว่า "ponytail … ปรับเมื่อทีมตกลง")
+- What-if ใช้ `risk_band` จาก API ซึ่งมาจาก [business_rules.py:22-23](../../src/business_rules.py#L22-L23) เกณฑ์ 0.4 / 0.7 ตาม README หัวข้อ 6.1
+- ทั้งสอง panel อยู่บนหน้าเดียวกัน ([App.jsx](../../frontend/src/App.jsx))
 
 **หลักฐาน (รันจริง):** มีพนักงาน 232 จาก 1,470 คน (16%) ที่สอง panel บอกระดับไม่ตรงกัน
 
@@ -123,9 +123,9 @@
 - ถ้าเกิดตอน demo ต่อหน้ากรรมการ จะตอบยาก
 
 **วิธีแก้:**
-1. ให้ `/shap` คืน `risk_band` และ `risk_band_th` จาก server ใช้ `score()` ใน [routers/predict.py](../backend/routers/predict.py) ตัวเดียวกับ What-if (ได้การจัดการ calibration ครบในที่เดียวด้วย)
-2. ลบ `LOW`, `HIGH` และ `riskLevel()` ออกจาก `ShapViewer.jsx` แล้วใช้สีตาม `risk_band` แบบเดียวกับ `BAND_COLOR` ใน [WhatIfSimulator.jsx:26](../frontend/src/WhatIfSimulator.jsx#L26)
-3. แก้ข้อความ "(เกณฑ์ประมาณ: ต่ำ < 30, สูง > 60)" ที่ [ShapViewer.jsx:85](../frontend/src/ShapViewer.jsx#L85) ให้ใช้ค่าจาก API หรือลบออก
+1. ให้ `/shap` คืน `risk_band` และ `risk_band_th` จาก server ใช้ `score()` ใน [routers/predict.py](../../backend/routers/predict.py) ตัวเดียวกับ What-if (ได้การจัดการ calibration ครบในที่เดียวด้วย)
+2. ลบ `LOW`, `HIGH` และ `riskLevel()` ออกจาก `ShapViewer.jsx` แล้วใช้สีตาม `risk_band` แบบเดียวกับ `BAND_COLOR` ใน [WhatIfSimulator.jsx:26](../../frontend/src/WhatIfSimulator.jsx#L26)
+3. แก้ข้อความ "(เกณฑ์ประมาณ: ต่ำ < 30, สูง > 60)" ที่ [ShapViewer.jsx:85](../../frontend/src/ShapViewer.jsx#L85) ให้ใช้ค่าจาก API หรือลบออก
 4. **หลักทั่วไป:** frontend ห้ามมีเกณฑ์ธุรกิจของตัวเอง ให้มาจาก `business_rules` ที่เดียว
 
 **เสร็จเมื่อ:** ใน frontend ไม่มีเลข 0.3/0.6/0.4/0.7 และพนักงานคนเดียวกันได้ระดับเดียวกันทุกหน้า รวม Streamlit
@@ -140,7 +140,7 @@
 
 **ปัญหา:**
 - ทุก panel เริ่มจากให้พิมพ์รหัสพนักงานเอง (ค่าเริ่มต้นคือ `1`) ไม่มีรายชื่อ ไม่มีการค้นหา ไม่มีการเรียงตามความเสี่ยง
-- SHAP Viewer กับ What-if ยังมีช่องรหัสพนักงานแยกกันคนละช่อง ([ShapViewer.jsx:55-58](../frontend/src/ShapViewer.jsx#L55-L58), [WhatIfSimulator.jsx:134-137](../frontend/src/WhatIfSimulator.jsx#L134-L137))
+- SHAP Viewer กับ What-if ยังมีช่องรหัสพนักงานแยกกันคนละช่อง ([ShapViewer.jsx:55-58](../../frontend/src/ShapViewer.jsx#L55-L58), [WhatIfSimulator.jsx:134-137](../../frontend/src/WhatIfSimulator.jsx#L134-L137))
 - EmployeeNumber มีตั้งแต่ 1 ถึง 2068 แต่มีจริงแค่ 1,470 เลข (เช่น 3, 6, 9 ไม่มี) พิมพ์เลขเดาจึงเจอ "ไม่พบพนักงาน" บ่อย
 - ใน TASKS.md ยังไม่มีใครรับงาน "หน้ารายชื่อพนักงานเสี่ยง" (Company Summary panel เป็นภาพรวมรายแผนก ไม่ใช่รายคน)
 
@@ -149,7 +149,7 @@
 - demo จะต้องพิมพ์เลขที่เตรียมไว้ล่วงหน้า ซึ่งดูไม่เป็นผลิตภัณฑ์จริง
 
 **วิธีแก้:**
-1. **Backend:** `GET /employees?department=&band=&sort=risk&limit=` คืนรหัส แผนก ตำแหน่ง ระดับ และคะแนน อ่านจากตาราง batch ตาม DE-04 (ใช้คะแนน out-of-fold ตาม DE-07) และต้องผ่าน auth ตาม [SEC-01](review_security_S.md#sec-01-api-ไม่มีการยืนยันตัวตน-และคืนข้อมูลส่วนตัวทั้งก้อน)
+1. **Backend:** `GET /employees?department=&band=&sort=risk&limit=` คืนรหัส แผนก ตำแหน่ง ระดับ และคะแนน อ่านจากตาราง batch ตาม DE-04 (ใช้คะแนน out-of-fold ตาม DE-07) และต้องผ่าน auth ตาม [SEC-01](round1-2_security_S.md#sec-01-api-ไม่มีการยืนยันตัวตน-และคืนข้อมูลส่วนตัวทั้งก้อน)
 2. หน้ารายชื่อ: เป็นตารางเรียงตามความเสี่ยง กรองตามแผนกและระดับได้ เป็นหน้าแรกของแอป
 3. หน้ารายละเอียดพนักงาน: คลิกจากตารางแล้วเปิดหน้าเดียวที่มี 3 ส่วนต่อกัน ใช้รหัสพนักงานร่วมกัน:
    1. ระดับ + เหตุผล (SHAP)
@@ -170,17 +170,17 @@
 
 ระดับ: สูง (Nielsen #2 Match between system and the real world)
 
-**ปัญหา:** ใน React [WhatIfSimulator.jsx:183-209](../frontend/src/WhatIfSimulator.jsx#L183-L209)
+**ปัญหา:** ใน React [WhatIfSimulator.jsx:183-209](../../frontend/src/WhatIfSimulator.jsx#L183-L209)
 - dropdown "มาตรการรักษาคน" (เช่น "ขึ้นเงินเดือน 10%") เปลี่ยนแค่ตัวเลขต้นทุน ไม่เปลี่ยน slider ความเสี่ยงจึงไม่ขยับตาม
 - ถ้าลาก slider เอง ต้นทุนก็ไม่เปลี่ยนตาม
-- หน้า Streamlit ทดสอบมีปุ่ม "ปิด OT", "ขึ้นเงินเดือน 10%", "เลื่อนตำแหน่ง" ที่เปลี่ยนหลายค่าพร้อมกันอย่างสมเหตุสมผลแล้ว ([whatif_page.py:118-124](../src/app_pages/whatif_page.py#L118-L124)) แต่ไม่ได้ย้ายมาใน React
+- หน้า Streamlit ทดสอบมีปุ่ม "ปิด OT", "ขึ้นเงินเดือน 10%", "เลื่อนตำแหน่ง" ที่เปลี่ยนหลายค่าพร้อมกันอย่างสมเหตุสมผลแล้ว ([whatif_page.py:118-124](../../src/app_pages/whatif_page.py#L118-L124)) แต่ไม่ได้ย้ายมาใน React
 
 **ทำไมต้องแก้:**
 - คำถามจริงของ HR คือ "ถ้าทำมาตรการนี้ ความเสี่ยงลดเท่าไร และคุ้มกับเงินที่จ่ายไหม" ตอนนี้ต้องต่อสองส่วนเองในหัว
 - ขั้น Act ใน README หัวข้อ 3 และ Financial Impact ในหัวข้อ 6.3 คือฟีเจอร์หลักที่โปรเจกต์นำเสนอ
 
 **วิธีแก้:**
-1. ให้ preset มาจาก config ที่เดียว: เพิ่มการเปลี่ยนค่าฟีเจอร์ของแต่ละมาตรการใน [config/financial_impact.json](../config/financial_impact.json) เช่น
+1. ให้ preset มาจาก config ที่เดียว: เพิ่มการเปลี่ยนค่าฟีเจอร์ของแต่ละมาตรการใน [config/financial_impact.json](../../config/financial_impact.json) เช่น
    ```json
    "salary_raise_10pct": {"label": "...", "months_of_salary": 1.2, "whatif": {"MonthlyIncome": {"multiply": 1.1}}},
    "reduce_overtime":    {"label": "...", "months_of_salary": 2.0, "whatif": {"OverTime": {"set": "No"}}},
@@ -205,8 +205,8 @@
 ระดับ: กลาง (Nielsen #5 Error prevention)
 
 **ปัญหา:**
-- slider "ตั้งแต่เลื่อนตำแหน่งล่าสุด" ตั้งได้ 0–15 ปีเสมอ ([WhatIfSimulator.jsx:17](../frontend/src/WhatIfSimulator.jsx#L17)) แม้พนักงานจะอยู่บริษัทมาแค่ 2 ปี
-- backend ([schemas.py](../backend/schemas.py)) ตรวจทีละฟิลด์เท่านั้น ไม่ได้ตรวจความสัมพันธ์ระหว่างฟิลด์
+- slider "ตั้งแต่เลื่อนตำแหน่งล่าสุด" ตั้งได้ 0–15 ปีเสมอ ([WhatIfSimulator.jsx:17](../../frontend/src/WhatIfSimulator.jsx#L17)) แม้พนักงานจะอยู่บริษัทมาแค่ 2 ปี
+- backend ([schemas.py](../../backend/schemas.py)) ตรวจทีละฟิลด์เท่านั้น ไม่ได้ตรวจความสัมพันธ์ระหว่างฟิลด์
 
 **หลักฐาน (รันจริง):** ในข้อมูลจริง 1,470 แถว ไม่มีแถวไหนเลยที่ฝ่าฝืนกฎต่อไปนี้
 - `YearsSinceLastPromotion ≤ YearsAtCompany`
@@ -231,8 +231,8 @@
 ระดับ: กลาง (Nielsen #2 และหลักการออกแบบหน้าจอที่อธิบายผลของ AI)
 
 **ปัญหา:**
-- คะแนนแสดงเป็น "68 / 100" ([ShapViewer.jsx:81](../frontend/src/ShapViewer.jsx#L81), [WhatIfSimulator.jsx:46](../frontend/src/WhatIfSimulator.jsx#L46)) คนส่วนใหญ่จะอ่านว่า "โอกาสลาออก 68%" ทั้งที่ยังไม่ได้ปรับเทียบ และ README หัวข้อ 6.5 บอกว่าใช้ จัดอันดับ เท่านั้น ส่วนคำอธิบายเป็นตัวอักษรเล็กสีจาง
-- กราฟ SHAP แสดงตัวเลข log-odds ดิบบนแกน X และใน tooltip ("0.352") ([ShapViewer.jsx:96-101](../frontend/src/ShapViewer.jsx#L96-L101)) ซึ่ง HR ไม่มีทางรู้ความหมาย
+- คะแนนแสดงเป็น "68 / 100" ([ShapViewer.jsx:81](../../frontend/src/ShapViewer.jsx#L81), [WhatIfSimulator.jsx:46](../../frontend/src/WhatIfSimulator.jsx#L46)) คนส่วนใหญ่จะอ่านว่า "โอกาสลาออก 68%" ทั้งที่ยังไม่ได้ปรับเทียบ และ README หัวข้อ 6.5 บอกว่าใช้ จัดอันดับ เท่านั้น ส่วนคำอธิบายเป็นตัวอักษรเล็กสีจาง
+- กราฟ SHAP แสดงตัวเลข log-odds ดิบบนแกน X และใน tooltip ("0.352") ([ShapViewer.jsx:96-101](../../frontend/src/ShapViewer.jsx#L96-L101)) ซึ่ง HR ไม่มีทางรู้ความหมาย
 - คำเตือนว่ายังไม่ปรับเทียบอยู่ใต้ตัวเลข ผู้ใช้จึงอ่านตัวเลขก่อนเห็นคำเตือน
 
 **ทำไมต้องแก้:** ตัวเลขที่ดูเหมือนความน่าจะเป็นจะถูกนำไปพูดต่อว่า "คนนี้มีโอกาสออก 68%" ซึ่งไม่จริงและอาจนำไปสู่การตัดสินใจที่ไม่เป็นธรรม
@@ -253,12 +253,12 @@
 
 ### UX-06 แสดงเพศ อายุ สถานภาพ เป็น "เหตุผล" ของความเสี่ยง
 
-ระดับ: กลาง (ความเป็นธรรม (ผูกกับ DS-03 ใน[รายงาน DE](review_data_engineering_S.md#ds-03-pdpa-fairness-และความปลอดภัย)))
+ระดับ: กลาง (ความเป็นธรรม (ผูกกับ DS-03 ใน[รายงาน DE](round1-2_data_engineering_S.md#ds-03-pdpa-fairness-และความปลอดภัย)))
 
 **ปัญหา:**
-- SHAP Viewer แสดงทุกปัจจัยเหมือนกันหมด เช่น "เพศ (ชาย) · ชาย · เพิ่มความเสี่ยง" หรือ "สถานภาพสมรส: Single · ใช่ · เพิ่มความเสี่ยง" โดยไม่มีคำเตือน ([ShapViewer.jsx:109-124](../frontend/src/ShapViewer.jsx#L109-L124))
-- ขณะที่หน้า Streamlit ติดป้ายไว้แล้วว่า "ข้อมูลส่วนตัว/ประวัติ บริษัทปรับไม่ได้" ([common.py:164](../src/app_pages/common.py#L164))
-- และ backend ก็มีรายการคำแนะนำ [`RECOMMENDATIONS`](../src/company_summary.py#L19) กับข้อความ [`NOT_ACTIONABLE`](../src/company_summary.py#L45) พร้อมใช้อยู่แล้ว
+- SHAP Viewer แสดงทุกปัจจัยเหมือนกันหมด เช่น "เพศ (ชาย) · ชาย · เพิ่มความเสี่ยง" หรือ "สถานภาพสมรส: Single · ใช่ · เพิ่มความเสี่ยง" โดยไม่มีคำเตือน ([ShapViewer.jsx:109-124](../../frontend/src/ShapViewer.jsx#L109-L124))
+- ขณะที่หน้า Streamlit ติดป้ายไว้แล้วว่า "ข้อมูลส่วนตัว/ประวัติ บริษัทปรับไม่ได้" ([common.py:164](../../src/app_pages/common.py#L164))
+- และ backend ก็มีรายการคำแนะนำ [`RECOMMENDATIONS`](../../src/company_summary.py#L19) กับข้อความ [`NOT_ACTIONABLE`](../../src/company_summary.py#L45) พร้อมใช้อยู่แล้ว
 
 **ทำไมต้องแก้:**
 - การวาง "เพศ" เป็นเหตุผลของความเสี่ยงบนหน้าจอ HR เท่ากับชี้นำให้ใช้เพศประกอบการตัดสินใจ ซึ่งเป็นการเลือกปฏิบัติ
@@ -268,7 +268,7 @@
 1. ให้ `/shap` คืน `actionable` และ `recommendation` ของแต่ละปัจจัย ใช้ `feature_group` + `RECOMMENDATIONS` ตัวเดียวกับ `company_summary`
 2. UI แบ่งเป็น 2 กลุ่ม
    - "ปัจจัยที่บริษัทปรับได้": แสดงคำแนะนำคู่กัน
-   - "ข้อมูลส่วนตัว/ประวัติ (ห้ามใช้ตัดสินใจ)": พับไว้เป็นค่าเริ่มต้น และไม่แสดงค่าจริงของ protected attribute (ผูกกับ [SEC-01](review_security_S.md#sec-01-api-ไม่มีการยืนยันตัวตน-และคืนข้อมูลส่วนตัวทั้งก้อน))
+   - "ข้อมูลส่วนตัว/ประวัติ (ห้ามใช้ตัดสินใจ)": พับไว้เป็นค่าเริ่มต้น และไม่แสดงค่าจริงของ protected attribute (ผูกกับ [SEC-01](round1-2_security_S.md#sec-01-api-ไม่มีการยืนยันตัวตน-และคืนข้อมูลส่วนตัวทั้งก้อน))
 3. ให้ Yanisa/Nanthamon (Fairness check) รีวิวถ้อยคำของกลุ่มที่สอง
 
 **เสร็จเมื่อ:** protected attribute ไม่ปรากฏเป็น "เหตุผล" ในมุมมองหลัก และปัจจัยที่ปรับได้มีคำแนะนำกำกับ
@@ -282,13 +282,13 @@
 ระดับ: กลาง (Nielsen #2 และ #4)
 
 **ปัญหา:**
-- one-hot แสดงทีละคอลัมน์ เช่น "ตำแหน่งงาน: Sales Representative · ไม่ใช่ · ลดความเสี่ยง" ([featureLabels.js:56-63](../frontend/src/featureLabels.js#L56-L63)) ผู้ใช้ต้องแปลในหัวว่า "การที่เขา*ไม่ได้*เป็นพนักงานขายช่วยลดความเสี่ยง" และชื่อหมวดยังเป็นภาษาอังกฤษ
-- คำแปลภาษาไทยมี 2 ชุด คือ [featureLabels.js](../frontend/src/featureLabels.js) กับ [app_pages/common.py](../src/app_pages/common.py) และเริ่มไม่ตรงกัน:
-  - Streamlit ใส่หน่วย "(กม.)" ให้ระยะทาง ([common.py:86](../src/app_pages/common.py#L86)) แต่ React ไม่มี และ IBM ไม่ได้ระบุหน่วยไว้
-  - key `"Human Resources "` (มีเว้นวรรคท้าย) ที่ [common.py:76](../src/app_pages/common.py#L76) ไม่เคยถูกใช้ ตำแหน่ง HR จึงแสดงเป็น "ฝ่ายทรัพยากรบุคคล" ซึ่งเป็นชื่อแผนก
+- one-hot แสดงทีละคอลัมน์ เช่น "ตำแหน่งงาน: Sales Representative · ไม่ใช่ · ลดความเสี่ยง" ([featureLabels.js:56-63](../../frontend/src/featureLabels.js#L56-L63)) ผู้ใช้ต้องแปลในหัวว่า "การที่เขา*ไม่ได้*เป็นพนักงานขายช่วยลดความเสี่ยง" และชื่อหมวดยังเป็นภาษาอังกฤษ
+- คำแปลภาษาไทยมี 2 ชุด คือ [featureLabels.js](../../frontend/src/featureLabels.js) กับ [app_pages/common.py](../../src/app_pages/common.py) และเริ่มไม่ตรงกัน:
+  - Streamlit ใส่หน่วย "(กม.)" ให้ระยะทาง ([common.py:86](../../src/app_pages/common.py#L86)) แต่ React ไม่มี และ IBM ไม่ได้ระบุหน่วยไว้
+  - key `"Human Resources "` (มีเว้นวรรคท้าย) ที่ [common.py:76](../../src/app_pages/common.py#L76) ไม่เคยถูกใช้ ตำแหน่ง HR จึงแสดงเป็น "ฝ่ายทรัพยากรบุคคล" ซึ่งเป็นชื่อแผนก
 
 **วิธีแก้:**
-1. รวม SHAP ของ one-hot กลับเป็นฟีเจอร์เดิมที่ฝั่ง server: ใช้ [`feature_group`](../src/company_summary.py#L51) ตัวเดียวกับ Company Summary (รวมได้เพราะค่า SHAP บวกกันได้) ผลคือ "ตำแหน่งงาน: พนักงานขาย · เพิ่มความเสี่ยง" หนึ่งบรรทัด
+1. รวม SHAP ของ one-hot กลับเป็นฟีเจอร์เดิมที่ฝั่ง server: ใช้ [`feature_group`](../../src/company_summary.py#L51) ตัวเดียวกับ Company Summary (รวมได้เพราะค่า SHAP บวกกันได้) ผลคือ "ตำแหน่งงาน: พนักงานขาย · เพิ่มความเสี่ยง" หนึ่งบรรทัด
 2. ให้คำแปลมีแหล่งเดียว: ย้ายไปไฟล์ เช่น `config/labels_th.json` ให้ API คืน `label_th`/`value_th` มาเลย แล้วลบ dictionary ที่ซ้ำใน React ส่วน Streamlit อ่านไฟล์เดียวกัน
 3. แก้ key ที่มีเว้นวรรค และใส่หน่วยตามที่ตกลงใน DE-01/UX-08
 
@@ -300,11 +300,11 @@
 
 ### UX-08 ตัวเลขไม่มีหน่วย
 
-ระดับ: กลาง (ผูกกับ DE-01 ใน[รายงาน DE](review_data_engineering_S.md#de-01-หน่วยเงินเดือนไม่มีนิยามกลาง))
+ระดับ: กลาง (ผูกกับ DE-01 ใน[รายงาน DE](round1-2_data_engineering_S.md#de-01-หน่วยเงินเดือนไม่มีนิยามกลาง))
 
 **ปัญหา:**
-- ตารางต้นทุนแสดงตัวเลขเปล่า ([WhatIfSimulator.jsx:27](../frontend/src/WhatIfSimulator.jsx#L27), [:196-201](../frontend/src/WhatIfSimulator.jsx#L196-L201)) HR คนไทยจะอ่านเป็นบาท
-- slider รายได้ 1,000–20,000 ([WhatIfSimulator.jsx:7](../frontend/src/WhatIfSimulator.jsx#L7)) และ slider ระยะทาง 1–30 ไม่มีหน่วย
+- ตารางต้นทุนแสดงตัวเลขเปล่า ([WhatIfSimulator.jsx:27](../../frontend/src/WhatIfSimulator.jsx#L27), [:196-201](../../frontend/src/WhatIfSimulator.jsx#L196-L201)) HR คนไทยจะอ่านเป็นบาท
+- slider รายได้ 1,000–20,000 ([WhatIfSimulator.jsx:7](../../frontend/src/WhatIfSimulator.jsx#L7)) และ slider ระยะทาง 1–30 ไม่มีหน่วย
 - บรรทัดที่บอกหน่วย (`currency_note`) อยู่ท้ายตารางเป็นตัวอักษรเล็ก
 
 **ทำไมต้องแก้:** ผู้ใช้จะเข้าใจว่าต้นทุนหาคนแทน "5,993" คือ 5,993 บาท ซึ่งผิดทั้งหน่วยและขนาด
@@ -321,10 +321,10 @@
 
 | ID | เรื่อง | หลักฐาน | วิธีแก้ | ผู้รับผิดชอบ |
 | :--- | :--- | :--- | :--- | :--- |
-| UX-09 | สถานะ loading/error ไม่ชัด ตอนคำนวณใหม่อัตโนมัติหลังลาก slider ไม่มีสัญญาณว่ากำลังโหลด, ถ้า error ผลเก่ายังแสดงอยู่เหมือนเป็นผลล่าสุด, error 422 ที่ `detail` เป็น list แสดงแค่ "เรียก API ไม่สำเร็จ (422)", `/whatif` กับ `/financial-impact` ใช้กล่อง error เดียวกัน, และข้อความสำหรับนักพัฒนา "เปิด uvicorn ที่ port 8000 หรือยัง" ขึ้นให้ HR เห็น | [WhatIfSimulator.jsx:29-38](../frontend/src/WhatIfSimulator.jsx#L29-L38), [:83-114](../frontend/src/WhatIfSimulator.jsx#L83-L114), [ShapViewer.jsx:38](../frontend/src/ShapViewer.jsx#L38) | 1. มีสถานะ pending ที่ทำให้ผลจางลงพร้อม `aria-busy` 2. บอกชัดว่า "ผลด้านบนยังเป็นค่าก่อนหน้า" 3. แปลง `detail[]` เป็นข้อความไทยรายช่อง 4. แยก error ของแต่ละส่วน 5. ข้อความสำหรับนักพัฒนาให้แสดงเฉพาะ `import.meta.env.DEV` | Saphondanai (What-if) + Puripat (SHAP Viewer) |
-| UX-10 | Accessibility สีข้อความ "เพิ่ม/ลดความเสี่ยง" ในตาราง SHAP มี contrast 4.38:1 และ 4.11:1 ต่ำกว่า 4.5:1 ของ WCAG AA ([ภาคผนวก A](#a-contrast-ของสีตาม-wcag)), คะแนนใหม่หลังลาก slider ไม่ถูกประกาศให้ screen reader, และความกว้างแกน Y อ่านจาก `window.innerWidth` ตอน render จึงไม่ปรับตามขนาดหน้าจอที่เปลี่ยน | [ShapViewer.jsx:8-9](../frontend/src/ShapViewer.jsx#L8-L9), [:97](../frontend/src/ShapViewer.jsx#L97), [:118](../frontend/src/ShapViewer.jsx#L118) | 1. ข้อความในตารางใช้สีที่มีอยู่แล้วและผ่านเกณฑ์: `--bad` #c62828 (5.62:1) และ #2f5bd3 (5.90:1) ส่วนแท่งกราฟใช้สีเดิมได้ (กราฟิกต้องการแค่ 3:1) 2. ใส่ `aria-live="polite"` ที่กล่องคะแนน 3. คำนวณความกว้างจาก container แทน `window` | Puripat (SHAP Viewer) + Saphondanai (What-if, CSS) |
-| UX-11 | ความสม่ำเสมอของผลิตภัณฑ์ หัวข้อ `<h1>` และ `<title>` เป็นภาษาอังกฤษ, UX ที่ดีกว่าหลายอย่างอยู่ในหน้า Streamlit ทดสอบ ([จุดที่ทำได้ดี](#3-จุดที่ทำได้ดี-ควรรักษาไว้)), ช่อง "รหัสบริษัท" โผล่ให้ผู้ใช้พิมพ์เอง ([SEC-02](review_security_S.md#sec-02-ไม่ได้แยกข้อมูลของแต่ละบริษัท-tenant-isolation)), และประกาศฟอนต์ Sarabun ไว้แต่ไม่ได้โหลด | [App.jsx:8](../frontend/src/App.jsx#L8), [index.html:7](../frontend/index.html#L7), [index.css:10](../frontend/src/index.css#L10) | 1. ตั้งชื่อผลิตภัณฑ์ภาษาไทย 2. ประกาศว่า React คือตัวผลิตภัณฑ์ แล้วย้ายคำอธิบายภาษาคน preset และคำเตือนนอกช่วงจาก Streamlit มาใช้ 3. ลบช่องรหัสบริษัท 4. โหลด Sarabun จาก Google Fonts หรือเอาออกจาก font stack | Saphondanai + Puripat |
-| UX-12 | การใช้คำและจริยธรรม ป้าย "ความเสี่ยงที่จะลาออก: สูง" ติดกับตัวบุคคล ถ้าหัวหน้างานเห็นอาจเกิดอคติหรือกลายเป็นคำทำนายที่เป็นจริงเอง, และคำแนะนำ "ใช้เป็นหัวข้อเริ่มคุย แล้วยืนยันจากการพูดคุย" ยังมีแค่ใน Streamlit | [common.py:173-174](../src/app_pages/common.py#L173-L174) | 1. ให้เห็นเฉพาะ role HR (ผูกกับ SEC-01) 2. พิจารณาคำที่เน้นการดูแล เช่น "ควรได้รับการดูแลก่อน" 3. ย้ายข้อความแนะนำมาไว้ใต้ผลทุกครั้ง 4. เขียนหลักว่า "ห้ามใช้คะแนนตัดสินเรื่องเงินเดือนหรือเลิกจ้างโดยอัตโนมัติ" ในรายงาน | ทั้งทีม (ตกลงถ้อยคำ) + Saphondanai (รายงาน) |
+| UX-09 | สถานะ loading/error ไม่ชัด ตอนคำนวณใหม่อัตโนมัติหลังลาก slider ไม่มีสัญญาณว่ากำลังโหลด, ถ้า error ผลเก่ายังแสดงอยู่เหมือนเป็นผลล่าสุด, error 422 ที่ `detail` เป็น list แสดงแค่ "เรียก API ไม่สำเร็จ (422)", `/whatif` กับ `/financial-impact` ใช้กล่อง error เดียวกัน, และข้อความสำหรับนักพัฒนา "เปิด uvicorn ที่ port 8000 หรือยัง" ขึ้นให้ HR เห็น | [WhatIfSimulator.jsx:29-38](../../frontend/src/WhatIfSimulator.jsx#L29-L38), [:83-114](../../frontend/src/WhatIfSimulator.jsx#L83-L114), [ShapViewer.jsx:38](../../frontend/src/ShapViewer.jsx#L38) | 1. มีสถานะ pending ที่ทำให้ผลจางลงพร้อม `aria-busy` 2. บอกชัดว่า "ผลด้านบนยังเป็นค่าก่อนหน้า" 3. แปลง `detail[]` เป็นข้อความไทยรายช่อง 4. แยก error ของแต่ละส่วน 5. ข้อความสำหรับนักพัฒนาให้แสดงเฉพาะ `import.meta.env.DEV` | Saphondanai (What-if) + Puripat (SHAP Viewer) |
+| UX-10 | Accessibility สีข้อความ "เพิ่ม/ลดความเสี่ยง" ในตาราง SHAP มี contrast 4.38:1 และ 4.11:1 ต่ำกว่า 4.5:1 ของ WCAG AA ([ภาคผนวก A](#a-contrast-ของสีตาม-wcag)), คะแนนใหม่หลังลาก slider ไม่ถูกประกาศให้ screen reader, และความกว้างแกน Y อ่านจาก `window.innerWidth` ตอน render จึงไม่ปรับตามขนาดหน้าจอที่เปลี่ยน | [ShapViewer.jsx:8-9](../../frontend/src/ShapViewer.jsx#L8-L9), [:97](../../frontend/src/ShapViewer.jsx#L97), [:118](../../frontend/src/ShapViewer.jsx#L118) | 1. ข้อความในตารางใช้สีที่มีอยู่แล้วและผ่านเกณฑ์: `--bad` #c62828 (5.62:1) และ #2f5bd3 (5.90:1) ส่วนแท่งกราฟใช้สีเดิมได้ (กราฟิกต้องการแค่ 3:1) 2. ใส่ `aria-live="polite"` ที่กล่องคะแนน 3. คำนวณความกว้างจาก container แทน `window` | Puripat (SHAP Viewer) + Saphondanai (What-if, CSS) |
+| UX-11 | ความสม่ำเสมอของผลิตภัณฑ์ หัวข้อ `<h1>` และ `<title>` เป็นภาษาอังกฤษ, UX ที่ดีกว่าหลายอย่างอยู่ในหน้า Streamlit ทดสอบ ([จุดที่ทำได้ดี](#3-จุดที่ทำได้ดี-ควรรักษาไว้)), ช่อง "รหัสบริษัท" โผล่ให้ผู้ใช้พิมพ์เอง ([SEC-02](round1-2_security_S.md#sec-02-ไม่ได้แยกข้อมูลของแต่ละบริษัท-tenant-isolation)), และประกาศฟอนต์ Sarabun ไว้แต่ไม่ได้โหลด | [App.jsx:8](../../frontend/src/App.jsx#L8), [index.html:7](../../frontend/index.html#L7), [index.css:10](../../frontend/src/index.css#L10) | 1. ตั้งชื่อผลิตภัณฑ์ภาษาไทย 2. ประกาศว่า React คือตัวผลิตภัณฑ์ แล้วย้ายคำอธิบายภาษาคน preset และคำเตือนนอกช่วงจาก Streamlit มาใช้ 3. ลบช่องรหัสบริษัท 4. โหลด Sarabun จาก Google Fonts หรือเอาออกจาก font stack | Saphondanai + Puripat |
+| UX-12 | การใช้คำและจริยธรรม ป้าย "ความเสี่ยงที่จะลาออก: สูง" ติดกับตัวบุคคล ถ้าหัวหน้างานเห็นอาจเกิดอคติหรือกลายเป็นคำทำนายที่เป็นจริงเอง, และคำแนะนำ "ใช้เป็นหัวข้อเริ่มคุย แล้วยืนยันจากการพูดคุย" ยังมีแค่ใน Streamlit | [common.py:173-174](../../src/app_pages/common.py#L173-L174) | 1. ให้เห็นเฉพาะ role HR (ผูกกับ SEC-01) 2. พิจารณาคำที่เน้นการดูแล เช่น "ควรได้รับการดูแลก่อน" 3. ย้ายข้อความแนะนำมาไว้ใต้ผลทุกครั้ง 4. เขียนหลักว่า "ห้ามใช้คะแนนตัดสินเรื่องเงินเดือนหรือเลิกจ้างโดยอัตโนมัติ" ในรายงาน | ทั้งทีม (ตกลงถ้อยคำ) + Saphondanai (รายงาน) |
 
 ---
 

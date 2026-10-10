@@ -8,7 +8,7 @@
 | ข้อควรรู้ | ณ วันตรวจ branch `dev007-NungUm` มี 8 commit ที่ยังไม่ merge เข้า `main` ดูจากชื่อ commit น่าจะเกี่ยวกับ UX-13 (sidebar บนจอเตี้ย), DE-13 (หน้าปรับเทียบของ admin), UX-18 (ดูพนักงานที่เพิ่งนำเข้า, refresh สรุปเบื้องหลัง), DE-01 (อัตราบาทจาก backend), UX-10 (สีชุดใหม่) รายงานนี้ไม่ได้ตรวจ commit เหล่านั้น ให้ตรวจข้อที่เกี่ยวข้องซ้ำหลัง merge |
 | ผู้ตรวจ | Claude Code (AI, Claude Opus 5.5) รับบท senior engineer 4 สาย (Security, Data Engineering, UX/UI, Backend/QA) และลองใช้ระบบแทนลูกค้า 3 ฝ่าย (HR, การเงิน, ผู้ดูแลระบบ) ตามคำขอของ Saphondanai |
 | ผู้ดูแลเอกสาร | Saphondanai |
-| ต่อจาก | [Security](review_security_S.md) · [Data Engineering](review_data_engineering_S.md) · [UX/UI](review_ux_ui_S.md) (รอบ 1–2 วันที่ 1 ต.ค.) |
+| ต่อจาก | [Security](round1-2_security_S.md) · [Data Engineering](round1-2_data_engineering_S.md) · [UX/UI](round1-2_ux_ui_S.md) (รอบ 1–2 วันที่ 1 ต.ค.) |
 | สถานะ | รอทีมยืนยันผู้รับผิดชอบและลำดับการแก้ |
 
 **วิธีใช้เอกสารนี้**
@@ -778,7 +778,7 @@ document.documentElement.scrollWidth <= innerWidth
 
 ### E. ทดสอบกับ PostgreSQL ใน docker
 
-ใช้ Git Bash จากรากโปรเจกต์ (activate `.venv` แล้ว) รหัสผ่านส่งทาง environment ไม่ต้องแก้ `.env` ถ้าจะใช้ DB ถาวรให้ใส่ใน `.env` ตาม [run guide](run_guide.md)
+ใช้ Git Bash จากรากโปรเจกต์ (activate `.venv` แล้ว) รหัสผ่านส่งทาง environment ไม่ต้องแก้ `.env` ถ้าจะใช้ DB ถาวรให้ใส่ใน `.env` ตาม [run guide](../run_guide.md)
 
 ```bash
 export POSTGRES_PASSWORD=<ตัวอักษร/ตัวเลขล้วน>
