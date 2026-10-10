@@ -25,6 +25,16 @@ function Driver({ tone, title, row, count }) {
   )
 }
 
+// UX-06/07: ข้อมูลส่วนตัว (อายุ เพศ สถานภาพ) และตัวเลขที่ HR ตีความไม่ได้ (อัตราค่าจ้างรายวัน ฯลฯ) ไม่ยกเป็น "สาเหตุ"
+// ยังแสดงในกราฟ/ตารางพร้อมป้ายกำกับ backend บอกชนิดมาใน kind (src/company_summary.py factor_kind)
+const NOT_A_REASON = { personal: 'ข้อมูลส่วนตัว ห้ามใช้ตัดสินใจ', unexplained: 'ตีความไม่ได้' }
+const isReason = (r) => !NOT_A_REASON[r.kind]
+
+// DE-18: คนที่ WFH โมเดลใช้ระยะทางที่ปรับตามวันเข้าออฟฟิศ แสดงระยะทางจริงคู่กับค่าที่ใช้คิด
+function commuteText(c, usedKm) {
+  return `${c.distance_km.toLocaleString()} กม. (คิดตาม WFH ${c.office_days} วัน/สัปดาห์ เป็น ${usedKm.toLocaleString()} กม.)`
+}
+
 // สรุปเป็นประโยค อ่านง่ายกว่ากราฟ: 3 ปัจจัยที่ดันขึ้นมากสุด + 2 ปัจจัยที่ช่วยให้อยู่ต่อ
 function Summary({ ups, downs, band }) {
   const list = (rows) => rows.map((r) => r.phrase).join(', ')
@@ -47,6 +57,7 @@ function Summary({ ups, downs, band }) {
               ส่วนสิ่งที่ช่วยให้อยู่ต่อคือ <b className="text-fg">{list(downs.slice(0, 2))}</b>
             </p>
           )}
+          <p className="text-xs text-muted-fg">ไม่นับอายุ เพศ สถานภาพสมรส และตัวเลขที่ตีความไม่ได้เป็นเหตุผล (ยังดูได้ในตาราง)</p>
         </div>
       </div>
     </div>
@@ -164,11 +175,17 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
 
   const score = data.calibrated_risk_score ?? data.risk_score
   // เรียงจากผลกระทบมากไปน้อย (API เรียงให้แล้ว) กราฟแนวนอนแสดงตัวบนสุดก่อน
-  const rows = data.contributions.map((c) => ({ ...c, label: featureLabel(c.feature), shown: c.feature === 'MonthlyIncome' ? baht(c.value * rate) : featureValue(c.feature, c.value) }))
+  const shownValue = (c) => {
+    if (c.feature === 'MonthlyIncome') return baht(c.value * rate)
+    if (data.commute && c.feature === 'DistanceFromHome') return commuteText(data.commute, c.value)
+    if (data.commute && c.feature === 'OverTimeXDistance' && c.value > 0) return commuteText(data.commute, c.value)
+    return featureValue(c.feature, c.value)
+  }
+  const rows = data.contributions.map((c) => ({ ...c, label: featureLabel(c.feature), shown: shownValue(c) }))
     .map((r) => ({ ...r, phrase: featurePhrase(r.feature, r.value, r.shown) }))
   const maxAbs = Math.max(...rows.map((r) => Math.abs(r.shap_value)), 1e-9)
-  const ups = rows.filter((r) => r.shap_value > 0)
-  const downs = rows.filter((r) => r.shap_value <= 0)
+  const ups = rows.filter((r) => r.shap_value > 0 && isReason(r))
+  const downs = rows.filter((r) => r.shap_value <= 0 && isReason(r))
 
   return (
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
@@ -241,6 +258,10 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
                     <tr key={r.feature} className="transition-colors duration-150 hover:bg-canvas">
                       <td className="px-5 py-2.5 sm:px-6">
                         <div className="font-medium text-fg">{r.label}</div>
+                        {NOT_A_REASON[r.kind] && (
+                          <span className="mt-0.5 inline-block rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-fg">{NOT_A_REASON[r.kind]}</span>
+                        )}
+                        {up && r.recommendation && <div className="mt-0.5 text-xs text-muted-fg">{r.recommendation}</div>}
                         <div className="mt-1 h-1 w-full max-w-40 rounded-full bg-muted">
                           <div
                             className={`bar-grow h-full rounded-full ${up ? 'bg-up' : 'bg-down'}`}

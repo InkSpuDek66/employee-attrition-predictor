@@ -2,6 +2,7 @@
 
 ตั้ง DATABASE_URL = เก็บในตาราง tenant_calibrations (เก็บทุกครั้ง ใช้ตัวล่าสุด)
 ไม่ตั้ง = ไฟล์ JSON ต่อ tenant ใน backend/calibrations/ (key ตรงกับคอลัมน์ในตาราง ให้ /calibration-status อ่านได้ทั้งสองแบบ)
+ค่าปรับเทียบผูกกับเวอร์ชันโมเดล (DE-12): เปลี่ยน MODEL_URI แล้ว load() คืน None จนกว่าจะปรับเทียบใหม่
 """
 
 import json
@@ -13,11 +14,13 @@ import numpy as np
 from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 
-import model_store  # noqa: F401  (เพิ่ม src/ เข้า sys.path)
+import model_store  # เพิ่ม src/ เข้า sys.path ด้วย
 import db  # noqa: E402
 
 STORE = os.path.join(os.path.dirname(__file__), "calibrations")
 TENANT_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"  # ใช้เป็นชื่อไฟล์ จึงต้องกัน path traversal
+# DE-12: คะแนนที่ปรับแล้วไม่แสดงเป็น 0 หรือ 100 เต็ม (isotonic กับข้อมูลน้อยให้ 1.0 ได้ ซึ่งอ่านเหมือน "ลาออกแน่")
+SCORE_FLOOR, SCORE_CEIL = 0.01, 0.99
 
 
 def _path(tenant_id: str) -> str:
@@ -37,8 +40,10 @@ def fit(scores: np.ndarray, labels: np.ndarray, method: str) -> dict:
 def apply(record: dict, scores: np.ndarray) -> np.ndarray:
     p = record["params"]
     if record["method"] == "platt":
-        return 1 / (1 + np.exp(-(p["coef"] * scores + p["intercept"])))
-    return np.interp(scores, p["x"], p["y"])
+        out = 1 / (1 + np.exp(-(p["coef"] * np.asarray(scores) + p["intercept"])))
+    else:
+        out = np.interp(scores, p["x"], p["y"])
+    return np.clip(out, SCORE_FLOOR, SCORE_CEIL)
 
 
 def save(tenant_id: str, method: str, params: dict, n_samples: int, positive_rate: float, metrics: dict) -> dict:
@@ -50,14 +55,18 @@ def save(tenant_id: str, method: str, params: dict, n_samples: int, positive_rat
         "positive_rate": positive_rate,
         "metrics": metrics,
         "calibrated_at": datetime.now(timezone.utc).isoformat(),
+        "model_version": model_store.MODEL_VERSION,
     }
     path = _path(tenant_id)
     if db.url():
         with db.connect() as conn:
+            # โมเดลที่ยังไม่เคยรัน batch ยังไม่มีใน model_runs (FK) เพิ่มไว้ก่อน ไม่แตะ is_active
+            conn.execute("INSERT INTO model_runs (model_version) VALUES (%s) ON CONFLICT DO NOTHING", (record["model_version"],))
             conn.execute(
                 "INSERT INTO tenant_calibrations (tenant_id, calibrated_at, method, params, n_samples, positive_rate, metrics, model_version) "
-                "VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s::jsonb, (SELECT model_version FROM model_runs WHERE is_active))",
-                (tenant_id, record["calibrated_at"], method, json.dumps(params), n_samples, positive_rate, json.dumps(metrics)),
+                "VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s::jsonb, %s)",
+                (tenant_id, record["calibrated_at"], method, json.dumps(params), n_samples, positive_rate, json.dumps(metrics),
+                 record["model_version"]),
             )
         return record
     os.makedirs(STORE, exist_ok=True)
@@ -97,19 +106,21 @@ def reset(tenant_id: str) -> int:
 
 
 def load(tenant_id: str):
+    """ค่าปรับเทียบล่าสุดของบริษัทสำหรับโมเดลที่ใช้อยู่ (ms.MODEL_VERSION) ไม่มี = None (ยังไม่ปรับเทียบ)"""
     path = _path(tenant_id)
     if db.url():
         with db.connect() as conn:
             row = conn.execute(
                 "SELECT tenant_id, method, params, n_samples, positive_rate, metrics, calibrated_at FROM tenant_calibrations "
-                "WHERE tenant_id = %s ORDER BY calibrated_at DESC LIMIT 1",
-                (tenant_id,),
+                "WHERE tenant_id = %s AND model_version = %s ORDER BY calibrated_at DESC LIMIT 1",
+                (tenant_id, model_store.MODEL_VERSION),
             ).fetchone()
         if not row:
             return None
         keys = ("tenant_id", "method", "params", "n_samples", "positive_rate", "metrics", "calibrated_at")
-        return dict(zip(keys, row)) | {"calibrated_at": row[-1].isoformat()}
+        return dict(zip(keys, row)) | {"calibrated_at": row[-1].isoformat(), "model_version": model_store.MODEL_VERSION}
     if not os.path.exists(path):
         return None
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        record = json.load(f)
+    return record if record.get("model_version") == model_store.MODEL_VERSION else None  # ไฟล์เก่าไม่มีเวอร์ชัน = ปรับใหม่

@@ -54,7 +54,8 @@ def issue_token(username: str, now: float = None) -> str:
 def read_token(token: str):
     """คืนชื่อผู้ใช้ถ้า token ถูกต้องและยังไม่หมดอายุ ไม่งั้น None"""
     payload, _, sig = token.partition(".")
-    if not hmac.compare_digest(sig, _sign(payload)):
+    # เทียบเป็น bytes: compare_digest กับ str ที่มีอักษรนอก ASCII จะ TypeError (เคยทำให้ token ภาษาไทยได้ 500, SEC-16)
+    if not hmac.compare_digest(sig.encode(), _sign(payload).encode()):
         return None
     try:
         data = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
@@ -130,6 +131,7 @@ LIMITS = {  # ใช้ใน main.py
     "whatif": RateLimit(240),  # หน้า What-if เรียกทุกครั้งที่ปรับค่า
     "recalibrate": RateLimit(30),  # รวมดูประวัติ/ดาวน์โหลดไฟล์ตัวอย่างในแท็บปรับเทียบ
     "import": RateLimit(20),
+    "validate": RateLimit(30),  # SEC-15: ตรวจไฟล์ 10,000 แถวใช้ CPU หลายวินาที
 }
 
 

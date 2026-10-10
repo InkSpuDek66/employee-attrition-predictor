@@ -14,6 +14,7 @@ import conftest
 import model_store as ms
 import db
 from main import app
+from routers import employee_upload as eu
 
 client = TestClient(app)
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -42,9 +43,9 @@ def real_db(monkeypatch):
         pytest.skip("ต่อ PostgreSQL ไม่ได้ (docker compose up -d postgres)")
     monkeypatch.setitem(conftest.TEST_USER, "tenant_id", db.DEMO_TENANT)
     monkeypatch.setattr(batch_score, "_score_once", lambda: None)  # ไม่ให้ test รัน batch เต็ม (ช้า + เพิ่มแถวใน DB จริง)
-    ms.raw_employees.cache_clear(), ms.employee_features.cache_clear()
+    ms.clear_cache()
     yield
-    ms.raw_employees.cache_clear(), ms.employee_features.cache_clear()
+    ms.clear_cache()
 
 
 def test_calibration_saved_in_db_latest_wins(real_db):
@@ -84,15 +85,82 @@ def test_import_needs_db(monkeypatch):
     assert r.status_code == 503
 
 
-def test_import_db_check_rejects_whole_file_without_logging_row(real_db, caplog):
+def _one_new_employee() -> bytes:
     template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
     template.loc[0, "รหัสพนักงาน"] = NEW_ID
-    template.loc[0, "อายุ"] = 90  # schemas.py รับได้ถึง 100 แต่ตารางรับ 15–80
     buf = io.BytesIO()
     template.to_excel(buf, index=False)
-    r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
+    return buf.getvalue()
+
+
+def test_import_db_check_rejects_whole_file_without_logging_row(real_db, caplog, monkeypatch):
+    """ด่านสุดท้าย: schemas.py ตรวจช่วงเดียวกับ CHECK แล้ว (test_schemas.py) จึงจำลองค่าที่หลุดขั้นตรวจด้วยการแก้แถวหลังตรวจ"""
+    real = eu.to_model_units
+    monkeypatch.setattr(eu, "to_model_units", lambda rows: real(rows).assign(Age=90))  # ตารางรับ 15–80
+    r = client.post("/employees/import", files={"file": ("e.xlsx", _one_new_employee(), XLSX)})
     assert r.status_code == 422 and ms.employee_record(NEW_ID) is None
     assert "employees_age_check" in caplog.text and str(NEW_ID) not in caplog.text  # log แค่ชื่อ constraint
+
+
+def test_import_on_outdated_schema_says_what_to_do(monkeypatch):
+    """QA-06: DB ที่ยังไม่ได้รัน 02-app-schema.sql ซ้ำหลัง pull เคยได้ 500 ต้องได้ 503 พร้อมบอกวิธีแก้"""
+
+    class FakeConn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def execute(self, *args):
+            return []
+
+    def outdated(*args):
+        raise db.SchemaOutdated("UndefinedColumn")
+
+    file = _one_new_employee()  # สร้างไฟล์ก่อนสลับไป DB ปลอม (ไฟล์ตัวอย่างอ่านข้อมูลพนักงาน)
+    monkeypatch.setattr(db, "url", lambda: "postgresql://fake")
+    monkeypatch.setattr(db, "connect", FakeConn)
+    monkeypatch.setattr(db, "upsert_employees", outdated)
+    r = client.post("/employees/import", files={"file": ("e.xlsx", file, XLSX)})
+    assert r.status_code == 503 and "run_guide" in r.json()["detail"]
+
+
+def test_employee_deleted_by_sql_is_gone_without_restart(real_db, monkeypatch):
+    """DE-15: ลบพนักงานด้วย SQL (เช่นตามคำขอ PDPA) แล้ว backend ที่เปิดอยู่ต้องเห็นทันที ไม่ต้อง restart"""
+    monkeypatch.setattr(ms, "DATA_CHECK_SECONDS", 0)
+    try:
+        assert client.post("/employees/import", files={"file": ("e.xlsx", _one_new_employee(), XLSX)}).status_code == 200
+        assert client.get(f"/shap/{NEW_ID}").status_code == 200
+    finally:
+        with db.connect() as conn:
+            conn.execute("DELETE FROM employees WHERE tenant_id = %s AND employee_id = %s", (db.DEMO_TENANT, NEW_ID))
+    assert client.get(f"/shap/{NEW_ID}").status_code == 404
+
+
+def test_batch_keeps_full_shap_only_for_latest_run(real_db):
+    """DE-16: รอบเก่าเหลือ SHAP_KEEP_OLD ปัจจัยต่อคน รอบล่าสุดครบทุกฟีเจอร์ รันใน transaction เดียวแล้ว rollback (ไม่แตะข้อมูลจริง)"""
+    n_features = ms.employee_features().shape[1]
+    with db.connect() as conn:
+        try:
+            n = batch_score.run(conn)
+            # now() คงที่ทั้ง transaction: ย้อนรอบแรกไป 1 วันให้กลายเป็น "รอบเก่า" ก่อนรันรอบสอง
+            conn.execute(
+                "UPDATE attrition_predictions SET scored_at = scored_at - interval '1 day' WHERE tenant_id = %s AND scored_at = now()",
+                (db.DEMO_TENANT,),
+            )
+            batch_score.run(conn)
+            counts = dict(
+                conn.execute(
+                    "SELECT p.scored_at = now(), count(*) FROM shap_explanations s JOIN attrition_predictions p USING (prediction_id) "
+                    "WHERE p.tenant_id = %s AND p.scored_at IN (now(), now() - interval '1 day') GROUP BY 1",
+                    (db.DEMO_TENANT,),
+                ).fetchall()
+            )
+            assert counts[True] == n * n_features
+            assert counts[False] == n * batch_score.SHAP_KEEP_OLD
+        finally:
+            conn.rollback()
 
 
 def test_calibration_history_and_reset_in_db(real_db):

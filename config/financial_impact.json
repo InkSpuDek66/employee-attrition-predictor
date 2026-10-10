@@ -24,6 +24,7 @@
     "default": "salary_raise_10pct",
     "options": {
       "salary_raise_10pct": {"label": "ขึ้นเงินเดือน 10% (1 ปี)", "months_of_salary": 1.2},
+      "salary_raise_20pct": {"label": "ขึ้นเงินเดือน 20% (1 ปี)", "months_of_salary": 2.4},
       "retention_bonus": {"label": "โบนัสรักษาคน 1 เดือน", "months_of_salary": 1.0},
       "reduce_overtime": {"label": "ลด OT / เพิ่มคนช่วยงาน (ต้นทุนแบ่งจ้างเพิ่ม)", "months_of_salary": 2.0},
       "training_and_promotion_track": {"label": "อบรม + แผนเลื่อนตำแหน่ง", "months_of_salary": 0.5}

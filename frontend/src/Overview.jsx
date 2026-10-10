@@ -1,10 +1,11 @@
 // ภาพรวมบริษัท (README 6.6) + รายชื่อพนักงานเสี่ยงสูงสุดให้กดเลือก ไม่ต้องรู้รหัสก่อน
-// ใช้ /company-summary, /company-summary/departments, /company-summary/top-employees (คะแนนยังไม่ปรับเทียบ ใช้จัดลำดับ)
+// ใช้ /company-summary, /company-summary/departments, /company-summary/top-employees
+// ทุกส่วนใช้คะแนนชุดเดียวกัน: ปรับเทียบแล้วถ้าบริษัทของผู้ใช้ปรับเทียบ (DE-11) ยังไม่ปรับ = backend ส่ง warning มา
 import { useState } from 'react'
 import { featureLabel, JOB_LEVELS } from './featureLabels'
 import { AssistantHint, SorryState } from './mascot/Mascot'
 import { api, baht, BAND, friendly, useApi } from './theme'
-import { Card, CountUp, Icon, Segmented, Skeleton } from './ui'
+import { Alert, Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
 // บริษัทมาจากผู้ใช้ที่ login (backend อ่านจาก token) บริษัทที่ปรับเทียบแล้วได้คะแนนปรับเทียบอัตโนมัติ
@@ -210,6 +211,13 @@ export default function Overview({ rate, onPick, onCsv }) {
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
       <Segmented label="เลือกแผนก" options={deptOptions} value={department} onChange={setDepartment} />
 
+      {/* UX-17: หน้าแรกที่มีตัวเลขเยอะสุดต้องบอกข้อจำกัดเหมือนหน้า SHAP / What-if */}
+      {(s.warning || s.data_note) && (
+        <Alert tone="warning">
+          {[s.warning, s.data_note].filter(Boolean).join(' · ')}
+        </Alert>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="พนักงานทั้งหมด" num={s.n_employees} format={(v) => Math.round(v).toLocaleString()} sub={department || 'ทุกแผนก'} />
         <Kpi label="คะแนนความเสี่ยงเฉลี่ย" num={s.mean_risk_score * 100} format={Math.round} sub="จาก 100" />
@@ -221,8 +229,10 @@ export default function Overview({ rate, onPick, onCsv }) {
         <BandDonut bands={s.risk_bands} total={s.n_employees} />
       </Card>
 
+      {/* UX-14: grid item มี min-width: auto เนื้อหาข้างในเคยดันการ์ดกว้าง 461px บนจอ 390px จึงใส่ min-w-0 */}
       <div className="grid items-start gap-4 xl:grid-cols-2">
         <Card
+          className="min-w-0"
           icon="user"
           title="พนักงานเสี่ยงสูงสุด 10 คน"
           subtitle="กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง"
@@ -231,7 +241,7 @@ export default function Overview({ rate, onPick, onCsv }) {
           <TopRiskList department={department} onPick={onPick} />
         </Card>
 
-        <Card icon="list" title="ปัจจัยที่ทำให้เสี่ยงมากที่สุด" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ของทั้งกลุ่ม">
+        <Card className="min-w-0" icon="list" title="ปัจจัยที่ทำให้เสี่ยงมากที่สุด" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ของทั้งกลุ่ม">
           <ul className="space-y-4">
             {s.top_factors.map((f) => (
               <li key={f.feature}>

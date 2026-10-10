@@ -13,7 +13,18 @@ def test_shap():
     r = client.get("/shap/1", params={"top_n": 3}).json()
     assert len(r["contributions"]) == 3 and r["warning"] and r["calibrated_risk_score"] is None
     assert abs(r["contributions"][0]["shap_value"]) >= abs(r["contributions"][-1]["shap_value"])
+    assert r["commute"] is None  # IBM เข้าออฟฟิศทุกวัน
     assert client.get("/shap/999999").status_code == 404
+
+
+def test_shap_marks_factors_that_are_not_reasons():
+    """UX-06/07: อายุ/เพศ/สถานภาพ = personal, อัตราค่าจ้างรายวัน ฯลฯ = unexplained หน้าเว็บจะไม่ยกเป็นสาเหตุ"""
+    kinds = {c["feature"]: c for c in client.get("/shap/811", params={"top_n": 100}).json()["contributions"]}
+    assert kinds["Age"]["kind"] == "personal" and kinds["Gender"]["kind"] == "personal"
+    assert all(c["kind"] == "personal" for f, c in kinds.items() if f.startswith("MaritalStatus_"))
+    assert kinds["DailyRate"]["kind"] == "unexplained"
+    assert kinds["OverTime"]["kind"] == "actionable" and kinds["OverTime"]["recommendation"]
+    assert all(c["recommendation"] is None for c in kinds.values() if c["kind"] != "actionable")
 
 
 def test_recalibrate_then_shap_uses_it(tmp_path, monkeypatch):
@@ -134,3 +145,19 @@ def test_office_days_shrinks_commute_distance():
     wfh = client.post("/whatif", json={"employee_id": emp_id, "changes": {"OfficeDaysPerWeek": 0}}).json()
     assert wfh["changes_applied"] == {"OfficeDaysPerWeek": 0} and wfh["delta"] != 0
     assert client.post("/whatif", json={"employee_id": emp_id, "changes": {"OfficeDaysPerWeek": 7}}).status_code == 422
+
+
+def test_shap_shows_real_distance_for_wfh_employee(monkeypatch):
+    """DE-18: คนที่เข้าออฟฟิศ 1 วัน /shap ต้องบอกระยะทางจริง คู่กับค่าที่โมเดลใช้หลังปรับตาม WFH"""
+    import pandas as pd
+
+    raw = ms.raw_employees().copy()
+    emp_id = int(raw.loc[raw["DistanceFromHome"] == 24, "EmployeeNumber"].iloc[0])
+    raw.loc[raw["EmployeeNumber"] == emp_id, "OfficeDaysPerWeek"] = 1
+    monkeypatch.setattr(ms, "_load_employees", lambda: raw)
+    monkeypatch.setattr(ms, "_employee_features", lambda: ms.to_features(raw).set_index(raw["EmployeeNumber"]))
+    r = client.get(f"/shap/{emp_id}", params={"top_n": 100}).json()
+    assert r["commute"] == {"distance_km": 24, "office_days": 1, "used_km": 5}
+    distance = next(c for c in r["contributions"] if c["feature"] == "DistanceFromHome")
+    assert distance["value"] == 5  # ค่าที่โมเดลใช้ (24 x 1 / 5) หน้าเว็บแสดงคู่กับ 24 กม. จาก commute
+    assert pd.notna(distance["shap_value"])

@@ -35,7 +35,7 @@ Method = Literal["platt", "isotonic"]
 
 class RecalibrateRequest(BaseModel):
     tenant_id: Optional[str] = Field(None, pattern=calibration.TENANT_ID_PATTERN)  # ไม่ต้องส่ง ใช้บริษัทของผู้ login (ส่งบริษัทอื่น = 403)
-    method: Method = "isotonic"
+    method: Method = "platt"  # DE-12: ตรงกับหน้าเว็บ isotonic กับข้อมูลไม่กี่ร้อยแถวได้ขั้นบันไดหยาบ
     # แต่ละแถว = พนักงาน 1 คน คอลัมน์เดียวกับ CSV ของ IBM รวม Attrition = "Yes"/"No"
     records: list[dict] = Field(min_length=MIN_ROWS, max_length=MAX_ROWS)
 
@@ -137,13 +137,13 @@ def recalibrate_template(demo: bool = False, _: dict = Depends(auth.require_admi
 
 
 @router.post("/recalibrate/upload", response_model=UploadResult)
-async def recalibrate_upload(
+def recalibrate_upload(  # def ไม่ใช่ async: ตรวจไฟล์ + fit ใน threadpool ไม่บล็อก request อื่น (SEC-15)
     background: BackgroundTasks,
     file: UploadFile = File(...),
-    method: Method = Form("isotonic"),
+    method: Method = Form("platt"),
     user: dict = Depends(auth.require_admin),
 ):
-    valid, check = await eu._check(file, label=True)
+    valid, check = eu._check(file, label=True)
     if check.missing_columns or check.n_invalid or not valid:
         return UploadResult(check=check, message="ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด แก้แล้วอัปโหลดใหม่")
     result = _fit(eu.to_model_units(pd.DataFrame(valid)), method, user["tenant_id"])

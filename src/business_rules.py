@@ -27,6 +27,12 @@ RISK_BANDS = {"High": "สูง", "Medium": "ปานกลาง", "Low": "�
 # backend ส่งให้หน้าเว็บตอน login (auth.py) ส่วน THB_PER_USD ใน frontend/src/theme.js เป็นค่าสำรอง มี test เช็กว่าตรงกัน
 THB_PER_USD = 35
 
+# UX-04/DE-10: เพดานเงินเดือนต่อเดือน (บาท) กันพิมพ์เกินหลายหลัก แต่ต้องรับฐานเงินเดือน CEO บริษัทใหญ่ได้
+# อ้างอิง: Adecco Thailand Salary Guide 2026 มัธยฐาน C-Level 350,000 บาท/เดือน, ประกาศงาน Country Manager
+# ของ Robert Walters ไทย 400,000–600,000 บาท/เดือน, CEO ไทยเบฟ (บริษัทใหญ่สุดกลุ่มหนึ่งใน SET) ค่าตอบแทนรวม
+# 126.76 ล้านบาท/ปี เป็นเงินเดือน 33% หรือราว 3.5 ล้านบาท/เดือน จึงตั้ง 5 ล้านให้มีที่เผื่อ
+MAX_MONTHLY_INCOME_THB = 5_000_000
+
 
 def risk_band(score: float) -> str:
     """คืน 'High' / 'Medium' / 'Low' ตาม README 6.1"""
@@ -59,10 +65,13 @@ def severance_days(years_at_company) -> np.ndarray:
     return days
 
 
-def estimate(employees: pd.DataFrame, risk_scores, retention: str = None, include_severance: bool = None) -> pd.DataFrame:
+def estimate(
+    employees: pd.DataFrame, risk_scores, retention: str = None, include_severance: bool = None, risk_scores_after=None
+) -> pd.DataFrame:
     """ประมาณต้นทุน Retain vs Replace ต่อพนักงาน (README 6.3)
 
     employees ต้องมีคอลัมน์ MonthlyIncome, YearsAtCompany, JobLevel (รูปแบบเดียวกับ CSV ของ IBM)
+    risk_scores_after = คะแนนหลังทำมาตรการ (จาก What-if) ถ้าส่งมาจะได้ expected_benefit ด้วย (UX-15)
     คืน DataFrame index เดียวกับ employees
     """
     cfg = config()
@@ -80,17 +89,23 @@ def estimate(employees: pd.DataFrame, risk_scores, retention: str = None, includ
     hiring_cost = monthly * 12 * multiplier
     replacement_cost = hiring_cost + (severance_pay if include_severance else 0)
     retain_cost = monthly * retention_options()[retention]["months_of_salary"]
+    risk = np.asarray(risk_scores, dtype=float)
 
-    return pd.DataFrame(
+    out = pd.DataFrame(
         {
-            "risk_score": np.asarray(risk_scores, dtype=float),
+            "risk_score": risk,
             "severance_days": days,
             "severance_pay": severance_pay,
             "hiring_cost": hiring_cost,
             "replacement_cost": replacement_cost,
             "retain_cost": retain_cost,
-            "net_benefit_if_retained": replacement_cost - retain_cost,  # README 6.3: ROI
-            "expected_loss": np.asarray(risk_scores, dtype=float) * replacement_cost,
+            "expected_loss": risk * replacement_cost,
         },
         index=employees.index,
     )
+    if risk_scores_after is not None:
+        # README 6.3 (UX-15): ผลที่คาดว่าจะได้ = มูลค่าความเสี่ยงที่ลดลง - ต้นทุนมาตรการ
+        # สูตรเดิม (ต้นทุนหาคนแทน - ต้นทุนมาตรการ) สมมติว่าไม่ทำอะไรจะลาออกแน่ จึงเป็นบวกแม้คนที่เสี่ยงแทบเป็นศูนย์
+        out["expected_loss_after"] = np.asarray(risk_scores_after, dtype=float) * replacement_cost
+        out["expected_benefit"] = out["expected_loss"] - out["expected_loss_after"] - retain_cost
+    return out

@@ -67,6 +67,12 @@ export function CheckDetails({ result }) {
       {result.unknown_columns.length > 0 && (
         <p className="mt-3 text-sm text-muted-fg">ไม่ได้ใช้คอลัมน์เหล่านี้ (ไม่เป็นไร): {result.unknown_columns.join(', ')}</p>
       )}
+      {/* DE-17: ไฟล์ผ่านได้ แต่ระบบเติมค่าแบบสำรวจให้ ความเสี่ยงของคนกลุ่มนั้นอาจต่ำกว่าจริง ต้องรู้ก่อนบันทึก */}
+      {result.warnings?.map((w) => (
+        <div key={w} className="mt-4">
+          <Alert tone="warning">{w}</Alert>
+        </div>
+      ))}
 
       {result.errors.length > 0 && (
         <div className="mt-5">

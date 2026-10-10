@@ -67,6 +67,10 @@ def test_survey_fields_optional_and_job_level_words():
     df.loc[1, "ระดับตำแหน่ง"] = "4"  # ตัวเลขยังใช้ได้
     body = _upload(df).json()
     assert body["n_valid"] == 3 and body["errors"] == [] and body["missing_columns"] == []
+    # DE-17: ระบบเติมค่าแบบสำรวจให้ทั้ง 3 คน (ขาดทั้งคอลัมน์) ต้องบอกจำนวนและเตือนว่าความเสี่ยงอาจต่ำกว่าจริง
+    assert body["survey_imputed"] == 3 and "3 คน" in body["warnings"][0] and "ต่ำกว่าจริง" in body["warnings"][0]
+    full = _upload(_template()).json()
+    assert full["survey_imputed"] == 0 and full["warnings"] == []
     df.loc[2, "ระดับตำแหน่ง"] = "หัวหน้าทีม"  # คำที่ไม่รู้จัก ต้องแจ้ง
     assert any(e["column"] == "ระดับตำแหน่ง" for e in _upload(df).json()["errors"])
 
@@ -87,3 +91,21 @@ def test_office_days_column_optional():
     assert _upload(df.drop(columns=["เข้าออฟฟิศ (วัน/สัปดาห์)"])).json()["missing_columns"] == []
     df.loc[0, "เข้าออฟฟิศ (วัน/สัปดาห์)"] = 9
     assert any(e["column"] == "เข้าออฟฟิศ (วัน/สัปดาห์)" for e in _upload(df).json()["errors"])
+
+
+def test_numbers_with_commas_and_cross_column_checks():
+    """UX-16: "45,000" แบบที่ Excel จัดรูปแบบต้องผ่าน · UX-04/DE-10: ค่าที่ขัดกันเองบอกแถว + คอลัมน์ · เพดานเงินเดือนเป็นบาท"""
+    df = _template().astype(object)
+    df.loc[0, "เงินเดือน (บาท)"] = "45,000"
+    df.loc[1, "อายุ"] = 85  # เกิน CHECK ของ DB (15–80) ต้องไม่ผ่านตั้งแต่ขั้นตรวจ
+    df.loc[2, "ตั้งแต่เลื่อนตำแหน่งล่าสุด (ปี)"] = int(df.loc[2, "อยู่บริษัทนี้ (ปี)"]) + 5
+    body = _upload(df, "employees.csv").json()
+    got = {(e["row"], e["column"]): e["message"] for e in body["errors"]}
+    assert not any(row == 2 for row, _ in got), got  # แถว 2 (เงินเดือนมีจุลภาค) ผ่าน
+    assert "ไม่เกิน 80" in got[(3, "อายุ")]
+    assert "เมื่อเทียบกับจำนวนปีที่อยู่บริษัทนี้" in got[(4, "ตั้งแต่เลื่อนตำแหน่งล่าสุด (ปี)")]
+    rich = _template()
+    rich.loc[0, "เงินเดือน (บาท)"] = 4_500_000  # ฐานเงินเดือน CEO บริษัทใหญ่ยังรับ
+    rich.loc[1, "เงินเดือน (บาท)"] = 45_000_000  # พิมพ์ศูนย์เกิน
+    got = {(e["row"], e["column"]): e["message"] for e in _upload(rich).json()["errors"]}
+    assert list(got) == [(3, "เงินเดือน (บาท)")] and "5,000,000 บาท" in got[(3, "เงินเดือน (บาท)")]

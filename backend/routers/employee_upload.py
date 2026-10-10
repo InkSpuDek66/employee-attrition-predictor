@@ -11,6 +11,7 @@ POST /employees/import    ตรวจแล้วบันทึกลงตา
 
 import io
 import logging
+import re
 import zipfile
 from typing import Optional
 
@@ -21,13 +22,14 @@ from pydantic import BaseModel, ValidationError
 
 import auth
 import model_store as ms
-from schemas import EmployeeInput
+from schemas import INCOME_IN_THB, EmployeeInput
 import batch_score
 import business_rules  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
 import db  # noqa: E402
 
 router = APIRouter(tags=["employees"])
 log = logging.getLogger(__name__)
+SCHEMA_OUTDATED = "ฐานข้อมูลยังเป็นโครงสร้างรุ่นเก่า บันทึกไม่ได้ ให้ผู้ดูแลระบบอัปเดตตามหัวข้อ \"หลัง pull\" ใน docs/run_guide.md แล้วลองใหม่"
 
 MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 10_000
@@ -77,6 +79,11 @@ LABEL = ("Attrition", "ลาออกแล้วหรือยัง", "ล�
 # ponytail: ค่ากลางทำให้คะแนนส่วนนี้ "เป็นกลาง" ไม่ได้สะท้อนตัวคนจริง ถ้าบริษัทมีแบบสำรวจควรกรอกค่าจริง
 SURVEY_FIELDS = ("JobSatisfaction", "EnvironmentSatisfaction", "RelationshipSatisfaction", "JobInvolvement", "WorkLifeBalance")
 SURVEY_DEFAULT = 3
+# DE-17: ทดสอบให้คะแนนพนักงาน IBM ทั้ง 1,470 คนแบบเติม 3 ทุกช่อง คนเสี่ยงสูงลดจาก 185 เหลือ 105 คน จึงต้องเตือนทุกครั้งที่เติม
+SURVEY_WARNING = (
+    "พนักงาน {n:,} คนไม่มีข้อมูลแบบสำรวจบางช่อง ระบบใส่ค่า 3 (พอใจ/ดี) ให้ ความเสี่ยงของคนกลุ่มนี้อาจต่ำกว่าจริง"
+    " (ทดลองกับข้อมูล IBM: ถ้าไม่มีแบบสำรวจเลย จำนวนคนเสี่ยงสูงลดจาก 185 เหลือ 105 คน) ถ้ามีผลแบบสำรวจ ควรกรอกค่าจริง"
+)
 # ช่องที่เว้นว่าง/ไม่มีคอลัมน์ได้ -> ค่าที่ใส่ให้ (วันเข้าออฟฟิศ: ไม่มีข้อมูล = เข้าทุกวันเหมือน IBM)
 OPTIONAL_DEFAULTS = {**{f: SURVEY_DEFAULT for f in SURVEY_FIELDS}, "OfficeDaysPerWeek": 5}
 # ระดับตำแหน่งเป็นคำ (ตรงกับ JOB_LEVELS ใน frontend/src/featureLabels.js) ค่าที่ส่งเข้าโมเดลยังเป็น 1–5
@@ -117,6 +124,8 @@ class ValidateResponse(BaseModel):
     errors: list[RowError]
     errors_truncated: int
     preview: list[dict]
+    survey_imputed: int = 0  # แถวที่ผ่านแต่ระบบเติมค่าแบบสำรวจให้อย่างน้อย 1 ช่อง (DE-17)
+    warnings: list[str] = []  # เรื่องที่ไม่ทำให้ไฟล์ไม่ผ่าน แต่ผู้ใช้ควรรู้ก่อนบันทึก
     saved: bool = False
     saved_ids: list[int] = []  # รหัสพนักงานที่เพิ่งบันทึก (ไม่เกิน 20 คนแรก) ให้หน้าเว็บกดไปดูได้
     note: str = "ตรวจไฟล์อย่างเดียว ยังไม่ได้บันทึกเข้าระบบ"
@@ -155,11 +164,16 @@ def _read(upload: UploadFile, data: bytes) -> pd.DataFrame:
     raise HTTPException(422, "รองรับเฉพาะไฟล์ .xlsx หรือ .csv")
 
 
+THOUSANDS = re.compile(r"-?\d{1,3}(,\d{3})+(\.\d+)?")
+
+
 def _clean(value):
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return None
     if isinstance(value, str):
         value = value.strip()
+        if THOUSANDS.fullmatch(value):  # "45,000" ตามที่ Excel จัดรูปแบบ (UX-16)
+            value = value.replace(",", "")
         return value or None
     return value
 
@@ -171,10 +185,12 @@ def to_model_units(rows: pd.DataFrame) -> pd.DataFrame:
     return rows
 
 
-async def _check(file: UploadFile, label: bool = False):
+def _check(file: UploadFile, label: bool = False):
     """ตรวจไฟล์ คืน (แถวที่ถูกต้องเป็นชื่อคอลัมน์ IBM เงินเดือนยังเป็นบาท, ผลตรวจ)
-    label=True: ต้องมีคอลัมน์ "ลาออกแล้วหรือยัง" ทุกแถว (ไฟล์ปรับเทียบ) และใส่ Attrition = Yes/No ในแถวที่คืน"""
-    data = await file.read(MAX_BYTES + 1)
+    label=True: ต้องมีคอลัมน์ "ลาออกแล้วหรือยัง" ทุกแถว (ไฟล์ปรับเทียบ) และใส่ Attrition = Yes/No ในแถวที่คืน
+    ฟังก์ชันธรรมดา (ไม่ใช่ async) ให้ endpoint ที่เรียกเป็น def ซึ่ง FastAPI รันใน threadpool
+    งานตรวจ 10,000 แถวจึงไม่บล็อก event loop จน request อื่นค้าง (SEC-15)"""
+    data = file.file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
         raise HTTPException(413, "ไฟล์ใหญ่เกิน 5 MB")
     df = _read(file, data)
@@ -190,13 +206,14 @@ async def _check(file: UploadFile, label: bool = False):
 
     errors: list[RowError] = []
     seen_ids: dict = {}
-    preview, valid, n_valid = [], [], 0
+    preview, valid, n_valid, n_imputed = [], [], 0, 0
     for i, raw in enumerate(df.to_dict("records")):
         excel_row = i + 2
         row = {mapped[h]: _clean(v) for h, v in raw.items() if h in mapped}
         if all(v is None for v in row.values()):
             continue  # แถวว่างท้ายไฟล์
         shown = dict(row)  # ค่าตามที่ผู้ใช้กรอก (ภาษาไทย) ไว้โชว์ในตัวอย่าง ก่อนแปลงเป็นค่าของโมเดล
+        imputed = any(row.get(f) is None for f in SURVEY_FIELDS)
         for field, default in OPTIONAL_DEFAULTS.items():  # ไม่มีข้อมูล = ใช้ค่าเริ่มต้น ไม่แจ้งเป็นข้อผิดพลาด
             if row.get(field) is None:
                 row[field] = default
@@ -222,7 +239,7 @@ async def _check(file: UploadFile, label: bool = False):
 
         checked = None
         try:
-            checked = EmployeeInput(**{k: v for k, v in row.items() if v is not None})
+            checked = EmployeeInput.model_validate({k: v for k, v in row.items() if v is not None}, context=INCOME_IN_THB)
         except ValidationError as e:
             for err in e.errors():
                 field = str(err["loc"][0]) if err["loc"] else ""
@@ -233,6 +250,7 @@ async def _check(file: UploadFile, label: bool = False):
             errors.extend(row_errors)
         else:
             n_valid += 1
+            n_imputed += imputed
             if checked:  # None = ผ่านแต่ขาดทั้งคอลัมน์ (บอกใน missing_columns) บันทึกไม่ได้
                 valid.append(checked.model_dump() | {"EmployeeNumber": emp_id} | ({"Attrition": attrition} if label else {}))  # ค่าที่แปลงชนิดแล้ว ("41" -> 41)
             if len(preview) < 5:
@@ -249,16 +267,18 @@ async def _check(file: UploadFile, label: bool = False):
         errors=errors[:MAX_ERRORS],
         errors_truncated=max(0, len(errors) - MAX_ERRORS),
         preview=preview,
+        survey_imputed=n_imputed,
+        warnings=[SURVEY_WARNING.format(n=n_imputed)] if n_imputed else [],
     )
 
 
 @router.post("/employees/validate", response_model=ValidateResponse)
-async def validate_upload(file: UploadFile = File(...)):
-    return (await _check(file))[1]
+def validate_upload(file: UploadFile = File(...), _=Depends(auth.LIMITS["validate"].per_user)):
+    return _check(file)[1]
 
 
 @router.post("/employees/import", response_model=ValidateResponse)
-async def import_employees(
+def import_employees(
     background: BackgroundTasks,
     file: UploadFile = File(...),
     user: dict = Depends(auth.require_admin),
@@ -267,7 +287,7 @@ async def import_employees(
     """บันทึกทั้งไฟล์ (ทุกแถวต้องถูกต้อง) รหัสพนักงานที่มีอยู่แล้ว = อัปเดตเป็นข้อมูลใหม่"""
     if not db.url():
         raise HTTPException(503, "ระบบยังไม่ได้ต่อฐานข้อมูล บันทึกไม่ได้ (ผู้ดูแลต้องตั้ง DATABASE_URL)")
-    valid, result = await _check(file)
+    valid, result = _check(file)
     if result.missing_columns or result.n_invalid or not valid:
         raise HTTPException(422, "ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด กด \"ตรวจไฟล์\" แล้วแก้ให้ครบก่อนบันทึก")
     rows = to_model_units(pd.DataFrame(valid))
@@ -275,11 +295,13 @@ async def import_employees(
         with db.connect() as conn:
             existing = {r[0] for r in conn.execute("SELECT employee_id FROM employees WHERE tenant_id = %s", (user["tenant_id"],))}
             db.upsert_employees(conn, rows, user["tenant_id"], "upload")
-    except db.IntegrityError as e:  # CHECK ของตารางเข้มกว่า schemas.py บางข้อ (เช่น อายุ 15–80) ทั้งไฟล์ไม่ถูกบันทึก
+    except db.IntegrityError as e:  # ด่านสุดท้าย: schemas.py ตรวจช่วงเดียวกับ CHECK แล้ว (test_schemas.py) ทั้งไฟล์ไม่ถูกบันทึก
         log.warning("employees/import: ฐานข้อมูลไม่รับ constraint=%s", e)  # ชื่อ constraint เท่านั้น ไม่มีข้อมูลพนักงาน
         raise HTTPException(422, "มีค่าบางแถวเกินช่วงที่ฐานข้อมูลรับ (เช่น อายุ 15–80 ปี) ยังไม่ได้บันทึกอะไร ตรวจไฟล์แล้วลองใหม่")
-    ms.raw_employees.cache_clear()  # ให้ทุกหน้าเห็นพนักงานที่เพิ่ง import
-    ms.employee_features.cache_clear()
+    except db.SchemaOutdated as e:  # QA-06: DB สร้างก่อนมีคอลัมน์ใหม่ ยังไม่ได้รัน 02-app-schema.sql ซ้ำ
+        log.error("employees/import: schema ของฐานข้อมูลเก่ากว่าโค้ด (%s) ให้รัน docker/postgres/init/02-app-schema.sql ซ้ำ", e)
+        raise HTTPException(503, SCHEMA_OUTDATED)
+    ms.clear_cache()  # ให้ทุกหน้าเห็นพนักงานที่เพิ่ง import ทันที (ไม่ต้องรอรอบตรวจของ model_store)
     background.add_task(batch_score.refresh_in_background)  # คำนวณสรุปใหม่หลังตอบกลับ ให้ /company-summary กลับมาใช้ cache
     n_updated = len(existing & set(rows["EmployeeNumber"]))
     return result.model_copy(

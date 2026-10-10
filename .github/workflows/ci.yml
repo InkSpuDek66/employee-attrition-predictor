@@ -19,8 +19,8 @@ jobs:
       MODEL_URI: models:/attrition-xgboost-P/1
       MLFLOW_DISABLE_AGENT_HINT: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -33,7 +33,16 @@ jobs:
         run: docker compose up -d --build --wait
       # เทรนโมเดลใหม่ทุกครั้ง ยืนยันว่าทำซ้ำได้จากโค้ดใน repo และ register เข้า MLflow ตัวจริงได้
       - run: python src/train.py
-      - run: python -m pytest backend -q
+      # QA-01: test ของ DB (test_db.py) ข้ามเองถ้าไม่มี DATABASE_URL ตั้งให้ชี้ PostgreSQL ใน compose แล้วโหลด IBM ก่อน
+      # ตั้งเฉพาะ 2 step นี้ ไม่ตั้งทั้ง job เพื่อให้ train.py ทำงานเหมือนเดิม
+      - name: Load IBM employees into PostgreSQL
+        run: python src/db.py
+        env:
+          DATABASE_URL: postgresql://attrition:ci-only-password@127.0.0.1:5432/attrition
+      - name: Backend tests (รวม test ของ DB)
+        run: python -m pytest backend -q -rs
+        env:
+          DATABASE_URL: postgresql://attrition:ci-only-password@127.0.0.1:5432/attrition
       - name: MLflow logs (เมื่อ fail)
         if: failure()
         run: docker compose logs mlflow
@@ -45,8 +54,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm

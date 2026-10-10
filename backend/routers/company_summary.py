@@ -3,9 +3,11 @@
 คำนวณด้วย src/company_summary.py (module ของ Saphondanai + Nanthamon): จัดอันดับปัจจัยด้วย mean |SHAP|
 โดยรวม one-hot กลับเป็นฟีเจอร์เดิม, คำแนะนำ rule-based และ financial impact จาก src/business_rules.py
 ตั้ง DATABASE_URL แล้วอ่านผลจาก backend/batch_score.py (ตาราง company_risk_summary) ถ้าใหม่กว่าข้อมูลพนักงาน
-และเป็นโมเดลตัวเดียวกัน ไม่งั้นคำนวณสด (SEC-03 ข้อ 3) ผลเหมือนกันทั้งสองทาง
+เป็นโมเดลตัวเดียวกัน และใช้ค่าปรับเทียบเดียวกับตอนนี้ ไม่งั้นคำนวณสด (SEC-03 ข้อ 3) ผลเหมือนกันทั้งสองทาง
+คะแนนที่ใช้สรุป = คะแนนที่หน้าเว็บแสดง (ปรับเทียบถ้าบริษัทของผู้ใช้ปรับแล้ว) ตรงกับ /shap, /whatif, รายชื่อ (DE-11)
 """
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,11 +16,13 @@ from pydantic import BaseModel
 import auth
 import calibration
 import model_store as ms
+from routers.shap import UNCALIBRATED_WARNING
 import db  # noqa: E402
 import business_rules  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
 import company_summary as cs  # noqa: E402
 
 router = APIRouter(tags=["explain"])
+log = logging.getLogger(__name__)
 
 
 class Factor(BaseModel):
@@ -38,9 +42,15 @@ class Summary(BaseModel):
     top_factors: list[Factor]
 
 
+# UX-17: ข้อมูลตัวอย่าง IBM เกือบทั้งหมดอยู่ในชุดที่ใช้เทรน ตัวเลขจึงดูแม่นกว่าใช้งานจริง (DE-07)
+IN_SAMPLE_NOTE = "ข้อมูลตัวอย่างชุดนี้ส่วนใหญ่ใช้เทรนโมเดล ตัวเลขจึงดูแม่นกว่าการใช้กับข้อมูลใหม่จริง"
+
+
 class CompanySummary(Summary):
     department: Optional[str]
     note: str = cs.NOTE
+    warning: Optional[str] = None  # ยังไม่ปรับเทียบ (README 6.5) ข้อความเดียวกับหน้า SHAP / What-if
+    data_note: Optional[str] = None
 
 
 class DepartmentSummary(Summary):
@@ -68,9 +78,12 @@ class DepartmentsResponse(BaseModel):
     note: str = cs.NOTE
 
 
-def _inputs():
+def _inputs(record):
+    """(SHAP, ชื่อฟีเจอร์, คะแนนที่แสดง, ข้อมูลพนักงาน) record = ค่าปรับเทียบของบริษัทหรือ None"""
     X = ms.employee_features()
-    return ms.explainer()(X).values, list(X.columns), ms.risk_scores(X), ms.raw_employees()
+    raw = ms.risk_scores(X)
+    shown = calibration.apply(record, raw) if record else raw
+    return ms.explainer()(X).values, list(X.columns), shown, ms.raw_employees()
 
 
 CACHE_SQL = """
@@ -79,16 +92,22 @@ FROM company_risk_summary
 WHERE tenant_id = %(t)s AND model_version = %(v)s
   AND generated_at = (SELECT max(generated_at) FROM company_risk_summary WHERE tenant_id = %(t)s AND model_version = %(v)s)
   AND generated_at > (SELECT max(updated_at) FROM employees WHERE tenant_id = %(t)s)
+  AND calibrated_at IS NOT DISTINCT FROM %(c)s::timestamptz
 """
 CACHE_KEYS = ("n_employees", "mean_risk_score", "risk_bands", "expected_loss_total", "high_risk_replacement_cost", "top_factors")
 
 
-def _cached(top_n: int):
+def _cached(top_n: int, record):
     """{department หรือ None (ทั้งบริษัท): สรุป} จากรอบ batch ล่าสุด หรือ None ถ้าต้องคำนวณสด"""
     if not db.url():
         return None
-    with db.connect() as conn:
-        rows = conn.execute(CACHE_SQL, {"t": db.DEMO_TENANT, "v": ms.MODEL_VERSION}).fetchall()
+    params = {"t": db.DEMO_TENANT, "v": ms.MODEL_VERSION, "c": record["calibrated_at"] if record else None}
+    try:
+        with db.connect() as conn:
+            rows = conn.execute(CACHE_SQL, params).fetchall()
+    except Exception as e:  # noqa: BLE001  เช่น DB เก่ายังไม่มีคอลัมน์ calibrated_at (QA-06): คำนวณสดแทน ไม่ตอบ 500
+        log.warning("company-summary: อ่าน cache ไม่ได้ (%s) คำนวณสดแทน", type(e).__name__)
+        return None
     cache = {r[0]: dict(zip(CACHE_KEYS, r[1:])) for r in rows}
     if not cache or any(len(s["top_factors"]) < top_n for s in cache.values()):
         return None
@@ -96,28 +115,36 @@ def _cached(top_n: int):
 
 
 @router.get("/company-summary", response_model=CompanySummary)
-def company_summary(department: Optional[str] = None, top_n: int = Query(5, ge=1, le=50)):
-    cache = _cached(top_n)
+def company_summary(
+    department: Optional[str] = None, top_n: int = Query(5, ge=1, le=50), user: dict = Depends(auth.current_user)
+):
+    record = calibration.load(user["tenant_id"])
+    notes = {
+        "warning": None if record else UNCALIBRATED_WARNING,
+        "data_note": IN_SAMPLE_NOTE if user["tenant_id"] == db.DEMO_TENANT else None,
+    }
+    cache = _cached(top_n, record)
     if cache and department in cache:
-        return CompanySummary(department=department, **cache[department])
-    shap_values, names, risk, employees = _inputs()
+        return CompanySummary(department=department, **cache[department], **notes)
+    shap_values, names, risk, employees = _inputs(record)
     if department:
         departments = employees["Department"]
         if department not in set(departments):
             raise HTTPException(404, f"ไม่พบแผนก '{department}' (มี: {sorted(departments.unique())})")
         mask = departments.to_numpy() == department
         shap_values, risk, employees = shap_values[mask], risk[mask], employees[mask]
-    return CompanySummary(department=department, **cs.summarize(shap_values, names, risk, employees, top_n))
+    return CompanySummary(department=department, **cs.summarize(shap_values, names, risk, employees, top_n), **notes)
 
 
 @router.get("/company-summary/departments", response_model=DepartmentsResponse)
-def departments_summary(top_n: int = Query(3, ge=1, le=50)):
+def departments_summary(top_n: int = Query(3, ge=1, le=50), user: dict = Depends(auth.current_user)):
     """ทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม สำหรับหน้า Company Summary / Superset"""
-    cache = _cached(top_n)
+    record = calibration.load(user["tenant_id"])
+    cache = _cached(top_n, record)
     if cache:
         rows = [{"department": d, **s} for d, s in cache.items() if d is not None]
         return DepartmentsResponse(departments=sorted(rows, key=lambda r: r["expected_loss_total"], reverse=True))
-    return DepartmentsResponse(departments=cs.by_department(*_inputs(), top_n=top_n))
+    return DepartmentsResponse(departments=cs.by_department(*_inputs(record), top_n=top_n))
 
 
 @router.get("/company-summary/top-employees", response_model=TopEmployeesResponse)
