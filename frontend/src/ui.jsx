@@ -1,5 +1,5 @@
 // ชิ้นส่วน UI ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
-import { BAND, bandOf, HIGH, LOW } from './theme'
+import { BAND, bandOf, HIGH, LOW, useCountUp } from './theme'
 
 // ไอคอนเส้น (path จาก Heroicons outline, MIT) ไม่ต้องลง library เพิ่ม
 const ICONS = {
@@ -128,7 +128,11 @@ export function Alert({ tone = 'error', children }) {
 
 // โครงสีเทากะพริบระหว่างโหลด กันหน้ากระโดด (CLS)
 export function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse rounded-xl bg-muted ${className}`} />
+  return <div className={`skeleton rounded-xl ${className}`} />
+}
+
+export function CountUp({ value, format = Math.round }) {
+  return format(useCountUp(value))
 }
 
 // คะแนนใหญ่ + แถบไล่สีเขียว เหลือง แดง พร้อมหมุดตำแหน่งคะแนนและเส้นเกณฑ์
@@ -140,7 +144,7 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
       <div className="text-xs font-medium tracking-wide text-muted-fg">{title}</div>
       <div className="mt-1 flex items-end gap-2">
         <span className={`${size === 'lg' ? 'text-5xl' : 'text-4xl'} font-semibold leading-none tabular-nums ${b.text}`}>
-          {Math.round(pct)}
+          <CountUp value={pct} />
         </span>
         <span className="pb-0.5 text-sm text-muted-fg">/ 100</span>
         <span className={`ml-auto rounded-md px-2.5 py-1 text-sm font-semibold ring-1 ${b.pill}`}>เสี่ยง{bandTh ?? b.th}</span>

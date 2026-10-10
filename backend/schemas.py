@@ -55,6 +55,8 @@ class EmployeeInput(BaseModel):
     YearsInCurrentRole: int = Field(ge=0)
     YearsSinceLastPromotion: int = Field(ge=0)
     YearsWithCurrManager: int = Field(ge=0)
+    # วันเข้าออฟฟิศต่อสัปดาห์ (WFH) ไม่บังคับ ค่าเริ่มต้น 5 = เข้าทุกวันเหมือนข้อมูล IBM ใช้ปรับระยะทางก่อนให้คะแนน (model_store.commute_adjusted)
+    OfficeDaysPerWeek: int = Field(5, ge=0, le=5)
 
 
 class EmployeeRef(BaseModel):

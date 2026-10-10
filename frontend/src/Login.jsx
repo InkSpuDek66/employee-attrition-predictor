@@ -44,9 +44,9 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
       <ThemeToggle dark={dark} onToggle={onToggleTheme} className="absolute right-4 top-4" />
       {/* จอใหญ่: ปุกปุย + จอย ทางซ้าย, กิต + ส้มฉุน ทางขวา (สัตว์ยืนด้านนอก) ยืนเสมอขอบล่างของฟอร์ม เห็นครบในจอเดียว */}
       <div className="flex w-full items-end justify-center gap-6 xl:gap-10">
-        <WelcomeMascots keys={['dog', 'chibiGirl']} className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
+        <WelcomeMascots keys={['dog', 'chibiGirl']} enter="left" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
         <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col items-center text-center">
+        <div className="login-enter flex flex-col items-center text-center">
           <Logo className="size-24 sm:size-28" />
           <div className="mt-3 text-2xl font-semibold tracking-tight text-fg" translate="no">
             Attrition Predictor
@@ -55,7 +55,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
         </div>
 
         <div>
-          <form onSubmit={submit} className="space-y-4 rounded-xl border border-line bg-card p-6">
+          <form onSubmit={submit} style={{ '--enter': '120ms' }} className="login-enter space-y-4 rounded-xl border border-line bg-card p-6">
           <div>
             <h1 className="text-xl font-semibold text-fg">เข้าสู่ระบบ</h1>
             <p className="text-sm text-muted-fg">ข้อมูลพนักงานเป็นข้อมูลส่วนบุคคล ต้องเข้าสู่ระบบก่อนใช้งาน</p>
@@ -103,7 +103,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
           </form>
         </div>
         </div>
-        <WelcomeMascots keys={['chibiBoy', 'cat']} className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
+        <WelcomeMascots keys={['chibiBoy', 'cat']} enter="right" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
       </div>
 
       {/* บัญชีทดลอง: พับเก็บไว้มุมซ้ายล่าง กดเพื่อเปิด แล้วกดบัญชีเพื่อกรอกให้ */}
@@ -121,7 +121,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
                 <button
                   type="button"
                   onClick={() => (setUsername(a.username), setPassword(a.password), (demo.current.open = false))}
-                  className="w-full cursor-pointer rounded-lg border border-line bg-card px-3 py-2.5 text-left transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="lift w-full cursor-pointer rounded-lg border border-line bg-card px-3 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                     <span className="font-medium text-fg">{a.role}</span>

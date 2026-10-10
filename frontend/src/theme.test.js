@@ -1,7 +1,7 @@
 // test ตรรกะเงิน/เกณฑ์ และการเรียก API (ใช้ node:test ในตัว ไม่ต้องลง library) รัน: npm test
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { api, bandOf, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
+import { api, bandOf, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
 
 test('ขอบเขตเงินเดือน: ขั้นต่ำ 15,000 บาท ขั้นสูง 20,000 ดอลลาร์ × อัตรา', () => {
   assert.deepEqual(incomeBounds(35), [15000, 700000])
@@ -94,4 +94,14 @@ test('postFile ส่งไฟล์และฟิลด์เพิ่มเ�
   assert.equal(calls[0].opts.method, 'POST')
   assert.equal(form.get('method'), 'platt')
   assert.ok(form.get('file'))
+})
+
+test('What-if: ข้อความเด้งตามทิศที่ระดับความเสี่ยงเปลี่ยน', () => {
+  assert.equal(toastKind('High', 'Low'), 'low')
+  assert.equal(toastKind('Medium', 'Low'), 'low')
+  assert.equal(toastKind('High', 'Medium'), 'midDown')
+  assert.equal(toastKind('Low', 'Medium'), 'midUp')
+  assert.equal(toastKind('Low', 'High'), 'high')
+  assert.equal(toastKind('Medium', 'High'), 'high')
+  assert.equal(toastKind('Low', 'Low'), null) // ไม่เปลี่ยน = ไม่เด้ง (เดิมเคยฉลองซ้ำตอนปรับครั้งแรกของคนที่ต่ำอยู่แล้ว)
 })

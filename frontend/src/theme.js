@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 // ค่าคงที่และ helper ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
 
 // เกณฑ์ระดับตาม README 6.1 ชุดเดียวกับ src/business_rules.py (MEDIUM_RISK / HIGH_RISK) แก้ต้องแก้คู่กัน
@@ -38,6 +38,11 @@ export const BAND = {
 }
 
 export const bandOf = (score) => (score < LOW ? 'Low' : score < HIGH ? 'Medium' : 'High')
+
+// What-if: ระดับเดิม -> ใหม่ ควรเด้งข้อความแบบไหน (null = ระดับไม่เปลี่ยน ไม่ต้องเด้ง)
+const BAND_RANK = { Low: 0, Medium: 1, High: 2 }
+export const toastKind = (from, to) =>
+  from === to ? null : BAND_RANK[to] < BAND_RANK[from] ? (to === 'Low' ? 'low' : 'midDown') : to === 'High' ? 'high' : 'midUp'
 
 // ผู้ช่วยในหน้า (mascot/Mascot.jsx) ลำดับนี้ใช้ทั้งปุ่มเลือกและหน้าขอโทษ ตัวที่เลือกจำใน localStorage
 export const MASCOTS = ['chibiGirl', 'chibiBoy', 'cat', 'dog']
@@ -143,4 +148,24 @@ export function postFile(path, file, fields = {}) {
   form.append('file', file)
   for (const [k, v] of Object.entries(fields)) form.append(k, v)
   return api(path, { method: 'POST', body: form })
+}
+
+// ตัวเลขค่อยๆ นับไปหาค่าใหม่ (ease-out) ตอนแสดงครั้งแรกนับจาก start, ตอนค่าเปลี่ยนนับจากค่าเดิม
+// เครื่องที่ตั้ง "ลดการเคลื่อนไหว" กระโดดไปค่าสุดท้ายทันที
+export function useCountUp(target, { ms = 450, start = 0 } = {}) {
+  const [shown, setShown] = useState(start)
+  const from = useRef(start)
+  useEffect(() => {
+    const begin = performance.now()
+    const a = from.current
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+    let id = requestAnimationFrame(function step(now) {
+      const t = reduce ? 1 : Math.min(1, (now - begin) / ms)
+      from.current = a + (target - a) * (1 - (1 - t) ** 3)
+      setShown(from.current)
+      if (t < 1) id = requestAnimationFrame(step)
+    })
+    return () => cancelAnimationFrame(id)
+  }, [target, ms])
+  return shown
 }

@@ -2,6 +2,7 @@
 // บันทึกได้เฉพาะผู้ดูแลระบบ (canSave) และ backend ต้องต่อ database (ไม่งั้นได้ข้อความ 503 จาก backend)
 // ชิ้นส่วนที่ export (DownloadButton, DropZone, CheckDetails) ใช้ร่วมกับหน้าปรับเทียบโมเดล (Calibrate.jsx)
 import { useState } from 'react'
+import { AssistantHint } from './mascot/Mascot'
 import { download, friendly, postFile } from './theme'
 import { Alert, Card, Icon } from './ui'
 
@@ -10,7 +11,7 @@ export function DownloadButton({ path, filename, children, onError }) {
     <button
       type="button"
       onClick={() => download(path, filename).catch((err) => onError(friendly(err)))}
-      className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line px-4 py-2 text-left font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      className="lift inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-card px-4 py-2 text-left font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
     >
       <Icon name="download" className="size-5 shrink-0" />
       {children}
@@ -130,7 +131,7 @@ export function CheckDetails({ result }) {
 }
 
 // onSaved() = ข้อมูลพนักงานเปลี่ยน ให้หน้าอื่นโหลดใหม่, onPick(id) = ไปดูพนักงานคนนั้นในหน้า SHAP
-export default function Upload({ canSave, onSaved, onPick }) {
+export default function Upload({ who, canSave, onSaved, onPick }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
@@ -183,6 +184,8 @@ export default function Upload({ canSave, onSaved, onPick }) {
             <li>เงินเดือนกรอกเป็นบาท ระยะทางเป็นกิโลเมตร</li>
             <li>ค่าที่เป็นตัวเลือกพิมพ์ภาษาไทยได้ เช่น OT: ทำ / ไม่ทำ (ดูชีต “คำอธิบาย”)</li>
             <li>ไฟล์ที่ export จากระบบเดิมใช้หัวคอลัมน์ภาษาอังกฤษแบบ IBM ได้</li>
+            <li>ช่องความพึงพอใจ/สมดุลงานกับชีวิต (จากแบบสำรวจพนักงาน) และความทุ่มเท (จากการประเมินของหัวหน้า) ไม่มีข้อมูลก็เว้นว่างได้</li>
+            <li>“เข้าออฟฟิศ (วัน/สัปดาห์)” ใส่ 0–5 ตามนโยบาย WFH หรือระบบลงเวลา เว้นว่าง = เข้าทุกวัน</li>
           </ul>
         </Card>
 
@@ -192,6 +195,12 @@ export default function Upload({ canSave, onSaved, onPick }) {
       </div>
 
       {error && <Alert>{error}</Alert>}
+
+      {!result && !error && !busy && (
+        <AssistantHint who={who} title="เริ่มจากดาวน์โหลดไฟล์ตัวอย่างนะ">
+          กรอกพนักงานหนึ่งคนต่อหนึ่งแถว แล้วลากไฟล์มาวางในช่องด้านบน ระบบจะตรวจให้ก่อนว่าแถวไหนต้องแก้ ยังไม่บันทึกจนกว่าจะกดยืนยัน
+        </AssistantHint>
+      )}
 
       {result && (
         <Card
@@ -217,7 +226,7 @@ export default function Upload({ canSave, onSaved, onPick }) {
                           key={id}
                           type="button"
                           onClick={() => onPick(id)}
-                          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                         >
                           พนักงาน #{id}
                           <Icon name="right" className="size-4 text-muted-fg" />

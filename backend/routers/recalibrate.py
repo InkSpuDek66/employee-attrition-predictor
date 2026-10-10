@@ -45,6 +45,12 @@ class Example(BaseModel):
     after: float
 
 
+class Bin(BaseModel):
+    score: float  # คะแนนเดิมเฉลี่ยของคนในช่วงนี้
+    rate: float  # สัดส่วนที่ลาออกจริงในไฟล์
+    n: int
+
+
 class RecalibrateResponse(BaseModel):
     tenant_id: str
     method: str
@@ -54,6 +60,8 @@ class RecalibrateResponse(BaseModel):
     brier_after: float  # วัดบนข้อมูลชุดเดียวกับที่ใช้ fit จึงดูดีเกินจริงเล็กน้อย
     calibrated_at: str
     examples: list[Example] = []
+    curve: list[Example] = []  # สูตรแปลงคะแนนทั้งเส้น (0–1 ทุก 0.02) ให้หน้าเว็บวาดกราฟ
+    bins: list[Bin] = []  # อัตราลาออกจริงในไฟล์ แยกตามช่วงคะแนนเดิม (ช่วงละ 0.1 อย่างน้อย 5 คน)
 
 
 class UploadResult(BaseModel):
@@ -85,6 +93,13 @@ def _fit(raw: pd.DataFrame, method: str, tenant_id: str) -> RecalibrateResponse:
     }
     saved = calibration.save(tenant_id, method, params, len(raw), float(np.mean(labels)), metrics)
     after = calibration.apply(record, np.array(EXAMPLE_SCORES))
+    grid = np.linspace(0, 1, 51)
+    edges = np.minimum((scores * 10).astype(int), 9)  # ช่วงคะแนน 0–0.1, 0.1–0.2, ...
+    bins = [
+        Bin(score=float(scores[edges == b].mean()), rate=float(labels[edges == b].mean()), n=int((edges == b).sum()))
+        for b in range(10)
+        if (edges == b).sum() >= 5
+    ]
     return RecalibrateResponse(
         tenant_id=saved["tenant_id"],
         method=saved["method"],
@@ -92,6 +107,8 @@ def _fit(raw: pd.DataFrame, method: str, tenant_id: str) -> RecalibrateResponse:
         positive_rate=saved["positive_rate"],
         calibrated_at=saved["calibrated_at"],
         examples=[Example(before=b, after=float(a)) for b, a in zip(EXAMPLE_SCORES, after)],
+        curve=[Example(before=float(g), after=float(a)) for g, a in zip(grid, calibration.apply(record, grid))],
+        bins=bins,
         **metrics,
     )
 
@@ -99,6 +116,8 @@ def _fit(raw: pd.DataFrame, method: str, tenant_id: str) -> RecalibrateResponse:
 @router.post("/recalibrate", response_model=RecalibrateResponse)
 def recalibrate(req: RecalibrateRequest, background: BackgroundTasks, user: dict = Depends(auth.require_admin)):
     raw = pd.DataFrame(req.records)
+    if ms.OFFICE_DAYS not in raw:  # ไม่บังคับ ไม่มี = เข้าออฟฟิศทุกวัน
+        raw[ms.OFFICE_DAYS] = ms.FULL_WEEK
     missing = sorted((ms.input_columns() | {"Attrition"}) - set(raw.columns))
     if missing:
         raise HTTPException(422, f"ขาดคอลัมน์: {missing}")

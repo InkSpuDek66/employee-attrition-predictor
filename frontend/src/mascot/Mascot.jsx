@@ -77,16 +77,22 @@ export function SorryState({ message }) {
 }
 
 // หน้า login: ผู้ช่วยยืนโบกมือต้อนรับ พร้อมป้ายชื่อ (keys = ตัวที่จะแสดง เรียงซ้ายไปขวา)
+// enter = 'left' | 'right' กระโดดเข้ามาจากขอบจอฝั่งนั้น ตัวที่อยู่ด้านนอกมาก่อน
 // โบก/ขยับไม่พร้อมกัน ดูมีชีวิต เป็นของตกแต่ง ซ่อนจากโปรแกรมอ่านหน้าจอ
-export function WelcomeMascots({ keys = MASCOTS, className = '' }) {
+export function WelcomeMascots({ keys = MASCOTS, enter, className = '' }) {
   return (
     <div className={`flex items-end ${className}`} aria-hidden="true">
-      {keys.map((k) => (
+      {keys.map((k, i) => (
         <div
           key={k}
           data-kind={k === 'cat' || k === 'dog' ? 'pet' : 'person'} // ให้หน้าที่ใช้ปรับขนาดสัตว์แยกได้
-          style={{ '--delay': `${MASCOTS.indexOf(k) * 220}ms` }}
-          className="flex flex-col items-center [&_.mascot-body]:[animation-delay:var(--delay)] [&_.mascot-wave]:[animation-delay:var(--delay)]"
+          style={{
+            '--delay': `${MASCOTS.indexOf(k) * 220}ms`,
+            '--hop': `${200 + (enter === 'right' ? keys.length - 1 - i : i) * 220}ms`,
+          }}
+          className={`flex flex-col items-center [&_.mascot-body]:[animation-delay:var(--delay)] [&_.mascot-wave]:[animation-delay:var(--delay)] ${
+            enter ? `hop-in-${enter}` : ''
+          }`}
         >
           {CHARACTERS[k]({ mood: 'none' })}
           <span className="-mt-1 rounded-full border border-line bg-card/80 px-2.5 py-0.5 text-xs font-medium text-fg">{LABELS[k]}</span>
@@ -113,9 +119,10 @@ export function NotFoundState({ who, message }) {
   )
 }
 
-export default function Mascot({ risk, who, onChoose }) {
-  const mood = risk?.notFound ? 'NotFound' : risk?.error ? 'Sorry' : (risk?.band ?? 'none')
-  const m = MOOD[mood]
+// say = { n, text, sub } ข้อความชั่วคราวหลังผู้ใช้ทำอะไรสำเร็จ (บันทึก/ปรับเทียบ/ดาวน์โหลด) ทำท่าดีใจแทนท่าตามความเสี่ยง
+export default function Mascot({ risk, who, onChoose, say }) {
+  const mood = say ? 'Low' : risk?.notFound ? 'NotFound' : risk?.error ? 'Sorry' : (risk?.band ?? 'none')
+  const m = say ?? MOOD[mood]
   const Character = CHARACTERS[who]
 
   return (
@@ -128,12 +135,12 @@ export default function Mascot({ risk, who, onChoose }) {
         className="cursor-pointer rounded-xl p-1 transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
         {/* key: เปลี่ยนระดับ/ตัวการ์ตูนแล้วเล่นท่าเข้าใหม่ */}
-        <Character key={`${who}-${mood}`} mood={mood} />
+        <Character key={`${who}-${mood}-${say?.n ?? 0}`} mood={mood} />
       </button>
       <Bubble className="mt-2" live>
         <div className="text-sm font-semibold text-fg">{m.text}</div>
         <div className="text-xs text-muted-fg">{m.sub}</div>
-        {risk?.band && (
+        {risk?.band && !say && (
           <div className="mt-1 text-[11px] tabular-nums text-muted-fg/80">
             พนักงาน #{risk.id} · {risk.label} {Math.round(risk.score * 100)}
           </div>

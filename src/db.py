@@ -16,6 +16,7 @@ from clean_pipeline import RAW_FILENAME, load_raw_data
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEMO_TENANT = "ibm_demo"
 SKIP_COLUMNS = {"EmployeeCount", "Over18", "StandardHours"}  # ค่าเดียวทั้งไฟล์ ไม่เก็บ
+EXTRA_COLUMNS = ["OfficeDaysPerWeek"]  # ไม่มีใน CSV ของ IBM แต่เก็บในตาราง employees
 
 
 def url():
@@ -45,7 +46,7 @@ def read_employees(tenant_id: str = DEMO_TENANT) -> pd.DataFrame:
         df = pd.DataFrame(cur.fetchall(), columns=[d.name for d in cur.description])
     if df.empty:
         raise LookupError(f"ไม่มีพนักงานของ tenant '{tenant_id}' ในฐานข้อมูล (โหลด IBM dataset: python src/db.py)")
-    ibm = {db_column(c): c for c in load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME)).columns}
+    ibm = {db_column(c): c for c in [*load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME)).columns, *EXTRA_COLUMNS]}
     return df[[c for c in df.columns if c in ibm]].rename(columns=ibm)
 
 
