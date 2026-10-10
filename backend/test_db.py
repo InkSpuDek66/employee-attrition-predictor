@@ -63,6 +63,7 @@ def test_import_saves_new_employee_in_baht(real_db):
     template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
     template.loc[0, "รหัสพนักงาน"] = NEW_ID
     template.loc[0, "เงินเดือน (บาท)"] = 70_000
+    template.loc[0, "เข้าออฟฟิศ (วัน/สัปดาห์)"] = 2
     buf = io.BytesIO()
     template.to_excel(buf, index=False)
     try:
@@ -70,6 +71,7 @@ def test_import_saves_new_employee_in_baht(real_db):
         assert r.status_code == 200, r.text
         assert r.json()["saved"] is True and "เพิ่มใหม่ 1" in r.json()["note"] and r.json()["saved_ids"] == [NEW_ID]
         assert ms.employee_record(NEW_ID)["MonthlyIncome"] == 2000  # 70,000 บาท / 35
+        assert ms.employee_record(NEW_ID)["OfficeDaysPerWeek"] == 2  # เก็บและอ่านกลับจาก DB
         assert client.get(f"/shap/{NEW_ID}").status_code == 200
     finally:
         with db.connect() as conn:
@@ -120,3 +122,24 @@ def test_background_refresh_runs_again_instead_of_overlapping(monkeypatch):
     monkeypatch.setattr(db, "url", lambda: "")
     batch_score.refresh_in_background()  # ไม่มี DB = ไม่ทำอะไร
     assert len(calls) == 2
+
+
+def test_demo_calibration_file_skips_employees_without_outcome(real_db):
+    """พนักงานที่นำเข้าเองยังไม่มีผลลาออก ต้องไม่ถูกใส่ในไฟล์ข้อมูลทดลอง (เคยทำให้ไฟล์ทดลองไม่ผ่านเอง)"""
+    template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
+    # รหัสที่ IBM ไม่มี และน้อยพอจะอยู่ในช่วง 300 คนแรก ข้ามถ้ามีพนักงานรหัสนี้อยู่แล้ว (ไม่ทับข้อมูลของใคร)
+    free = sorted(set(range(1, 300)) - set(ms.raw_employees()["EmployeeNumber"]))
+    if not free:
+        pytest.skip("ไม่มีรหัสว่างในช่วง 300 คนแรก")
+    emp_id = free[-1]
+    template.loc[0, "รหัสพนักงาน"] = emp_id
+    buf = io.BytesIO()
+    template.to_excel(buf, index=False)
+    try:
+        assert client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)}).status_code == 200
+        demo = client.get("/recalibrate/template", params={"demo": True})
+        df = pd.read_excel(io.BytesIO(demo.content), sheet_name="พนักงาน")
+        assert emp_id not in set(df["รหัสพนักงาน"]) and df["ลาออกแล้วหรือยัง"].notna().all() and len(df) == 300
+    finally:
+        with db.connect() as conn:
+            conn.execute("DELETE FROM employees WHERE tenant_id = %s AND employee_id = %s AND source = 'upload'", (db.DEMO_TENANT, emp_id))

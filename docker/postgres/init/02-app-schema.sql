@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS employees (
     years_in_current_role       smallint NOT NULL CHECK (years_in_current_role >= 0),
     years_since_last_promotion  smallint NOT NULL CHECK (years_since_last_promotion >= 0),
     years_with_curr_manager     smallint NOT NULL CHECK (years_with_curr_manager >= 0),
+    -- ไม่มีใน IBM: วันเข้าออฟฟิศต่อสัปดาห์ (5 = เข้าทุกวัน, 0 = WFH ทั้งหมด) ใช้ปรับระยะทางจากบ้านก่อนให้คะแนน
+    office_days_per_week        smallint NOT NULL DEFAULT 5 CHECK (office_days_per_week BETWEEN 0 AND 5),
     -- ผลจริง: ใช้กับ /recalibrate และการวัดผล (Measure) ว่างได้สำหรับคนที่ยังทำงานอยู่
     attrition                   text CHECK (attrition IN ('Yes', 'No')),
     left_at                     date,
@@ -63,6 +65,9 @@ CREATE TABLE IF NOT EXISTS employees (
     PRIMARY KEY (tenant_id, employee_id)
 );
 CREATE INDEX IF NOT EXISTS employees_department_idx ON employees (tenant_id, department);
+-- volume ที่สร้างก่อนมีคอลัมน์นี้ (รันซ้ำได้)
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS office_days_per_week smallint NOT NULL DEFAULT 5
+    CHECK (office_days_per_week BETWEEN 0 AND 5);
 
 -- โมเดลที่เคยใช้ให้คะแนน (อ้างอิง MLflow Model Registry) เช่น 'attrition-xgboost-P/1'
 CREATE TABLE IF NOT EXISTS model_runs (

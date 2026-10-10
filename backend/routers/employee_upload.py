@@ -45,18 +45,19 @@ COLUMNS = [
     ("EducationField", "สาขาที่เรียน", "Life Sciences / Medical / Marketing / Technical Degree / Human Resources / Other"),
     ("Department", "แผนก", "Sales / Research & Development / Human Resources"),
     ("JobRole", "ตำแหน่งงาน", "ดูชีต \"ตัวเลือก\""),
-    ("JobLevel", "ระดับตำแหน่ง", "1–5"),
+    ("JobLevel", "ระดับตำแหน่ง", "จูเนียร์ / พนักงานระดับกลาง / ซีเนียร์ / ผู้จัดการแผนก / ผู้จัดการใหญ่ (หรือ 1–5)"),
     ("MonthlyIncome", "เงินเดือน (บาท)", "บาทต่อเดือน"),
     ("PercentSalaryHike", "เงินเดือนขึ้นล่าสุด (%)", "0–100"),
     ("StockOptionLevel", "สิทธิ์ซื้อหุ้นพนักงาน", "0 ไม่มี, 1–3"),
     ("OverTime", "ทำงานล่วงเวลา (OT)", "ทำ / ไม่ทำ"),
-    ("BusinessTravel", "การเดินทางไปทำงาน", "ไม่เดินทาง / นานๆ ครั้ง / บ่อย"),
+    ("BusinessTravel", "เดินทางไปทำงานนอกสถานที่", "ไม่ต้องไป / นานๆ ครั้ง / บ่อย (ไปหาลูกค้า/สาขาอื่น ไม่ใช่การเดินทางไปออฟฟิศทุกวัน)"),
     ("DistanceFromHome", "ระยะทางจากบ้าน (กม.)", "ตัวเลขจำนวนเต็ม"),
-    ("JobSatisfaction", "พอใจในงานที่ทำ", "1 ต่ำ – 4 สูงมาก"),
-    ("EnvironmentSatisfaction", "พอใจสภาพแวดล้อมที่ทำงาน", "1 ต่ำ – 4 สูงมาก"),
-    ("RelationshipSatisfaction", "พอใจความสัมพันธ์กับเพื่อนร่วมงาน", "1 ต่ำ – 4 สูงมาก"),
-    ("JobInvolvement", "ความทุ่มเทให้กับงาน", "1 ต่ำ – 4 สูงมาก"),
-    ("WorkLifeBalance", "สมดุลงานกับชีวิต", "1 แย่ – 4 ดีมาก"),
+    ("JobSatisfaction", "พอใจในงานที่ทำ", "1 ต่ำ – 4 สูงมาก · จากแบบสำรวจพนักงาน"),
+    ("EnvironmentSatisfaction", "พอใจสภาพแวดล้อมที่ทำงาน", "1 ต่ำ – 4 สูงมาก · จากแบบสำรวจพนักงาน"),
+    ("RelationshipSatisfaction", "พอใจความสัมพันธ์กับเพื่อนร่วมงาน", "1 ต่ำ – 4 สูงมาก · จากแบบสำรวจพนักงาน"),
+    ("JobInvolvement", "ความทุ่มเทให้กับงาน", "1 ต่ำ – 4 สูงมาก · จากการประเมินของหัวหน้า"),
+    ("WorkLifeBalance", "สมดุลงานกับชีวิต", "1 แย่ – 4 ดีมาก · จากแบบสำรวจพนักงาน"),
+    ("OfficeDaysPerWeek", "เข้าออฟฟิศ (วัน/สัปดาห์)", "0–5 (0 = WFH ทั้งหมด) · จากนโยบายการทำงานหรือระบบลงเวลา"),
     ("PerformanceRating", "ผลประเมินการทำงาน", "1–4"),
     ("TrainingTimesLastYear", "จำนวนครั้งที่อบรมปีที่ผ่านมา", "ครั้ง"),
     ("NumCompaniesWorked", "จำนวนบริษัทที่เคยทำงาน", "บริษัท"),
@@ -71,18 +72,32 @@ COLUMNS = [
 ]
 # ผลจริงว่าลาออกหรือยัง ใช้เฉพาะไฟล์ปรับเทียบ (/recalibrate/upload) ไฟล์นำเข้าปกติมีก็ได้ไม่มีก็ได้ (ไม่ได้บันทึก)
 LABEL = ("Attrition", "ลาออกแล้วหรือยัง", "ลาออก / ยังอยู่")
+# ช่องจากแบบสำรวจความผูกพัน/ความพึงพอใจ (engagement survey, pulse survey) และการประเมินของหัวหน้า
+# หลายบริษัทไม่มีข้อมูลนี้ทุกคน: เว้นว่างหรือไม่มีคอลัมน์ได้ ระบบใส่ 3 ให้เอง (ค่ากลางของ IBM dataset ทั้ง 5 ช่อง)
+# ponytail: ค่ากลางทำให้คะแนนส่วนนี้ "เป็นกลาง" ไม่ได้สะท้อนตัวคนจริง ถ้าบริษัทมีแบบสำรวจควรกรอกค่าจริง
+SURVEY_FIELDS = ("JobSatisfaction", "EnvironmentSatisfaction", "RelationshipSatisfaction", "JobInvolvement", "WorkLifeBalance")
+SURVEY_DEFAULT = 3
+# ช่องที่เว้นว่าง/ไม่มีคอลัมน์ได้ -> ค่าที่ใส่ให้ (วันเข้าออฟฟิศ: ไม่มีข้อมูล = เข้าทุกวันเหมือน IBM)
+OPTIONAL_DEFAULTS = {**{f: SURVEY_DEFAULT for f in SURVEY_FIELDS}, "OfficeDaysPerWeek": 5}
+# ระดับตำแหน่งเป็นคำ (ตรงกับ JOB_LEVELS ใน frontend/src/featureLabels.js) ค่าที่ส่งเข้าโมเดลยังเป็น 1–5
+JOB_LEVELS = {1: "จูเนียร์", 2: "พนักงานระดับกลาง", 3: "ซีเนียร์", 4: "ผู้จัดการแผนก", 5: "ผู้จัดการใหญ่"}
 THAI = {f: th for f, th, _ in COLUMNS + [LABEL]}
 HINT = {f: hint for f, _, hint in COLUMNS + [LABEL]}
 # รับได้ทั้งหัวคอลัมน์ไทยและชื่อคอลัมน์ IBM (ไฟล์ที่ export จากระบบเดิม)
-HEADER_TO_FIELD = {th: f for f, th, _ in COLUMNS + [LABEL]} | {f: f for f, _, _ in COLUMNS + [LABEL]}
+HEADER_TO_FIELD = (
+    {th: f for f, th, _ in COLUMNS + [LABEL]}
+    | {f: f for f, _, _ in COLUMNS + [LABEL]}
+    | {"การเดินทางไปทำงาน": "BusinessTravel"}  # หัวคอลัมน์ชื่อเดิม ไฟล์ที่กรอกไว้ก่อนเปลี่ยนชื่อยังใช้ได้
+)
 
 # ค่าภาษาไทย -> ค่าที่โมเดลรู้จัก (รับค่าภาษาอังกฤษแบบ IBM ได้ด้วย)
 THAI_VALUES = {
     "Gender": {"ชาย": "Male", "หญิง": "Female"},
     "MaritalStatus": {"โสด": "Single", "สมรส": "Married", "แต่งงาน": "Married", "หย่า": "Divorced"},
     "OverTime": {"ทำ": "Yes", "ไม่ทำ": "No", "ใช่": "Yes", "ไม่ใช่": "No"},
-    "BusinessTravel": {"ไม่เดินทาง": "Non-Travel", "นานๆ ครั้ง": "Travel_Rarely", "นานๆครั้ง": "Travel_Rarely", "บ่อย": "Travel_Frequently"},
+    "BusinessTravel": {"ไม่ต้องไป": "Non-Travel", "ไม่เดินทาง": "Non-Travel", "นานๆ ครั้ง": "Travel_Rarely", "นานๆครั้ง": "Travel_Rarely", "บ่อย": "Travel_Frequently"},
     "Attrition": {"ลาออก": "Yes", "ลาออกแล้ว": "Yes", "ยังอยู่": "No", "ยังทำงานอยู่": "No"},
+    "JobLevel": {name: level for level, name in JOB_LEVELS.items()},
 }
 
 
@@ -170,7 +185,7 @@ async def _check(file: UploadFile, label: bool = False):
     df.columns = headers
     mapped = {h: HEADER_TO_FIELD[h] for h in headers if h in HEADER_TO_FIELD}
     present = set(mapped.values())
-    missing = [THAI[f] for f, _, _ in COLUMNS + ([LABEL] if label else []) if f not in present]
+    missing = [THAI[f] for f, _, _ in COLUMNS + ([LABEL] if label else []) if f not in present and f not in OPTIONAL_DEFAULTS]
     unknown = [h for h in headers if h not in HEADER_TO_FIELD and not h.startswith("Unnamed")]
 
     errors: list[RowError] = []
@@ -182,6 +197,9 @@ async def _check(file: UploadFile, label: bool = False):
         if all(v is None for v in row.values()):
             continue  # แถวว่างท้ายไฟล์
         shown = dict(row)  # ค่าตามที่ผู้ใช้กรอก (ภาษาไทย) ไว้โชว์ในตัวอย่าง ก่อนแปลงเป็นค่าของโมเดล
+        for field, default in OPTIONAL_DEFAULTS.items():  # ไม่มีข้อมูล = ใช้ค่าเริ่มต้น ไม่แจ้งเป็นข้อผิดพลาด
+            if row.get(field) is None:
+                row[field] = default
         for field, table in THAI_VALUES.items():
             if isinstance(row.get(field), str):
                 row[field] = table.get(row[field], row[field])
@@ -274,14 +292,17 @@ async def import_employees(
 
 
 def _example_rows(n: int = 2, label: bool = False) -> list[dict]:
-    """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือน × 35 เป็นบาท ให้ดูเป็นตัวอย่างเท่านั้น)"""
-    raw = ms.raw_employees().head(n)
+    """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือน × 35 เป็นบาท ให้ดูเป็นตัวอย่างเท่านั้น)
+    label=True (ไฟล์ปรับเทียบ): เอาเฉพาะคนที่รู้ผลจริงแล้ว พนักงานที่นำเข้าเองยังไม่มีผลลาออก ใส่ไปจะทำให้ไฟล์ไม่ผ่าน"""
+    raw = ms.raw_employees()
+    raw = (raw[raw["Attrition"].isin(["Yes", "No"])] if label else raw).head(n)
     back = {
         "Attrition": {"Yes": "ลาออก", "No": "ยังอยู่"},
+        "JobLevel": JOB_LEVELS,
         "Gender": {"Male": "ชาย", "Female": "หญิง"},
         "MaritalStatus": {"Single": "โสด", "Married": "สมรส", "Divorced": "หย่า"},
         "OverTime": {"Yes": "ทำ", "No": "ไม่ทำ"},
-        "BusinessTravel": {"Non-Travel": "ไม่เดินทาง", "Travel_Rarely": "นานๆ ครั้ง", "Travel_Frequently": "บ่อย"},
+        "BusinessTravel": {"Non-Travel": "ไม่ต้องไป", "Travel_Rarely": "นานๆ ครั้ง", "Travel_Frequently": "บ่อย"},
     }
     rows = []
     for rec in raw.to_dict("records"):
@@ -303,7 +324,9 @@ def template_response(rows: list[dict], columns: list, filename: str) -> Streami
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as xw:
         pd.DataFrame(rows, columns=[th for _, th, _ in columns]).to_excel(xw, sheet_name="พนักงาน", index=False)
-        pd.DataFrame([{"คอลัมน์": th, "ต้องกรอก": "ต้อง", "ค่าที่รับ": hint} for _, th, hint in columns]).to_excel(
+        pd.DataFrame(
+            [{"คอลัมน์": th, "ต้องกรอก": "ไม่บังคับ (ว่าง = พอใจ/ดี)" if f in SURVEY_FIELDS else "ไม่บังคับ (ว่าง = 5 วัน)" if f in OPTIONAL_DEFAULTS else "ต้อง", "ค่าที่รับ": hint} for f, th, hint in columns]
+        ).to_excel(
             xw, sheet_name="คำอธิบาย", index=False
         )
         roles = EmployeeInput.model_fields["JobRole"].annotation.__args__

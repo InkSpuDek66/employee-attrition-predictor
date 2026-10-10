@@ -85,6 +85,9 @@ def test_recalibrate_from_excel_then_history_and_reset(tmp_path, monkeypatch):
     xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     r = client.post("/recalibrate/upload", files={"file": ("d.xlsx", demo.content, xlsx)}, data={"method": "platt"}).json()
     assert r["result"]["n_samples"] == 300 and r["result"]["method"] == "platt" and len(r["result"]["examples"]) == 4
+    curve, bins = r["result"]["curve"], r["result"]["bins"]
+    assert len(curve) == 51 and all(a["after"] <= b["after"] for a, b in zip(curve, curve[1:]))  # สูตรไม่สลับลำดับ
+    assert bins and sum(b["n"] for b in bins) <= 300 and all(0 <= b["rate"] <= 1 for b in bins)
     assert client.get("/shap/1").json()["calibrated_risk_score"] is not None
     assert client.get("/recalibrate/history").json()["history"][0]["method"] == "platt"
 
@@ -114,3 +117,20 @@ def test_import_file_with_label_column_still_validates():
     xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     body = client.post("/employees/validate", files={"file": ("d.xlsx", _xlsx(df), xlsx)}).json()
     assert body["n_valid"] == 2 and body["unknown_columns"] == [] and body["errors"] == []
+
+
+
+def test_office_days_shrinks_commute_distance():
+    """WFH (วันเข้าออฟฟิศ) ปรับระยะทางก่อนให้คะแนน ไม่ส่ง = 5 วัน คะแนนเท่าเดิม"""
+    import model_store as ms
+    import pandas as pd
+
+    raw = pd.DataFrame({"DistanceFromHome": [20, 20, 20, 1], "OfficeDaysPerWeek": [5, 2, 0, 0]})
+    assert ms.commute_adjusted(raw)["DistanceFromHome"].tolist() == [20, 8, 1, 1]
+    far_ot = next(i for i, r in ms.raw_employees().iterrows() if r.DistanceFromHome >= 20 and r.OverTime == "Yes")
+    emp_id = int(ms.raw_employees().loc[far_ot, "EmployeeNumber"])
+    same = client.post("/whatif", json={"employee_id": emp_id, "changes": {"OfficeDaysPerWeek": 5}}).json()
+    assert same["delta"] == 0 and same["employee"]["OfficeDaysPerWeek"] == 5
+    wfh = client.post("/whatif", json={"employee_id": emp_id, "changes": {"OfficeDaysPerWeek": 0}}).json()
+    assert wfh["changes_applied"] == {"OfficeDaysPerWeek": 0} and wfh["delta"] != 0
+    assert client.post("/whatif", json={"employee_id": emp_id, "changes": {"OfficeDaysPerWeek": 7}}).status_code == 422

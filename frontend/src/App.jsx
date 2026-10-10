@@ -62,6 +62,13 @@ export default function App() {
   return <Workspace user={session.user} settings={session.settings} onLogout={() => (saveSession(null), setSession(null), setExpired(false))} {...theme} />
 }
 
+// คำทักทายตามช่วงเวลาบนหน้าภาพรวม
+function greeting(name) {
+  const h = new Date().getHours()
+  const part = h < 5 ? 'สวัสดี' : h < 11 ? 'สวัสดีตอนเช้า' : h < 13 ? 'สวัสดีตอนกลางวัน' : h < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น'
+  return `${part} ${name}`
+}
+
 function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
   const tenant = user.tenant_id
   const tabs = TABS.filter((t) => !t.admin || user.role === 'admin') // แท็บ admin ไม่โชว์ให้ HR
@@ -71,6 +78,14 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
   // ข้อมูลเปลี่ยน (ปรับเทียบ/นำเข้าพนักงาน) = เพิ่มเลขนี้ หน้าภาพรวม/SHAP/What-if โหลดใหม่ด้วยคะแนนล่าสุด
   const [dataVersion, setDataVersion] = useState(0)
   const refreshData = () => setDataVersion((v) => v + 1)
+  // ผู้ช่วยใน sidebar พูดหลังทำอะไรสำเร็จ แล้วกลับเป็นปกติเองใน 4.5 วินาที
+  const [say, setSay] = useState(null)
+  const sayTimer = useRef(null)
+  function speak(text, sub) {
+    clearTimeout(sayTimer.current)
+    setSay((s) => ({ n: (s?.n ?? 0) + 1, text, sub }))
+    sayTimer.current = setTimeout(() => setSay(null), 4500)
+  }
   const [employeeId, setEmployeeId] = useState(initial.id || '1')
   const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant, n: 1 } : null)
   const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
@@ -130,7 +145,8 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
   }
 
   return (
-    <div className="min-h-screen lg:pl-64">
+    <div className="relative isolate min-h-screen lg:pl-64">
+      <div className="app-glow pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
       <a
         href="#main"
         className="sr-only z-50 rounded-lg bg-primary px-4 py-2 text-on-primary focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
@@ -181,7 +197,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
         </nav>
 
         <div className="hidden flex-1 items-center justify-center lg:flex">
-          <Mascot risk={risk[tab]} who={who} onChoose={(v) => (setWho(v), saveMascot(v))} />
+          <Mascot risk={risk[tab]} who={who} say={say} onChoose={(v) => (setWho(v), saveMascot(v))} />
         </div>
 
         <div className="hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
@@ -216,6 +232,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
       <main id="main" className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
         <header className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
+            {tab === 'overview' && <div className="mb-1 text-sm text-accent">{greeting(user.name)}</div>}
             <div className="text-sm font-medium text-muted-fg">{current.label}</div>
             <h1 className="mt-0.5 text-balance text-2xl font-semibold tracking-tight text-fg sm:text-3xl">{current.hint}</h1>
           </div>
@@ -245,23 +262,36 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
           )}
         </header>
 
-        <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`}>
-          <Overview rate={rate} onPick={pick} />
+        <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`} className="fade-up">
+          <Overview rate={rate} onPick={pick} onCsv={() => speak('ดาวน์โหลดรายชื่อให้แล้ว', 'เปิดใน Excel ได้เลย')} />
         </div>
         <Suspense fallback={tab === 'import' || tab === 'calibrate' ? <Skeleton className="h-96" /> : null}>
-          <div hidden={tab !== 'import'}>
-            <Upload canSave={user.role === 'admin'} onSaved={refreshData} onPick={pick} />
+          <div hidden={tab !== 'import'} className="fade-up">
+            <Upload
+              who={who}
+              canSave={user.role === 'admin'}
+              onSaved={() => (refreshData(), speak('บันทึกพนักงานเรียบร้อย!', 'กดชื่อด้านล่างเพื่อดูความเสี่ยงได้เลย'))}
+              onPick={pick}
+            />
           </div>
           {user.role === 'admin' && (
-            <div hidden={tab !== 'calibrate'}>
-              <Calibrate onChanged={refreshData} />
+            <div hidden={tab !== 'calibrate'} className="fade-up">
+              <Calibrate
+                who={who}
+                onChanged={(reset) => (
+                  refreshData(),
+                  reset
+                    ? speak('ยกเลิกการปรับเทียบแล้ว', 'กลับไปใช้คะแนนของโมเดลกลาง')
+                    : speak('ปรับเทียบเสร็จแล้ว!', 'ทุกหน้าใช้คะแนนที่ตรงกับบริษัทแล้วนะ')
+                )}
+              />
             </div>
           )}
         </Suspense>
         {/* เก็บทุกแท็บไว้ (ซ่อนด้วย hidden) สลับแท็บแล้วข้อมูลที่โหลดไว้ไม่หาย */}
         <Suspense fallback={<Skeleton className="h-96" />}>
           {TABS.filter((t) => t.Component).map(({ id, Component }) => (
-            <div key={`${id}-${dataVersion}`} hidden={tab !== id}>
+            <div key={`${id}-${dataVersion}`} hidden={tab !== id} className="fade-up">
               <Component query={query} rate={rate} dark={dark} who={who} tenant={tenant} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
             </div>
           ))}
