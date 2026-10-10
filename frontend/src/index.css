@@ -1,0 +1,230 @@
+@import 'tailwindcss';
+
+/* โหมดมืดสลับด้วย class .dark บน <html> (index.html ตั้งค่าแรกตามเครื่อง/ที่เคยเลือก) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens: แนว Vercel / Linear / shadcn — พื้นขาว เทา zinc ปุ่มดำ น้ำเงินสีเดียวไว้ชี้จุดที่โต้ตอบ/ถูกปรับ
+   Geist ใช้กับตัวอังกฤษ/ตัวเลข ตัวไทยตกไปที่ IBM Plex Sans Thai ใช้ผ่าน class เช่น bg-primary text-muted-fg */
+@theme {
+  --font-sans: 'Geist', 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, sans-serif;
+  --color-primary: #18181b;
+  --color-primary-hover: #3f3f46;
+  --color-primary-soft: #f4f4f5;
+  --color-on-primary: #ffffff;
+  --color-secondary: #d4d4d8;
+  --color-accent: #0070f3;
+  --color-accent-soft: #eff6ff;
+  --color-ink: #09090b;
+  --color-canvas: #fafafa;
+  --color-card: #ffffff;
+  --color-fg: #09090b;
+  --color-muted: #f4f4f5;
+  --color-muted-fg: #71717a;
+  --color-line: #e4e4e7;
+  --color-risk-low: #15803d;
+  --color-risk-low-soft: #f0fdf4;
+  --color-risk-mid: #a16207;
+  --color-risk-mid-soft: #fefce8;
+  --color-risk-high: #dc2626;
+  --color-risk-high-soft: #fef2f2;
+  --color-up: #ef4444;
+  --color-down: #0070f3;
+  /* ชุดตัวการ์ตูนใน sidebar (ChibiCharacter.jsx) */
+  --color-suit: #2f3b58;
+  --color-suit-line: #45527a;
+  --color-pants: #252f47;
+  --color-blazer: #26262d;
+  --color-blazer-line: #4a4a55;
+}
+
+/* โหมดมืด: แนวเดียวกับ Vercel dark — พื้นเกือบดำ ขอบเทาเข้ม ปุ่มขาว ตัวอักษรสถานะใช้โทนสว่าง (contrast ≥ 4.5:1 บนพื้นมืด) */
+.dark {
+  color-scheme: dark;
+  --color-primary: #fafafa;
+  --color-primary-hover: #d4d4d8;
+  --color-primary-soft: #18181b;
+  --color-on-primary: #09090b;
+  --color-secondary: #3f3f46;
+  --color-accent: #3291ff;
+  --color-accent-soft: #0b1a33;
+  --color-ink: #18181b;
+  --color-canvas: #09090b;
+  --color-card: #111113;
+  --color-fg: #fafafa;
+  --color-muted: #1c1c1f;
+  --color-muted-fg: #a1a1aa;
+  --color-line: #27272a;
+  --color-risk-low: #4ade80;
+  --color-risk-low-soft: #0c2417;
+  --color-risk-mid: #facc15;
+  --color-risk-mid-soft: #2a2306;
+  --color-risk-high: #f87171;
+  --color-risk-high-soft: #2c1215;
+  --color-up: #f87171;
+  --color-down: #3291ff;
+  /* ชุดตัวการ์ตูนเป็นโทนครีม/ขาว ให้ตัดกับพื้นมืด */
+  --color-suit: #efe6d2;
+  --color-suit-line: #c8b995;
+  --color-pants: #ddd2b9;
+  --color-blazer: #f7f3ea;
+  --color-blazer-line: #cfc6b2;
+}
+
+body {
+  @apply bg-canvas text-fg antialiased;
+}
+
+/* แตะปุ่มบนมือถือไม่ต้องรอ double-tap zoom */
+button,
+a,
+input,
+select,
+label {
+  touch-action: manipulation;
+}
+
+input[type='range'] {
+  @apply h-1.5 w-full cursor-pointer accent-fg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+/* ตัวการ์ตูนใน sidebar (Mascot.jsx) */
+.mascot-static,
+.mascot-static * {
+  animation: none !important;
+}
+.mascot-body {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation:
+    mascot-in 450ms cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    mascot-bob 3s ease-in-out 450ms infinite;
+}
+.mascot-shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-shadow 3s ease-in-out 450ms infinite;
+}
+.mascot-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-blink 4s ease-in-out infinite;
+}
+.mascot-wave {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: mascot-wave 1.6s ease-in-out infinite;
+}
+.mascot-pop {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: mascot-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) 200ms both;
+}
+.mascot-tail {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: mascot-tail 1.4s ease-in-out infinite;
+}
+@keyframes mascot-tail {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-12deg); }
+}
+/* โค้งขอโทษแบบญี่ปุ่น: ก้มลงช้าๆ ค้างไว้ แล้วเงยขึ้น */
+.mascot-bow {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: mascot-bow 2.8s ease-in-out infinite;
+}
+@keyframes mascot-bow {
+  0%, 12%, 100% { transform: none; }
+  35%, 70% { transform: translateY(10px) scaleY(0.94); }
+}
+/* ประกายฉลองตอนความเสี่ยงลดลงเป็นระดับต่ำ (WhatIfSimulator.jsx) เล่นครั้งเดียว */
+.celebrate-spark {
+  animation: celebrate-spark 900ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes celebrate-spark {
+  0% { transform: translate(0, 0) scale(0.2); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; }
+}
+.celebrate-text {
+  animation: celebrate-text 1800ms ease-out both;
+}
+@keyframes celebrate-text {
+  0% { transform: translateY(6px) scale(0.9); opacity: 0; }
+  15%, 75% { transform: none; opacity: 1; }
+  100% { transform: translateY(-4px); opacity: 0; }
+}
+.mascot-check {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    mascot-check-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1) 150ms both,
+    mascot-float 2.4s ease-in-out 650ms infinite;
+}
+@keyframes mascot-check-in {
+  from { transform: scale(0.3) translateY(8px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.mascot-float {
+  animation: mascot-float 2s ease-in-out infinite;
+}
+.mascot-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-twinkle 1.8s ease-in-out infinite;
+}
+.mascot-shake {
+  animation: mascot-shake 0.5s ease-in-out infinite;
+}
+@keyframes mascot-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1px); }
+  75% { transform: translateX(1px); }
+}
+.mascot-drip {
+  animation: mascot-drip 1.6s ease-in infinite;
+}
+@keyframes mascot-twinkle {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.3; }
+  50% { transform: scale(1) rotate(45deg); opacity: 1; }
+}
+@keyframes mascot-drip {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+@keyframes mascot-in {
+  from { transform: scale(0.6) translateY(12px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes mascot-bob {
+  50% { transform: translateY(-4px); }
+}
+@keyframes mascot-shadow {
+  50% { transform: scaleX(0.85); opacity: 0.7; }
+}
+@keyframes mascot-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
+}
+@keyframes mascot-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-18deg); }
+}
+@keyframes mascot-pop {
+  from { transform: rotate(40deg) scale(0.5); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes mascot-float {
+  50% { transform: translateY(-4px); }
+}

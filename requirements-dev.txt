@@ -1,0 +1,21 @@
+# ชุดสำหรับพัฒนา = แพ็กเกจรันจริง + notebook, test, lint (ทุกคนในทีมและ CI ติดตั้งไฟล์นี้)
+-r requirements.txt
+
+# notebook / EDA / ทดลองโมเดล
+jupyter==1.1.1
+matplotlib==3.11.2
+seaborn==0.13.2
+optuna==5.0.0
+lightgbm==4.7.0
+catboost==1.2.10
+imbalanced-learn==0.14.2
+kagglehub==1.0.2
+
+# หน้าทดสอบ Streamlit (src/test_app.py)
+streamlit==1.64.0
+
+# test / lint / สแกนช่องโหว่
+pytest==9.1.1
+httpx==0.28.1
+ruff==0.16.9
+pip-audit==2.10.1
