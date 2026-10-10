@@ -376,7 +376,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 type="button"
                 onClick={() => setChanges({})}
                 disabled={!nChanged}
-                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-primary transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <Icon name="reset" className="size-4" />
                 กลับเป็นค่าเดิม
@@ -403,7 +403,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
               {GROUPS.map((g) => (
                 <fieldset key={g.title}>
                   <legend className="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-fg">
-                    <Icon name={g.icon} className="size-4 text-primary" />
+                    <Icon name={g.icon} className="size-4 text-accent" />
                     {g.title}
                   </legend>
                   <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
@@ -444,11 +444,11 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 </p>
                 <p>ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท</p>
               </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-ink px-4 py-3 text-white dark:border dark:border-line">
-                <span className="text-sm text-zinc-400">มูลค่าความเสี่ยง (คะแนน × ต้นทุนหาคนแทน)</span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary-soft px-4 py-3 text-fg ring-1 ring-primary/50">
+                <span className="text-sm text-muted-fg">มูลค่าความเสี่ยง (คะแนน × ต้นทุนหาคนแทน)</span>
                 <span className="flex items-center gap-2 text-lg font-semibold tabular-nums">
                   {money(impact.expected_loss)}
-                  <Icon name="right" className="size-4 text-zinc-500" />
+                  <Icon name="right" className="size-4 text-muted-fg" />
                   {money(afterScore * impact.replacement_cost)}
                 </span>
               </div>

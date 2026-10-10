@@ -1,19 +1,14 @@
+import { useEffect, useState } from 'react'
 // ค่าคงที่และ helper ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
 
 // เกณฑ์ระดับตาม README 6.1 ชุดเดียวกับ src/business_rules.py (MEDIUM_RISK / HIGH_RISK) แก้ต้องแก้คู่กัน
 export const LOW = 0.4
 export const HIGH = 0.7
 
-// สีกราฟ (recharts รับ class ไม่ได้) ชุดเดียวกับ token ใน index.css แยกตามธีม
-export const CHART = {
-  light: { up: '#ef4444', down: '#0070f3', axis: '#71717a', label: '#09090b', grid: '#e4e4e7', hover: '#f4f4f5', bg: '#ffffff' },
-  dark: { up: '#f87171', down: '#3291ff', axis: '#a1a1aa', label: '#fafafa', grid: '#27272a', hover: '#1c1c1f', bg: '#111113' },
-}
-
 // เงิน: ถือว่า MonthlyIncome ใน IBM dataset เป็นดอลลาร์ (แนวเดียวกับ src/app_pages/whatif_page.py)
 // หน้าเว็บรับ/แสดงเป็นบาท แล้วหารด้วยอัตรานี้ก่อนส่งเข้าโมเดล ผู้ใช้ปรับไม่ได้และไม่เห็นดอลลาร์
-// ponytail: อัตราคงที่ในหน้าเว็บ ตาม DE-01 ควรย้ายไป config/financial_impact.json ให้ backend แปลงที่เดียว
-export const THB_PER_USD = 35
+// อัตราจริงอยู่ที่ src/business_rules.py (DE-01) backend ส่งมาตอน login ค่าด้านล่างเป็นค่าสำรองสำหรับ session เก่า
+export const THB_PER_USD = 35 // ค่าสำรอง: ค่าจริงมาจาก backend ตอน login (session.settings.thb_per_usd) มี test เช็กว่าตรงกัน
 export const INCOME_RANGE_USD = [1009, 19999] // ช่วง MonthlyIncome ใน data/raw (นอกช่วงนี้โมเดลไม่เคยเห็น)
 export const INCOME_MIN_BAHT = 15000 // ขั้นต่ำของช่อง/แถบเงินเดือน (ต่ำกว่าช่วง dataset ได้ แต่จะมีคำเตือน)
 export const baht = (v) => `${Math.round(v).toLocaleString()} บาท`
@@ -32,8 +27,6 @@ export function parseIncomeBaht(text, rate, fallback) {
 // changes ที่ส่งเข้า backend: เงินเดือนเก็บเป็นดอลลาร์ทศนิยม (ให้ช่องโชว์บาทตรงที่กรอก) แต่ API รับจำนวนเต็ม
 export const toApiChanges = (changes) =>
   'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
-// ช่วงสีของแถบคะแนน ต่ำ / กลาง / สูง
-export const GAUGE = ['#22c55e', '#eab308', '#ef4444']
 
 export const inputClass =
   'h-11 w-full rounded-lg border border-line bg-card px-3 text-fg outline-none transition-colors duration-200 placeholder:text-muted-fg/60 hover:border-secondary focus-visible:border-accent focus-visible:ring-3 focus-visible:ring-accent/20'
@@ -79,7 +72,14 @@ export function loadSession() {
     return null
   }
 }
+// คำขอของ session ปัจจุบันผูกกับ controller นี้ ออกจากระบบ = ยกเลิกคำขอที่ค้างทั้งหมด
+let sessionAbort = new AbortController()
+
 export function saveSession(session) {
+  if (!session) {
+    sessionAbort.abort()
+    sessionAbort = new AbortController()
+  }
   try {
     if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
     else sessionStorage.removeItem(SESSION_KEY)
@@ -89,11 +89,14 @@ export function saveSession(session) {
 }
 
 // ทุกคำขอแนบ token ถ้า backend ตอบ 401 (token หมดอายุ/backend restart) แจ้ง App ให้กลับไปหน้า login
+// แจ้งเฉพาะเมื่อ token ที่ใช้ยังเป็นของ session ปัจจุบัน (คำขอเก่าที่ตอบกลับหลัง logout ไม่ทำให้ขึ้น "หมดเวลา" ผิดจังหวะ)
 async function call(path, options = {}) {
   const token = loadSession()?.access_token
   const headers = { ...options.headers, ...(token && { Authorization: `Bearer ${token}` }) }
-  const res = await fetch(`/api${path}`, { ...options, headers })
-  if (res.status === 401 && token) dispatchEvent(new Event('session-expired'))
+  const signals = [options.signal, token && sessionAbort.signal].filter(Boolean)
+  const signal = signals.length > 1 && AbortSignal.any ? AbortSignal.any(signals) : signals[0]
+  const res = await fetch(`/api${path}`, { ...options, headers, signal })
+  if (res.status === 401 && token && token === loadSession()?.access_token) dispatchEvent(new Event('session-expired'))
   return res
 }
 
@@ -118,4 +121,26 @@ export async function api(path, options) {
   const res = await call(path, options)
   if (!res.ok) throw await fail(res)
   return res.json().catch(() => null)
+}
+
+// โหลดหลาย endpoint พร้อมกัน ผูกผลกับ key ของคำขอ (key เปลี่ยน = กำลังโหลดใหม่) ไม่ต้อง setState ใน effect ตอนเริ่ม
+export function useApi(paths) {
+  const key = paths.join('|')
+  const [res, setRes] = useState({ key: null })
+  useEffect(() => {
+    const ctrl = new AbortController()
+    Promise.all(key.split('|').map((p) => api(p, { signal: ctrl.signal }))).then(
+      (data) => setRes({ key, data }),
+      (err) => err.name !== 'AbortError' && setRes({ key, error: friendly(err) }),
+    )
+    return () => ctrl.abort()
+  }, [key])
+  return { loading: res.key !== key, data: res.data, error: res.error }
+}
+
+export function postFile(path, file, fields = {}) {
+  const form = new FormData()
+  form.append('file', file)
+  for (const [k, v] of Object.entries(fields)) form.append(k, v)
+  return api(path, { method: 'POST', body: form })
 }

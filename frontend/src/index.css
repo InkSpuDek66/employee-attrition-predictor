@@ -3,32 +3,39 @@
 /* โหมดมืดสลับด้วย class .dark บน <html> (index.html ตั้งค่าแรกตามเครื่อง/ที่เคยเลือก) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens: แนว Vercel / Linear / shadcn — พื้นขาว เทา zinc ปุ่มดำ น้ำเงินสีเดียวไว้ชี้จุดที่โต้ตอบ/ถูกปรับ
+/* Design tokens: ธีมฟ้าพาสเทลเป็นสีประจำเว็บ สีอื่นมีแค่แดง/เหลือง/เขียวของระดับความเสี่ยง
+   - primary = ฟ้าพาสเทล (ปุ่มหลัก โลโก้) ตัวหนังสือบนปุ่มเป็นกรมท่า เพราะพาสเทลอ่อนเกินจะใช้ตัวขาว
+   - accent = ฟ้าเข้ม ใช้กับตัวหนังสือ/ไอคอน/เส้นโฟกัสที่ต้องอ่านบนพื้นขาว (contrast ≥ 4.5:1)
+   - พื้น/เส้น/ตัวหนังสือรองเป็นเทาอมฟ้า ให้ทั้งหน้าอยู่โทนเดียวกัน
    Geist ใช้กับตัวอังกฤษ/ตัวเลข ตัวไทยตกไปที่ IBM Plex Sans Thai ใช้ผ่าน class เช่น bg-primary text-muted-fg */
 @theme {
   --font-sans: 'Geist', 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, sans-serif;
-  --color-primary: #18181b;
-  --color-primary-hover: #3f3f46;
-  --color-primary-soft: #f4f4f5;
-  --color-on-primary: #ffffff;
-  --color-secondary: #d4d4d8;
-  --color-accent: #0070f3;
-  --color-accent-soft: #eff6ff;
-  --color-ink: #09090b;
-  --color-canvas: #fafafa;
+  --color-primary: #a9d1fb;
+  --color-primary-hover: #8ec2f8;
+  --color-primary-soft: #e7f2fe;
+  --color-on-primary: #0b2a4a;
+  --color-secondary: #bcd0e6;
+  --color-accent: #2b6cb0;
+  --color-accent-soft: #edf5fe;
+  --color-ink: #0f1e33;
+  --color-canvas: #f5f9fd;
   --color-card: #ffffff;
-  --color-fg: #09090b;
-  --color-muted: #f4f4f5;
-  --color-muted-fg: #71717a;
-  --color-line: #e4e4e7;
+  --color-fg: #0f1b2d;
+  --color-muted: #edf3fa;
+  --color-muted-fg: #56677d;
+  --color-line: #dae4ef;
   --color-risk-low: #15803d;
   --color-risk-low-soft: #f0fdf4;
   --color-risk-mid: #a16207;
   --color-risk-mid-soft: #fefce8;
   --color-risk-high: #dc2626;
   --color-risk-high-soft: #fef2f2;
+  /* สีเติมของแถบ/มาตรวัดระดับความเสี่ยง (สดกว่าสีตัวหนังสือด้านบน) ใช้ชุดเดียวกันทุกหน้า */
+  --color-band-low: #22c55e;
+  --color-band-mid: #eab308;
+  --color-band-high: #ef4444;
   --color-up: #ef4444;
-  --color-down: #0070f3;
+  --color-down: #4589d6;
   /* ชุดตัวการ์ตูนใน sidebar (ChibiCharacter.jsx) */
   --color-suit: #2f3b58;
   --color-suit-line: #45527a;
@@ -37,31 +44,34 @@
   --color-blazer-line: #4a4a55;
 }
 
-/* โหมดมืด: แนวเดียวกับ Vercel dark — พื้นเกือบดำ ขอบเทาเข้ม ปุ่มขาว ตัวอักษรสถานะใช้โทนสว่าง (contrast ≥ 4.5:1 บนพื้นมืด) */
+/* โหมดมืด: กรมท่าเข้มแทนดำสนิท ปุ่มยังเป็นฟ้าพาสเทล ตัวอักษรสถานะใช้โทนสว่าง (contrast ≥ 4.5:1 บนพื้นมืด) */
 .dark {
   color-scheme: dark;
-  --color-primary: #fafafa;
-  --color-primary-hover: #d4d4d8;
-  --color-primary-soft: #18181b;
-  --color-on-primary: #09090b;
-  --color-secondary: #3f3f46;
-  --color-accent: #3291ff;
-  --color-accent-soft: #0b1a33;
-  --color-ink: #18181b;
-  --color-canvas: #09090b;
-  --color-card: #111113;
-  --color-fg: #fafafa;
-  --color-muted: #1c1c1f;
-  --color-muted-fg: #a1a1aa;
-  --color-line: #27272a;
+  --color-primary: #9ccaf8;
+  --color-primary-hover: #b9daf9;
+  --color-primary-soft: #132640;
+  --color-on-primary: #0a2238;
+  --color-secondary: #2c3f5c;
+  --color-accent: #8cc2fa;
+  --color-accent-soft: #10233c;
+  --color-ink: #0f1e33;
+  --color-canvas: #0a1220;
+  --color-card: #0f1a2c;
+  --color-fg: #e8f1fc;
+  --color-muted: #16233a;
+  --color-muted-fg: #9cafc7;
+  --color-line: #22324b;
   --color-risk-low: #4ade80;
   --color-risk-low-soft: #0c2417;
   --color-risk-mid: #facc15;
   --color-risk-mid-soft: #2a2306;
   --color-risk-high: #f87171;
   --color-risk-high-soft: #2c1215;
+  --color-band-low: #4ade80;
+  --color-band-mid: #facc15;
+  --color-band-high: #f87171;
   --color-up: #f87171;
-  --color-down: #3291ff;
+  --color-down: #7ab4f5;
   /* ชุดตัวการ์ตูนเป็นโทนครีม/ขาว ให้ตัดกับพื้นมืด */
   --color-suit: #efe6d2;
   --color-suit-line: #c8b995;
@@ -84,7 +94,7 @@ label {
 }
 
 input[type='range'] {
-  @apply h-1.5 w-full cursor-pointer accent-fg;
+  @apply h-1.5 w-full cursor-pointer accent-accent;
 }
 
 @media (prefers-reduced-motion: reduce) {

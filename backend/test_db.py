@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
+import batch_score
 import calibration
 import conftest
 import model_store as ms
@@ -40,6 +41,7 @@ def real_db(monkeypatch):
     except Exception:  # noqa: BLE001
         pytest.skip("ต่อ PostgreSQL ไม่ได้ (docker compose up -d postgres)")
     monkeypatch.setitem(conftest.TEST_USER, "tenant_id", db.DEMO_TENANT)
+    monkeypatch.setattr(batch_score, "_score_once", lambda: None)  # ไม่ให้ test รัน batch เต็ม (ช้า + เพิ่มแถวใน DB จริง)
     ms.raw_employees.cache_clear(), ms.employee_features.cache_clear()
     yield
     ms.raw_employees.cache_clear(), ms.employee_features.cache_clear()
@@ -66,7 +68,7 @@ def test_import_saves_new_employee_in_baht(real_db):
     try:
         r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
         assert r.status_code == 200, r.text
-        assert r.json()["saved"] is True and "เพิ่มใหม่ 1" in r.json()["note"]
+        assert r.json()["saved"] is True and "เพิ่มใหม่ 1" in r.json()["note"] and r.json()["saved_ids"] == [NEW_ID]
         assert ms.employee_record(NEW_ID)["MonthlyIncome"] == 2000  # 70,000 บาท / 35
         assert client.get(f"/shap/{NEW_ID}").status_code == 200
     finally:
@@ -89,3 +91,32 @@ def test_import_db_check_rejects_whole_file_without_logging_row(real_db, caplog)
     r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
     assert r.status_code == 422 and ms.employee_record(NEW_ID) is None
     assert "employees_age_check" in caplog.text and str(NEW_ID) not in caplog.text  # log แค่ชื่อ constraint
+
+
+def test_calibration_history_and_reset_in_db(real_db):
+    with db.connect() as conn:  # เก็บของจริงที่อาจมีอยู่ไว้ คืนค่าหลัง test
+        before = conn.execute("SELECT count(*) FROM tenant_calibrations WHERE tenant_id = %s", (db.DEMO_TENANT,)).fetchone()[0]
+    if before:
+        pytest.skip("บริษัทตัวอย่างมีผลปรับเทียบจริงอยู่ ไม่ลบทิ้งใน test")
+    calibration.save(db.DEMO_TENANT, "platt", {"coef": 1.0, "intercept": 0.0}, 60, 0.2, {})
+    calibration.save(db.DEMO_TENANT, "isotonic", {"x": [0, 1], "y": [0, 1]}, 80, 0.25, {})
+    assert [h["method"] for h in calibration.history(db.DEMO_TENANT)] == ["isotonic", "platt"]
+    assert calibration.reset(db.DEMO_TENANT) == 2
+    assert calibration.history(db.DEMO_TENANT) == [] and calibration.load(db.DEMO_TENANT) is None
+
+
+def test_background_refresh_runs_again_instead_of_overlapping(monkeypatch):
+    calls = []
+
+    def fake_score():
+        calls.append(1)
+        if len(calls) == 1:  # มี request ใหม่เข้ามาระหว่างรอบแรก: ไม่รันซ้อน แต่ต้องรันต่ออีกรอบ
+            batch_score.refresh_in_background()
+
+    monkeypatch.setattr(db, "url", lambda: "postgresql://fake")
+    monkeypatch.setattr(batch_score, "_score_once", fake_score)
+    batch_score.refresh_in_background()
+    assert len(calls) == 2
+    monkeypatch.setattr(db, "url", lambda: "")
+    batch_score.refresh_in_background()  # ไม่มี DB = ไม่ทำอะไร
+    assert len(calls) == 2

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { featureLabel, featurePhrase, featureValue } from './featureLabels'
-import { api, baht, bandOf, CHART, friendly } from './theme'
+import { api, baht, bandOf, friendly } from './theme'
 import { NotFoundState, SorryState } from './Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
@@ -31,7 +30,7 @@ function Summary({ ups, downs, band }) {
   return (
     <div className="rounded-xl border border-line bg-card p-5">
       <div className="flex items-start gap-3">
-        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-accent">
           <Icon name="info" className="size-5" />
         </div>
         <div className="space-y-1.5 text-sm leading-relaxed">
@@ -53,8 +52,39 @@ function Summary({ ups, downs, band }) {
   )
 }
 
-export default function ShapViewer({ query, rate, dark, who, onRisk, onDone, onPick }) {
-  const C = CHART[dark ? 'dark' : 'light']
+// กราฟแท่งแนวนอนแบบซ้าย/ขวาจากเส้นกลาง (ขวา = ดันให้เสี่ยง, ซ้าย = ดันให้อยู่ต่อ) วาดด้วย CSS ไม่ต้องโหลด library กราฟ
+function ShapBars({ rows, maxAbs }) {
+  return (
+    <ul className="space-y-1.5">
+      {rows.map((r) => {
+        const up = r.shap_value > 0
+        const width = `${(Math.abs(r.shap_value) / maxAbs) * 50}%`
+        return (
+          <li
+            key={r.feature}
+            title={`${r.label}: ${r.shown} · ผลกระทบ (SHAP) ${r.shap_value.toFixed(3)}`}
+            className="grid grid-cols-[7.5rem_1fr] items-center gap-3 rounded-md px-1 py-1 transition-colors duration-150 hover:bg-muted sm:grid-cols-[12.5rem_1fr]"
+          >
+            <span className="truncate text-right text-xs text-fg sm:text-sm">{r.label}</span>
+            <span className="relative block h-4">
+              <span className="absolute inset-y-[-4px] left-1/2 w-px bg-line" aria-hidden="true" />
+              <span
+                className={`absolute inset-y-0 rounded ${up ? 'bg-up' : 'bg-down'}`}
+                style={{ width, [up ? 'left' : 'right']: '50%' }}
+                aria-hidden="true"
+              />
+              <span className="sr-only">
+                {up ? 'ดันให้เสี่ยงลาออกมากขึ้น' : 'ดันให้อยู่ต่อ'} ผลกระทบ {Math.abs(r.shap_value).toFixed(2)}
+              </span>
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick }) {
   const [topN, setTopN] = useState(10)
   // ผลล่าสุดผูกกับ key ของคำขอ ถ้า key ไม่ตรงกับที่ขออยู่ = กำลังโหลด (ข้อมูลเก่ายังโชว์แบบจางๆ)
   const [res, setRes] = useState({ key: null })
@@ -143,39 +173,16 @@ export default function ShapViewer({ query, rate, dark, who, onRisk, onDone, onP
           <div className="mb-3 flex flex-wrap gap-4 text-xs text-muted-fg">
             <span className="flex items-center gap-1.5">
               <Icon name="up" className="size-3.5 text-risk-high" />
-              <span className="size-2.5 rounded-sm" style={{ background: C.up }} />
+              <span className="size-2.5 rounded-sm bg-up" />
               ดันให้เสี่ยงลาออกมากขึ้น
             </span>
             <span className="flex items-center gap-1.5">
-              <Icon name="down" className="size-3.5 text-accent" />
-              <span className="size-2.5 rounded-sm" style={{ background: C.down }} />
+              <Icon name="down" className="size-3.5 text-down" />
+              <span className="size-2.5 rounded-sm bg-down" />
               ดันให้อยู่ต่อ
             </span>
           </div>
-          <ResponsiveContainer width="100%" height={Math.max(220, rows.length * 34)}>
-            <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 16 }}>
-              <XAxis type="number" tick={{ fontSize: 11, fill: C.axis }} axisLine={false} tickLine={false} />
-              <YAxis
-                type="category"
-                dataKey="label"
-                width={window.innerWidth < 600 ? 120 : 200}
-                tick={{ fontSize: 12, fill: C.label }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <ReferenceLine x={0} stroke={C.grid} />
-              <Tooltip
-                cursor={{ fill: C.hover }}
-                contentStyle={{ borderRadius: 8, border: `1px solid ${C.grid}`, background: C.bg, color: C.label, fontSize: 13 }}
-                itemStyle={{ color: C.label }}
-                formatter={(v) => [v.toFixed(3), 'ผลกระทบ (SHAP)']}
-                labelFormatter={(l, p) => `${l}: ${p?.[0]?.payload.shown ?? ''}`}
-              />
-              <Bar dataKey="shap_value" isAnimationActive={false} radius={4} barSize={16}>
-                {rows.map((r) => <Cell key={r.feature} fill={r.shap_value > 0 ? C.up : C.down} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <ShapBars rows={rows} maxAbs={maxAbs} />
         </Card>
 
         <Card icon="list" title="รายละเอียดแต่ละปัจจัย" subtitle="ค่าจริงของพนักงานและทิศทางที่ส่งผล">

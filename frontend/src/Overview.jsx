@@ -1,25 +1,10 @@
 // ภาพรวมบริษัท (README 6.6) + รายชื่อพนักงานเสี่ยงสูงสุดให้กดเลือก ไม่ต้องรู้รหัสก่อน
 // ใช้ /company-summary, /company-summary/departments, /company-summary/top-employees (คะแนนยังไม่ปรับเทียบ ใช้จัดลำดับ)
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { featureLabel } from './featureLabels'
 import { AssistantHint, SorryState } from './Mascot'
-import { api, baht, BAND, friendly } from './theme'
+import { api, baht, BAND, friendly, useApi } from './theme'
 import { Card, Icon, Segmented, Skeleton } from './ui'
-
-// โหลดหลาย endpoint พร้อมกัน ผลผูกกับ key ของคำขอ (key ไม่ตรง = กำลังโหลด) เลี่ยง setState ตรงๆ ใน effect
-function useApi(paths) {
-  const key = paths.join('|')
-  const [res, setRes] = useState({ key: null })
-  useEffect(() => {
-    const ctrl = new AbortController()
-    Promise.all(key.split('|').map((p) => api(p, { signal: ctrl.signal }))).then(
-      (data) => setRes({ key, data }),
-      (err) => err.name !== 'AbortError' && setRes({ key, error: friendly(err) }),
-    )
-    return () => ctrl.abort()
-  }, [key])
-  return { loading: res.key !== key, data: res.data, error: res.error }
-}
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
 // บริษัทมาจากผู้ใช้ที่ login (backend อ่านจาก token) บริษัทที่ปรับเทียบแล้วได้คะแนนปรับเทียบอัตโนมัติ
@@ -126,9 +111,9 @@ function Kpi({ label, value, sub, tone = 'text-fg', small = false }) {
 // แถบสัดส่วน ต่ำ/กลาง/สูง พร้อมจำนวนคน (ไม่ใช้สีอย่างเดียว มีตัวเลขกำกับ)
 function BandBar({ bands, total }) {
   const order = [
-    ['Low', 'bg-risk-low'],
-    ['Medium', 'bg-risk-mid'],
-    ['High', 'bg-risk-high'],
+    ['Low', 'bg-band-low'],
+    ['Medium', 'bg-band-mid'],
+    ['High', 'bg-band-high'],
   ]
   return (
     <div>
