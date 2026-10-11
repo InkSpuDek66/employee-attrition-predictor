@@ -59,6 +59,7 @@ class DepartmentSummary(Summary):
 
 class TopEmployee(BaseModel):
     employee_id: int
+    name: Optional[str] = None  # ชื่อ-นามสกุลที่บริษัทกรอกตอนนำเข้า (ไม่บังคับ) ใช้แสดงผลเท่านั้น
     risk_score: float
     calibrated_risk_score: Optional[float] = None  # มีเมื่อบริษัทของผู้ใช้ recalibrate แล้ว (ตรงกับ /shap, /whatif)
     risk_band: str  # คิดจาก calibrated_risk_score ถ้ามี
@@ -165,10 +166,12 @@ def top_employees(
             raise HTTPException(404, f"ไม่พบแผนก '{department}' (มี: {sorted(rows['Department'].unique())})")
         rows = rows[rows["Department"] == department]
     top = rows.nlargest(n, "shown")
+    names = db.employee_names(user["tenant_id"], top.index)
     return TopEmployeesResponse(
         employees=[
             TopEmployee(
                 employee_id=int(emp_id),
+                name=names.get(int(emp_id)),
                 risk_score=float(r.risk_score),
                 calibrated_risk_score=float(r.shown) if record else None,
                 risk_band=(band := business_rules.risk_band(r.shown)),

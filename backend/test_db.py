@@ -79,6 +79,30 @@ def test_import_saves_new_employee_in_baht(real_db):
             conn.execute("DELETE FROM employees WHERE tenant_id = %s AND employee_id = %s", (db.DEMO_TENANT, NEW_ID))
 
 
+def test_import_name_is_shown_but_never_reaches_the_model(real_db):
+    template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
+    template.loc[0, "รหัสพนักงาน"] = NEW_ID
+    template.loc[0, "ชื่อ-นามสกุล"] = "ทดสอบ ระบบ"
+
+    def upload(df):
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False)
+        return client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
+
+    try:
+        r = upload(template)
+        assert r.status_code == 200, r.text
+        assert r.json()["saved_names"] == {str(NEW_ID): "ทดสอบ ระบบ"}
+        assert db.employee_names(db.DEMO_TENANT, [NEW_ID]) == {NEW_ID: "ทดสอบ ระบบ"}
+        assert db.FULL_NAME not in ms.raw_employees().columns and db.FULL_NAME not in ms.employee_record(NEW_ID)  # ไม่เข้าโมเดล
+        assert client.get(f"/shap/{NEW_ID}").json()["name"] == "ทดสอบ ระบบ"
+        assert upload(template.drop(columns=["ชื่อ-นามสกุล"])).status_code == 200  # อัปเดตด้วยไฟล์ที่ไม่มีคอลัมน์ชื่อ
+        assert db.employee_names(db.DEMO_TENANT, [NEW_ID]) == {NEW_ID: "ทดสอบ ระบบ"}  # ชื่อเดิมไม่หาย
+    finally:
+        with db.connect() as conn:
+            conn.execute("DELETE FROM employees WHERE tenant_id = %s AND employee_id = %s", (db.DEMO_TENANT, NEW_ID))
+
+
 def test_import_needs_db(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "")
     r = client.post("/employees/import", files={"file": ("e.csv", b"x", "text/csv")})

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { featureLabel, featurePhrase, featureValue } from './featureLabels'
 import Logo from '../logo/Logo'
-import { api, baht, bandOf, friendly, loadSession, useApi } from './theme'
+import { api, baht, bandOf, employeeLabel, friendly, loadSession, useApi } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
@@ -127,13 +127,13 @@ function printReport(setPrintedAt) {
 }
 
 // หัวรายงาน แสดงเฉพาะตอนพิมพ์ (บนจอมีหัวหน้าเว็บอยู่แล้ว)
-function PrintHeader({ id, printedAt }) {
+function PrintHeader({ id, name, printedAt }) {
   const user = loadSession()?.user
   return (
     <div className="hidden items-center gap-3 border-b border-line pb-4 print:flex">
       <Logo className="size-12" />
       <div className="flex-1">
-        <div className="text-lg font-semibold text-fg">รายงานความเสี่ยงการลาออก · พนักงาน #{id}</div>
+        <div className="text-lg font-semibold text-fg">รายงานความเสี่ยงการลาออก · {employeeLabel(id, name)}</div>
         <div className="text-sm text-muted-fg">
           {user?.tenant_name ?? user?.tenant_id} · พิมพ์เมื่อ {printedAt}
           {user?.name && ` · โดย ${user.name}`}
@@ -161,7 +161,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
         setRes({ key, data })
         onDone()
         const score = data.calibrated_risk_score ?? data.risk_score
-        onRisk({ id: query.id, band: bandOf(score), score, label: 'คะแนน' })
+        onRisk({ id: query.id, name: data.name, band: bandOf(score), score, label: 'คะแนน' })
       },
       (err) => {
         if (err.name === 'AbortError') return
@@ -212,7 +212,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
 
   return (
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
-      <PrintHeader id={query.id} printedAt={printedAt} />
+      <PrintHeader id={query.id} name={data.name} printedAt={printedAt} />
       {/* แบบเดียวกับหน้า What-if: การ์ดคะแนน (รหัสพนักงาน) ล็อกอยู่ขวาตอนเลื่อนดูกราฟ/ตาราง จะได้ไม่ลืมว่ากำลังดูใคร
           มือถือ/ตอนพิมพ์: การ์ดคะแนนอยู่บนสุด */}
       <div className="grid items-start gap-4 lg:grid-cols-[1fr_22rem] print:block print:space-y-4">
@@ -220,7 +220,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
           <Card>
             <div className="mb-4">
               <div className="text-xs font-medium text-muted-fg">ผลวิเคราะห์</div>
-              <div className="font-semibold text-fg">พนักงาน #{query.id}</div>
+              <div className="font-semibold text-fg">{employeeLabel(query.id, data.name)}</div>
             </div>
             <RiskGauge title="ความเสี่ยงที่จะลาออก" score={score} avg={company?.mean_risk_score} />
             <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-fg">

@@ -61,7 +61,11 @@ export function loadMascot() {
 
 // พนักงานที่เพิ่งดู (ปุ่มลัดใต้ช่องรหัส) ใหม่สุดอยู่หน้า ไม่ซ้ำ เก็บแค่ RECENT_MAX คน แยกตามบริษัท
 const RECENT_MAX = 5
-export const pushRecent = (list, item) => [item, ...list.filter((r) => r.id !== item.id)].slice(0, RECENT_MAX)
+// item ที่ไม่มีชื่อ (เช่น What-if แจ้งมา) ไม่ลบชื่อที่จำไว้จากหน้า SHAP
+export const pushRecent = (list, item) =>
+  [{ ...list.find((r) => r.id === item.id), ...item }, ...list.filter((r) => r.id !== item.id)].slice(0, RECENT_MAX)
+// ชื่อที่แสดงของพนักงาน: มีชื่อ (บริษัทกรอกตอนนำเข้า) = "ชื่อ · #id" ไม่มี = "พนักงาน #id"
+export const employeeLabel = (id, name) => (name ? `${name} · #${id}` : `พนักงาน #${id}`)
 export function loadRecent(tenant) {
   try {
     const v = JSON.parse(localStorage.getItem(`recent:${tenant}`))

@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { featureLabel, JOB_LEVELS } from './featureLabels'
 import { AssistantHint, SorryState } from './mascot/Mascot'
-import { api, baht, BAND, bahtShort, friendly, useApi } from './theme'
+import { api, baht, BAND, bahtShort, employeeLabel, friendly, useApi } from './theme'
 import { Alert, Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
@@ -19,8 +19,8 @@ const topQuery = (n, department) => new URLSearchParams({ n, ...(department && {
 // ดาวน์โหลดรายชื่อเสี่ยงสูงเป็น CSV (เปิดใน Excel ภาษาไทยได้ เพราะใส่ BOM) ไว้ใช้ในประชุม/ส่งหัวหน้าแผนก
 async function downloadCsv(department) {
   const { employees } = await api(`/company-summary/top-employees?${topQuery(100, department)}`)
-  const header = ['อันดับ', 'รหัสพนักงาน', 'คะแนนความเสี่ยง', 'ระดับ', 'แผนก', 'ตำแหน่ง', 'ระดับตำแหน่ง']
-  const rows = employees.map((e, i) => [i + 1, e.employee_id, Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, JOB_LEVELS[e.job_level] ?? e.job_level])
+  const header = ['อันดับ', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'คะแนนความเสี่ยง', 'ระดับ', 'แผนก', 'ตำแหน่ง', 'ระดับตำแหน่ง']
+  const rows = employees.map((e, i) => [i + 1, e.employee_id, e.name ?? '', Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, JOB_LEVELS[e.job_level] ?? e.job_level])
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(',')).join('\r\n')
   const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }))
   const a = Object.assign(document.createElement('a'), { href: url, download: `top-risk-${department || 'all'}.csv` })
@@ -76,7 +76,7 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
                 {initials(e.job_role)}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-fg">พนักงาน #{e.employee_id}</span>
+                <span className="block truncate text-sm font-medium text-fg">{employeeLabel(e.employee_id, e.name)}</span>
                 {!compact && (
                   <span className="block truncate text-xs text-muted-fg">
                     {e.job_role} · {e.department} · {JOB_LEVELS[e.job_level] ?? `ระดับ ${e.job_level}`}

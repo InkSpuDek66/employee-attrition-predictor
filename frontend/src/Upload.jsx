@@ -3,7 +3,7 @@
 // ชิ้นส่วนที่ export (DownloadButton, DropZone, CheckDetails) ใช้ร่วมกับหน้าปรับเทียบโมเดล (Calibrate.jsx)
 import { useState } from 'react'
 import { AssistantHint, MascotLoader } from './mascot/Mascot'
-import { download, friendly, postFile } from './theme'
+import { download, employeeLabel, friendly, postFile } from './theme'
 import { Alert, Card, Icon } from './ui'
 
 export function DownloadButton({ path, filename, children, onError }) {
@@ -190,6 +190,7 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
             <li>เงินเดือนกรอกเป็นบาท ระยะทางเป็นกิโลเมตร</li>
             <li>ค่าที่เป็นตัวเลือกพิมพ์ภาษาไทยได้ เช่น OT: ทำ / ไม่ทำ (ดูชีต “คำอธิบาย”)</li>
             <li>ไฟล์ที่ export จากระบบเดิมใช้หัวคอลัมน์ภาษาอังกฤษแบบ IBM ได้</li>
+            <li>ใส่ชื่อ-นามสกุลได้ (ไม่บังคับ) ใช้แสดงผลเท่านั้น ระบบไม่นำไปคำนวณความเสี่ยง</li>
             <li>ช่องความพึงพอใจ/สมดุลงานกับชีวิต (จากแบบสำรวจพนักงาน) และความทุ่มเท (จากการประเมินของหัวหน้า) ไม่มีข้อมูลก็เว้นว่างได้</li>
             <li>“เข้าออฟฟิศ (วัน/สัปดาห์)” ใส่ 0–5 ตามนโยบาย WFH หรือระบบลงเวลา เว้นว่าง = เข้าทุกวัน</li>
           </ul>
@@ -234,7 +235,7 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
                           onClick={() => onPick(id)}
                           className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                         >
-                          พนักงาน #{id}
+                          {employeeLabel(id, result.saved_names?.[id])}
                           <Icon name="right" className="size-4 text-muted-fg" />
                         </button>
                       ))}

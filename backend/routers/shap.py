@@ -8,6 +8,7 @@ import auth
 import calibration
 import model_store as ms
 import company_summary as cs  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
+import db  # noqa: E402
 
 router = APIRouter(tags=["explain"])
 
@@ -37,6 +38,7 @@ class Commute(BaseModel):
 
 class ShapResponse(BaseModel):
     employee_id: int
+    name: Optional[str] = None  # ชื่อ-นามสกุล (ถ้าบริษัทกรอกตอนนำเข้า) ใช้แสดงผลเท่านั้น
     risk_score: float
     calibrated_risk_score: Optional[float] = None
     warning: Optional[str] = None
@@ -65,6 +67,7 @@ def get_shap(employee_id: int, top_n: int = Query(10, ge=1, le=100), user: dict 
         commute = Commute(distance_km=raw["DistanceFromHome"], office_days=office_days, used_km=used)
     return ShapResponse(
         employee_id=employee_id,
+        name=db.employee_names(user["tenant_id"], [employee_id]).get(employee_id),
         risk_score=float(score[0]),
         calibrated_risk_score=float(calibration.apply(record, score)[0]) if record else None,
         warning=None if record else UNCALIBRATED_WARNING,

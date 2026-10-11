@@ -109,3 +109,14 @@ def test_numbers_with_commas_and_cross_column_checks():
     rich.loc[1, "เงินเดือน (บาท)"] = 45_000_000  # พิมพ์ศูนย์เกิน
     got = {(e["row"], e["column"]): e["message"] for e in _upload(rich).json()["errors"]}
     assert list(got) == [(3, "เงินเดือน (บาท)")] and "5,000,000 บาท" in got[(3, "เงินเดือน (บาท)")]
+
+
+def test_name_column_optional_shown_in_preview():
+    df = _template()
+    assert df.columns[1] == "ชื่อ-นามสกุล" and df["ชื่อ-นามสกุล"].str.contains("ตัวอย่าง").all()
+    body = _upload(df).json()
+    assert body["n_valid"] == 3 and body["unknown_columns"] == [] and body["preview"][0]["ชื่อ-นามสกุล"] == df.loc[0, "ชื่อ-นามสกุล"]
+    no_name = _upload(df.drop(columns=["ชื่อ-นามสกุล"])).json()  # ไฟล์เดิมที่ไม่มีคอลัมน์ชื่อ ยังผ่าน
+    assert no_name["n_valid"] == 3 and no_name["missing_columns"] == [] and "ชื่อ-นามสกุล" not in no_name["preview"][0]
+    df.loc[0, "ชื่อ-นามสกุล"] = "ก" * 101
+    assert any(e["column"] == "ชื่อ-นามสกุล" and "100" in e["message"] for e in _upload(df).json()["errors"])

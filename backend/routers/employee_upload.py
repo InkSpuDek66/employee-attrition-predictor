@@ -72,6 +72,12 @@ COLUMNS = [
     ("HourlyRate", "อัตราค่าจ้างรายชั่วโมง", "ตามข้อมูล IBM (โมเดลต้องใช้)"),
     ("MonthlyRate", "อัตราค่าจ้างรายเดือน", "ตามข้อมูล IBM (โมเดลต้องใช้)"),
 ]
+# ชื่อ-นามสกุล: ไม่บังคับ ใช้แสดงผลในหน้าเว็บเท่านั้น ไม่ส่งเข้าโมเดล (ตัดออกก่อนตรวจด้วย EmployeeInput)
+# ไม่อยู่ใน COLUMNS เพราะ COLUMNS = ฟิลด์ของโมเดล (ไฟล์ปรับเทียบ / แถวตัวอย่างจาก IBM ใช้ร่วมกัน) ไฟล์นำเข้าใช้ TEMPLATE_COLUMNS
+NAME = (db.FULL_NAME, "ชื่อ-นามสกุล", "ไม่บังคับ · ใช้แสดงผลเท่านั้น ระบบไม่นำไปคำนวณความเสี่ยง")
+NAME_MAX = 100  # ตรงกับ CHECK ของคอลัมน์ full_name
+TEMPLATE_COLUMNS = [COLUMNS[0], NAME, *COLUMNS[1:]]
+EXAMPLE_NAMES = ["สมชาย (ตัวอย่าง)", "สมหญิง (ตัวอย่าง)"]
 # ผลจริงว่าลาออกหรือยัง ใช้เฉพาะไฟล์ปรับเทียบ (/recalibrate/upload) ไฟล์นำเข้าปกติมีก็ได้ไม่มีก็ได้ (ไม่ได้บันทึก)
 LABEL = ("Attrition", "ลาออกแล้วหรือยัง", "ลาออก / ยังอยู่")
 # ช่องจากแบบสำรวจความผูกพัน/ความพึงพอใจ (engagement survey, pulse survey) และการประเมินของหัวหน้า
@@ -88,12 +94,12 @@ SURVEY_WARNING = (
 OPTIONAL_DEFAULTS = {**{f: SURVEY_DEFAULT for f in SURVEY_FIELDS}, "OfficeDaysPerWeek": 5}
 # ระดับตำแหน่งเป็นคำ (ตรงกับ JOB_LEVELS ใน frontend/src/featureLabels.js) ค่าที่ส่งเข้าโมเดลยังเป็น 1–5
 JOB_LEVELS = {1: "จูเนียร์", 2: "พนักงานระดับกลาง", 3: "ซีเนียร์", 4: "ผู้จัดการแผนก", 5: "ผู้จัดการใหญ่"}
-THAI = {f: th for f, th, _ in COLUMNS + [LABEL]}
-HINT = {f: hint for f, _, hint in COLUMNS + [LABEL]}
+THAI = {f: th for f, th, _ in COLUMNS + [LABEL, NAME]}
+HINT = {f: hint for f, _, hint in COLUMNS + [LABEL, NAME]}
 # รับได้ทั้งหัวคอลัมน์ไทยและชื่อคอลัมน์ IBM (ไฟล์ที่ export จากระบบเดิม)
 HEADER_TO_FIELD = (
-    {th: f for f, th, _ in COLUMNS + [LABEL]}
-    | {f: f for f, _, _ in COLUMNS + [LABEL]}
+    {th: f for f, th, _ in COLUMNS + [LABEL, NAME]}
+    | {f: f for f, _, _ in COLUMNS + [LABEL, NAME]}
     | {"การเดินทางไปทำงาน": "BusinessTravel"}  # หัวคอลัมน์ชื่อเดิม ไฟล์ที่กรอกไว้ก่อนเปลี่ยนชื่อยังใช้ได้
 )
 
@@ -128,6 +134,7 @@ class ValidateResponse(BaseModel):
     warnings: list[str] = []  # เรื่องที่ไม่ทำให้ไฟล์ไม่ผ่าน แต่ผู้ใช้ควรรู้ก่อนบันทึก
     saved: bool = False
     saved_ids: list[int] = []  # รหัสพนักงานที่เพิ่งบันทึก (ไม่เกิน 20 คนแรก) ให้หน้าเว็บกดไปดูได้
+    saved_names: dict[int, str] = {}  # ชื่อของคนใน saved_ids (เฉพาะคนที่กรอกชื่อ)
     note: str = "ตรวจไฟล์อย่างเดียว ยังไม่ได้บันทึกเข้าระบบ"
 
 
@@ -223,6 +230,10 @@ def _check(file: UploadFile, label: bool = False):
         row_errors = []
 
         attrition = row.pop("Attrition", None)  # ไม่ใช่ฟีเจอร์ของโมเดล แยกออกก่อนตรวจ
+        name = row.pop(NAME[0], None)  # ชื่อก็ไม่ใช่ฟีเจอร์ แยกออกก่อนตรวจ (ไฟล์ปรับเทียบมีคอลัมน์นี้ได้ ไม่ใช้)
+        name = None if name is None else str(name)
+        if name is not None and len(name) > NAME_MAX:
+            row_errors.append(RowError(row=excel_row, column=NAME[1], message=f"ยาวเกิน {NAME_MAX} ตัวอักษร"))
         if label and "Attrition" in present and attrition not in ("Yes", "No"):
             row_errors.append(RowError(row=excel_row, column=LABEL[1], message="ว่างอยู่ ต้องกรอก" if attrition is None else f"ค่าไม่ถูกต้อง ต้องเป็น: {LABEL[2]}"))
 
@@ -252,9 +263,19 @@ def _check(file: UploadFile, label: bool = False):
             n_valid += 1
             n_imputed += imputed
             if checked:  # None = ผ่านแต่ขาดทั้งคอลัมน์ (บอกใน missing_columns) บันทึกไม่ได้
-                valid.append(checked.model_dump() | {"EmployeeNumber": emp_id} | ({"Attrition": attrition} if label else {}))  # ค่าที่แปลงชนิดแล้ว ("41" -> 41)
+                valid.append(
+                    checked.model_dump()  # ค่าที่แปลงชนิดแล้ว ("41" -> 41)
+                    | {"EmployeeNumber": emp_id}
+                    | ({"Attrition": attrition} if label else {})
+                    # มีคอลัมน์ชื่อเท่านั้นถึงบันทึกชื่อ: ไฟล์ที่ไม่มีคอลัมน์นี้ อัปเดตแล้วชื่อเดิมใน DB ไม่หาย
+                    | ({NAME[0]: name} if NAME[0] in present and not label else {})
+                )
             if len(preview) < 5:
-                preview.append({THAI["EmployeeNumber"]: str(emp_id)} | {THAI[f]: shown.get(f) for f, _, _ in COLUMNS[1:9]})
+                preview.append(
+                    {THAI["EmployeeNumber"]: str(emp_id)}
+                    | ({NAME[1]: name} if NAME[0] in present else {})  # ไม่มีคอลัมน์ชื่อ = ไม่โชว์คอลัมน์ว่าง
+                    | {THAI[f]: shown.get(f) for f, _, _ in COLUMNS[1:9]}
+                )
 
     n_rows = n_valid + len({e.row for e in errors})
     return valid, ValidateResponse(
@@ -304,11 +325,14 @@ def import_employees(
     ms.clear_cache()  # ให้ทุกหน้าเห็นพนักงานที่เพิ่ง import ทันที (ไม่ต้องรอรอบตรวจของ model_store)
     background.add_task(batch_score.refresh_in_background)  # คำนวณสรุปใหม่หลังตอบกลับ ให้ /company-summary กลับมาใช้ cache
     n_updated = len(existing & set(rows["EmployeeNumber"]))
+    first = rows.head(20)
+    names = dict(zip(first["EmployeeNumber"], first[NAME[0]])) if NAME[0] in rows else {}
     return result.model_copy(
         update={
             "saved": True,
             "note": f"บันทึกแล้ว: เพิ่มใหม่ {len(rows) - n_updated:,} คน อัปเดต {n_updated:,} คน",
-            "saved_ids": [int(i) for i in rows["EmployeeNumber"].head(20)],
+            "saved_ids": [int(i) for i in first["EmployeeNumber"]],
+            "saved_names": {int(i): n for i, n in names.items() if isinstance(n, str)},
         }
     )
 
@@ -339,7 +363,16 @@ def _example_rows(n: int = 2, label: bool = False) -> list[dict]:
 @router.get("/employees/template")
 def download_template(n_examples: Optional[int] = 2):
     """ไฟล์ Excel ตัวอย่าง: ชีต "พนักงาน" (หัวคอลัมน์ + แถวตัวอย่าง) และชีต "คำอธิบาย" """
-    return template_response(_example_rows(max(0, min(n_examples or 0, 5))), COLUMNS, "employee_template.xlsx")
+    rows = [r | {NAME[1]: EXAMPLE_NAMES[i % len(EXAMPLE_NAMES)]} for i, r in enumerate(_example_rows(max(0, min(n_examples or 0, 5))))]
+    return template_response(rows, TEMPLATE_COLUMNS, "employee_template.xlsx")
+
+
+def _required(field: str) -> str:
+    if field in SURVEY_FIELDS:
+        return "ไม่บังคับ (ว่าง = พอใจ/ดี)"
+    if field in OPTIONAL_DEFAULTS:
+        return "ไม่บังคับ (ว่าง = 5 วัน)"
+    return "ไม่บังคับ" if field == NAME[0] else "ต้อง"
 
 
 def template_response(rows: list[dict], columns: list, filename: str) -> StreamingResponse:
@@ -347,7 +380,7 @@ def template_response(rows: list[dict], columns: list, filename: str) -> Streami
     with pd.ExcelWriter(buf, engine="openpyxl") as xw:
         pd.DataFrame(rows, columns=[th for _, th, _ in columns]).to_excel(xw, sheet_name="พนักงาน", index=False)
         pd.DataFrame(
-            [{"คอลัมน์": th, "ต้องกรอก": "ไม่บังคับ (ว่าง = พอใจ/ดี)" if f in SURVEY_FIELDS else "ไม่บังคับ (ว่าง = 5 วัน)" if f in OPTIONAL_DEFAULTS else "ต้อง", "ค่าที่รับ": hint} for f, th, hint in columns]
+            [{"คอลัมน์": th, "ต้องกรอก": _required(f), "ค่าที่รับ": hint} for f, th, hint in columns]
         ).to_excel(
             xw, sheet_name="คำอธิบาย", index=False
         )

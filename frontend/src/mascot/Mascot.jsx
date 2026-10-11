@@ -22,7 +22,7 @@ const CHARACTERS = {
   dog: (p) => <PetCharacter {...p} kind="dog" />,
 }
 // ชื่อผู้ช่วย ใช้ทั้งปุ่มเลือกผู้ช่วยใน sidebar และป้ายชื่อหน้า login
-const LABELS = { chibiGirl: 'จอย', chibiBoy: 'กิต', cat: 'ส้มฉุน', dog: 'ปุกปุย' }
+const LABELS = { chibiGirl: 'HR จอย', chibiBoy: 'HR กิต', cat: 'น้องส้มฉุน', dog: 'น้องปุกปุย' }
 
 // กล่องคำพูด หางชี้ไปหาตัวการ์ตูน (tail = ทิศที่ตัวการ์ตูนอยู่)
 function Bubble({ tail = 'top', className = '', live = false, children }) {

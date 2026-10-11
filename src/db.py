@@ -17,6 +17,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEMO_TENANT = "ibm_demo"
 SKIP_COLUMNS = {"EmployeeCount", "Over18", "StandardHours"}  # ค่าเดียวทั้งไฟล์ ไม่เก็บ
 EXTRA_COLUMNS = ["OfficeDaysPerWeek"]  # ไม่มีใน CSV ของ IBM แต่เก็บในตาราง employees
+# ชื่อพนักงาน (คอลัมน์ full_name) ตั้งใจไม่อยู่ใน EXTRA_COLUMNS: read_employees จึงไม่คืนชื่อ
+# ข้อมูลที่ส่งเข้าโมเดล/predict/whatif ไม่มีชื่อปนแน่นอน อ่านชื่อแยกด้วย employee_names() ตอนจะแสดงผล
+FULL_NAME = "FullName"  # ชื่อแบบ IBM ของคอลัมน์ full_name (ใช้ตอนบันทึกผ่าน upsert_employees)
 
 
 def url():
@@ -52,6 +55,24 @@ def read_employees(tenant_id: str = DEMO_TENANT) -> pd.DataFrame:
         raise LookupError(f"ไม่มีพนักงานของ tenant '{tenant_id}' ในฐานข้อมูล (โหลด IBM dataset: python src/db.py)")
     ibm = {db_column(c): c for c in [*load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME)).columns, *EXTRA_COLUMNS]}
     return df[[c for c in df.columns if c in ibm]].rename(columns=ibm)
+
+
+def employee_names(tenant_id: str, ids) -> dict[int, str]:
+    """{รหัสพนักงาน: ชื่อ} เฉพาะคนที่มีชื่อ ไม่ตั้ง DATABASE_URL (อ่าน CSV ของ IBM ซึ่งไม่มีชื่อ) = {}"""
+    ids = [int(i) for i in ids]
+    if not url() or not ids:
+        return {}
+    import psycopg
+
+    try:
+        with connect() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT employee_id, full_name FROM employees WHERE tenant_id = %s AND employee_id = ANY(%s) AND full_name IS NOT NULL",
+                (tenant_id, ids),
+            )
+            return dict(cur.fetchall())
+    except psycopg.errors.UndefinedColumn:  # DB เก่ายังไม่มี full_name (QA-06): แสดงแค่รหัสไปก่อน ไม่ให้หน้าพัง
+        return {}
 
 
 def upsert_employees(conn, df: pd.DataFrame, tenant_id: str, source: str) -> int:

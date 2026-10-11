@@ -3,7 +3,7 @@ import Logo from '../logo/Logo'
 import Login from './Login'
 import Mascot, { MascotLoader } from './mascot/Mascot'
 import Overview from './Overview'
-import { inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD } from './theme'
+import { employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
@@ -103,7 +103,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
           t,
           (r) => {
             setRisk((m) => ({ ...m, [t]: r }))
-            if (r.band) setRecent((l) => pushRecent(l, { id: r.id }))
+            if (r.band) setRecent((l) => pushRecent(l, r.name ? { id: r.id, name: r.name } : { id: r.id }))
           },
         ]),
       ),
@@ -309,6 +309,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
                         onClick={() => pick(r.id)}
                         disabled={current}
                         aria-current={current ? 'true' : undefined}
+                        title={employeeLabel(r.id, r.name)}
                         className={`h-6 rounded-md border px-2 font-medium tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                           current
                             ? 'cursor-default border-transparent bg-primary-soft text-on-primary dark:text-fg'
