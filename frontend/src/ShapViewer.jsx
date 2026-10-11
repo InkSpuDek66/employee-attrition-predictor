@@ -66,16 +66,18 @@ function Summary({ ups, downs, band }) {
 }
 
 // กราฟแท่งแนวนอนแบบซ้าย/ขวาจากเส้นกลาง (ขวา = ดันให้เสี่ยง, ซ้าย = ดันให้อยู่ต่อ) วาดด้วย CSS ไม่ต้องโหลด library กราฟ
+// ชี้ที่แถว = กล่องรายละเอียดเหนือแท่ง (ค่าจริง ทิศทาง อันดับ) แทนกล่องของเบราว์เซอร์ ข้อมูลเดียวกับตารางด้านข้าง
 function ShapBars({ rows, maxAbs }) {
+  const [hover, setHover] = useState(null)
   return (
-    <ul className="space-y-1.5">
-      {rows.map((r) => {
+    <ul className="space-y-1.5" onMouseLeave={() => setHover(null)}>
+      {rows.map((r, i) => {
         const up = r.shap_value > 0
         const width = `${(Math.abs(r.shap_value) / maxAbs) * 50}%`
         return (
           <li
             key={r.feature}
-            title={`${r.label}: ${r.shown} · ผลกระทบ (SHAP) ${r.shap_value.toFixed(3)}`}
+            onMouseEnter={() => setHover(r.feature)}
             className="grid grid-cols-[7.5rem_1fr] items-center gap-3 rounded-md px-1 py-1 transition-colors duration-150 hover:bg-muted sm:grid-cols-[12.5rem_1fr]"
           >
             <span className="truncate text-right text-xs text-fg sm:text-sm">{r.label}</span>
@@ -89,6 +91,21 @@ function ShapBars({ rows, maxAbs }) {
               <span className="sr-only">
                 {up ? 'ดันให้เสี่ยงลาออกมากขึ้น' : 'ดันให้อยู่ต่อ'} ผลกระทบ {Math.abs(r.shap_value).toFixed(2)}
               </span>
+              {hover === r.feature && (
+                <span
+                  className="pointer-events-none absolute bottom-full z-10 mb-2 w-max max-w-56 -translate-x-1/2 rounded-lg border border-line bg-card px-2.5 py-1.5 text-xs shadow-md"
+                  style={{ left: `calc(50% ${up ? '+' : '-'} ${(Math.abs(r.shap_value) / maxAbs) * 25}%)` }}
+                  aria-hidden="true"
+                >
+                  <span className="block font-medium text-fg">{r.label}</span>
+                  <span className="block tabular-nums text-fg">{r.shown}</span>
+                  <span className={`flex items-center gap-1 ${up ? 'text-risk-high' : 'text-accent'}`}>
+                    <Icon name={up ? 'up' : 'down'} className="size-3.5" />
+                    {up ? 'ดันให้เสี่ยงขึ้น' : 'ช่วยให้อยู่ต่อ'}
+                    <span className="text-muted-fg">· อันดับ {i + 1} จาก {rows.length}</span>
+                  </span>
+                </span>
+              )}
             </span>
           </li>
         )
@@ -196,104 +213,113 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
   return (
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
       <PrintHeader id={query.id} printedAt={printedAt} />
-      <div className="flex justify-end print:hidden">
-        <button
-          type="button"
-          onClick={() => printReport(setPrintedAt)}
-          className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-        >
-          <Icon name="download" className="size-4" />
-          พิมพ์ / บันทึก PDF
-        </button>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-3 print:grid-cols-3">
-        <Card>
-          <RiskGauge title={`ความเสี่ยงที่จะลาออก · พนักงาน #${query.id}`} score={score} avg={company?.mean_risk_score} />
-          <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-fg">
-            <Icon name="info" className="size-4 shrink-0" />
-            คะแนนใช้เทียบว่าใครเสี่ยงกว่าใคร ไม่ใช่โอกาสลาออกจริง
-          </p>
-        </Card>
-        <Driver tone="up" title="ปัจจัยที่ดันให้เสี่ยงมากที่สุด" row={ups[0]} count={ups.length} />
-        <Driver tone="down" title="ปัจจัยที่ช่วยให้อยู่ต่อมากที่สุด" row={downs[0]} count={downs.length} />
-      </div>
-
-      <Summary ups={ups} downs={downs} band={bandOf(score)} />
-      {data.warning && <Alert tone="warning">{data.warning}</Alert>}
-
-      <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr] print:grid-cols-1">
-        <Card
-          icon="chart"
-          title="ปัจจัยที่ส่งผลมากที่สุด"
-          subtitle="แท่งยิ่งยาว ยิ่งมีผลกับคะแนนมาก"
-          action={
-            <div className="w-44 print:hidden">
-              <Segmented size="sm" label="จำนวนปัจจัย" options={TOP_N} value={topN} onChange={(v) => setTopN(Number(v))} />
+      {/* แบบเดียวกับหน้า What-if: การ์ดคะแนน (รหัสพนักงาน) ล็อกอยู่ขวาตอนเลื่อนดูกราฟ/ตาราง จะได้ไม่ลืมว่ากำลังดูใคร
+          มือถือ/ตอนพิมพ์: การ์ดคะแนนอยู่บนสุด */}
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_22rem] print:block print:space-y-4">
+        <aside className="lg:sticky lg:top-20 lg:order-last">
+          <Card>
+            <div className="mb-4">
+              <div className="text-xs font-medium text-muted-fg">ผลวิเคราะห์</div>
+              <div className="font-semibold text-fg">พนักงาน #{query.id}</div>
             </div>
-          }
-        >
-          <div className="mb-3 flex flex-wrap gap-4 text-xs text-muted-fg">
-            <span className="flex items-center gap-1.5">
-              <Icon name="up" className="size-3.5 text-risk-high" />
-              <span className="size-2.5 rounded-sm bg-up" />
-              ดันให้เสี่ยงลาออกมากขึ้น
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Icon name="down" className="size-3.5 text-down" />
-              <span className="size-2.5 rounded-sm bg-down" />
-              ดันให้อยู่ต่อ
-            </span>
-          </div>
-          <ShapBars key={query.n} rows={rows} maxAbs={maxAbs} />
-        </Card>
+            <RiskGauge title="ความเสี่ยงที่จะลาออก" score={score} avg={company?.mean_risk_score} />
+            <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-fg">
+              <Icon name="info" className="size-4 shrink-0" />
+              คะแนนใช้เทียบว่าใครเสี่ยงกว่าใคร ไม่ใช่โอกาสลาออกจริง
+            </p>
+            <button
+              type="button"
+              onClick={() => printReport(setPrintedAt)}
+              className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 print:hidden"
+            >
+              <Icon name="download" className="size-4" />
+              พิมพ์ / บันทึก PDF
+            </button>
+          </Card>
+        </aside>
 
-        <Card icon="list" title="รายละเอียดแต่ละปัจจัย" subtitle="ค่าจริงของพนักงานและทิศทางที่ส่งผล">
-          <div className="-mx-5 overflow-x-auto sm:-mx-6">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-line bg-canvas text-left text-xs font-medium text-muted-fg">
-                  <th className="px-5 py-2 sm:px-6">ปัจจัย</th>
-                  <th className="px-2 py-2">ค่า</th>
-                  <th className="px-5 py-2 text-right sm:px-6">ผล</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {rows.map((r) => {
-                  const up = r.shap_value > 0
-                  return (
-                    <tr key={r.feature} className="transition-colors duration-150 hover:bg-canvas">
-                      <td className="px-5 py-2.5 sm:px-6">
-                        <div className="font-medium text-fg">{r.label}</div>
-                        {NOT_A_REASON[r.kind] && (
-                          <span className="mt-0.5 inline-block rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-fg">{NOT_A_REASON[r.kind]}</span>
-                        )}
-                        {up && r.recommendation && <div className="mt-0.5 text-xs text-muted-fg">{r.recommendation}</div>}
-                        <div className="mt-1 h-1 w-full max-w-40 rounded-full bg-muted">
-                          <div
-                            className={`bar-grow h-full rounded-full ${up ? 'bg-up' : 'bg-down'}`}
-                            style={{ width: `${(Math.abs(r.shap_value) / maxAbs) * 100}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-2 py-2.5 tabular-nums text-muted-fg">{r.shown}</td>
-                      <td className="px-5 py-2.5 text-right sm:px-6">
-                        <span
-                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ${
-                            up ? 'bg-risk-high-soft text-risk-high' : 'bg-accent-soft text-accent'
-                          }`}
-                        >
-                          <Icon name={up ? 'up' : 'down'} className="size-3.5" />
-                          {up ? 'เพิ่มความเสี่ยง' : 'ลดความเสี่ยง'}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+        <div className="min-w-0 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Driver tone="up" title="ปัจจัยที่ดันให้เสี่ยงมากที่สุด" row={ups[0]} count={ups.length} />
+            <Driver tone="down" title="ปัจจัยที่ช่วยให้อยู่ต่อมากที่สุด" row={downs[0]} count={downs.length} />
           </div>
-          <p className="mt-4 text-xs text-muted-fg">SHAP บอกความสัมพันธ์กับโมเดล ไม่ใช่เหตุและผลที่พิสูจน์แล้ว</p>
-        </Card>
+
+          <Summary ups={ups} downs={downs} band={bandOf(score)} />
+          {data.warning && <Alert tone="warning">{data.warning}</Alert>}
+
+          <Card
+            icon="chart"
+            title="ปัจจัยที่ส่งผลมากที่สุด"
+            subtitle="แท่งยิ่งยาว ยิ่งมีผลกับคะแนนมาก"
+            action={
+              <div className="w-44 print:hidden">
+                <Segmented size="sm" label="จำนวนปัจจัย" options={TOP_N} value={topN} onChange={(v) => setTopN(Number(v))} />
+              </div>
+            }
+          >
+            <div className="mb-3 flex flex-wrap gap-4 text-xs text-muted-fg">
+              <span className="flex items-center gap-1.5">
+                <Icon name="up" className="size-3.5 text-risk-high" />
+                <span className="size-2.5 rounded-sm bg-up" />
+                ดันให้เสี่ยงลาออกมากขึ้น
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Icon name="down" className="size-3.5 text-down" />
+                <span className="size-2.5 rounded-sm bg-down" />
+                ดันให้อยู่ต่อ
+              </span>
+            </div>
+            <ShapBars key={query.n} rows={rows} maxAbs={maxAbs} />
+          </Card>
+
+          <Card icon="list" title="รายละเอียดแต่ละปัจจัย" subtitle="ค่าจริงของพนักงานและทิศทางที่ส่งผล">
+            <div className="-mx-5 overflow-x-auto sm:-mx-6">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-y border-line bg-canvas text-left text-xs font-medium text-muted-fg">
+                    <th className="px-5 py-2 sm:px-6">ปัจจัย</th>
+                    <th className="px-2 py-2">ค่า</th>
+                    <th className="px-5 py-2 text-right sm:px-6">ผล</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {rows.map((r) => {
+                    const up = r.shap_value > 0
+                    return (
+                      <tr key={r.feature} className="transition-colors duration-150 hover:bg-canvas">
+                        <td className="px-5 py-2.5 sm:px-6">
+                          <div className="font-medium text-fg">{r.label}</div>
+                          {NOT_A_REASON[r.kind] && (
+                            <span className="mt-0.5 inline-block rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-fg">{NOT_A_REASON[r.kind]}</span>
+                          )}
+                          {up && r.recommendation && <div className="mt-0.5 text-xs text-muted-fg">{r.recommendation}</div>}
+                          <div className="mt-1 h-1 w-full max-w-40 rounded-full bg-muted">
+                            <div
+                              className={`bar-grow h-full rounded-full ${up ? 'bg-up' : 'bg-down'}`}
+                              style={{ width: `${(Math.abs(r.shap_value) / maxAbs) * 100}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-2 py-2.5 tabular-nums text-muted-fg">{r.shown}</td>
+                        <td className="px-5 py-2.5 text-right sm:px-6">
+                          <span
+                            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ${
+                              up ? 'bg-risk-high-soft text-risk-high' : 'bg-accent-soft text-accent'
+                            }`}
+                          >
+                            <Icon name={up ? 'up' : 'down'} className="size-3.5" />
+                            {up ? 'เพิ่มความเสี่ยง' : 'ลดความเสี่ยง'}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-4 text-xs text-muted-fg">SHAP บอกความสัมพันธ์กับโมเดล ไม่ใช่เหตุและผลที่พิสูจน์แล้ว</p>
+          </Card>
+        </div>
       </div>
     </div>
   )

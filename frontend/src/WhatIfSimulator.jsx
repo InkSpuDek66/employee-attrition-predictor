@@ -531,7 +531,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
           )}
         </div>
 
-        <aside className="relative lg:sticky lg:top-6">
+        <aside className="relative lg:sticky lg:top-20">
           {toast && <BandToast key={toast.n} kind={toast.kind} />}
           <Card>
             <div className="mb-5 flex items-center justify-between">

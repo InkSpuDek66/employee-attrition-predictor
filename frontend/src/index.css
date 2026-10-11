@@ -168,8 +168,9 @@ body {
   from { transform: scaleX(0); }
 }
 /* เนื้อหาแท็บค่อยๆ ปรากฏ (เล่นใหม่ทุกครั้งที่แท็บถูกเปิด เพราะ hidden -> แสดง) */
+/* backwards ไม่ใช่ both: ถ้าค้าง transform ไว้หลังเล่นจบ ของ position: fixed ข้างใน (แถบคะแนน What-if บนมือถือ) จะไม่ติดขอบจอ */
 .fade-up {
-  animation: fade-up 260ms ease-out both;
+  animation: fade-up 260ms ease-out backwards;
 }
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }

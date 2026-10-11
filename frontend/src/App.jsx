@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Logo from '../logo/Logo'
 import Login from './Login'
-import Mascot from './mascot/Mascot'
+import Mascot, { MascotLoader } from './mascot/Mascot'
 import Overview from './Overview'
 import { inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
@@ -111,6 +111,26 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
   )
   const onDone = useMemo(() => Object.fromEntries(PER_EMPLOYEE.map((t) => [t, () => setPending((p) => ({ ...p, [t]: false }))])), [])
   const current = TABS.find((t) => t.id === tab)
+
+  // มือถือ: เลื่อนลงไปไกลแล้วมีปุ่มกลับขึ้นด้านบน (หน้าภาพรวมบนมือถือยาวกว่า 3,000 px) จอใหญ่ซ่อนไว้
+  const [farDown, setFarDown] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setFarDown(scrollY > 1200)
+    addEventListener('scroll', onScroll, { passive: true })
+    return () => removeEventListener('scroll', onScroll)
+  }, [])
+
+  // จอใหญ่: ช่องรหัสพนักงานด้านบนเลื่อนพ้นจอ = โชว์ช่องรหัสแบบย่อลอยมุมขวาบน เปลี่ยนคนได้ขณะดูข้อมูลด้านล่าง
+  // (อยู่คอลัมน์เดียวกับการ์ดคะแนนที่ล็อกไว้ในหน้า SHAP / What-if ซึ่งล็อกที่ top-20 ให้พ้นช่องนี้)
+  const headerForm = useRef(null)
+  const [formOut, setFormOut] = useState(false)
+  useEffect(() => {
+    const el = headerForm.current
+    if (!el) return
+    const io = new IntersectionObserver(([e]) => setFormOut(!e.isIntersecting))
+    io.observe(el)
+    return () => io.disconnect()
+  }, [tab])
 
   // เขียนสถานะลง URL (ระบบภายนอก) — เปลี่ยนแท็บ/โหลดพนักงานใหม่ = 1 รายการใน history
   // ครั้งแรกตอนเปิดหน้าใช้ replace ไม่งั้นต้องกด back สองครั้งถึงออกจากเว็บ
@@ -254,6 +274,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
           {/* ช่องรหัสพนักงานใช้เฉพาะแท็บรายคน (ภาพรวม/นำเข้า เลือกคนจากรายชื่อแทน) */}
           {PER_EMPLOYEE.includes(tab) && (
             <form
+              ref={headerForm}
               onSubmit={submit}
               className="grid gap-3 rounded-xl border border-line bg-card p-3 sm:max-w-md sm:grid-cols-[1fr_auto] sm:items-end xl:w-[22rem] xl:shrink-0"
             >
@@ -304,6 +325,36 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
           )}
         </header>
 
+        {PER_EMPLOYEE.includes(tab) && formOut && (
+          <div className="sticky top-0 z-20 hidden h-0 lg:block print:hidden">
+            <form
+              onSubmit={submit}
+              className="fade-up absolute right-0 top-4 flex w-[22rem] items-center gap-2 rounded-xl border border-line bg-card/95 p-2 shadow-md backdrop-blur"
+            >
+              <label className="flex min-w-0 flex-1 items-center gap-2 pl-1.5 text-muted-fg">
+                <Icon name="user" className="size-4 shrink-0" />
+                <span className="sr-only">รหัสพนักงาน</span>
+                <input
+                  className={inputClass.replace('h-11', 'h-9')}
+                  type="number"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  min="1"
+                  required
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                />
+              </label>
+              <button
+                disabled={!!pending[tab]}
+                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-wait disabled:opacity-60"
+              >
+                {pending[tab] ? <MascotLoader /> : 'โหลด'}
+              </button>
+            </form>
+          </div>
+        )}
+
         <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`} className="fade-up">
           <Overview rate={rate} onPick={pick} onCsv={() => speak('ดาวน์โหลดรายชื่อให้แล้ว', 'เปิดใน Excel ได้เลย')} />
         </div>
@@ -339,6 +390,21 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
           ))}
         </Suspense>
       </main>
+
+      {farDown && (
+        <button
+          type="button"
+          onClick={() => scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}
+          aria-label="กลับขึ้นด้านบน"
+          title="กลับขึ้นด้านบน"
+          // What-if มีแถบคะแนนติดขอบล่างบนมือถือ ยกปุ่มขึ้นไปเหนือแถบ
+          className={`fade-up fixed right-4 z-20 grid size-11 cursor-pointer place-items-center rounded-full border border-line bg-card/95 text-fg shadow-md backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:hidden print:hidden ${
+            tab === 'whatif' ? 'bottom-24' : 'bottom-5'
+          }`}
+        >
+          <Icon name="up" className="size-5" />
+        </button>
+      )}
     </div>
   )
 }
