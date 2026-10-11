@@ -12,6 +12,9 @@ export const THB_PER_USD = 35 // ค่าสำรอง: ค่าจริง
 export const INCOME_RANGE_USD = [1009, 19999] // ช่วง MonthlyIncome ใน data/raw (นอกช่วงนี้โมเดลไม่เคยเห็น)
 export const INCOME_MIN_BAHT = 15000 // ขั้นต่ำของช่อง/แถบเงินเดือน (ต่ำกว่าช่วง dataset ได้ แต่จะมีคำเตือน)
 export const baht = (v) => `${Math.round(v).toLocaleString()} บาท`
+// เงินก้อนใหญ่แบบย่อ อ่านง่ายในการ์ด: 457,969,584 -> "~458 ล้านบาท" (~ = ปัดแล้ว ประมาณ) ต่ำกว่าล้านแสดงเต็ม
+export const bahtShort = (v) =>
+  Math.abs(v) < 1e6 ? baht(v) : `~${(v / 1e6).toLocaleString('en-US', { maximumFractionDigits: Math.abs(v) >= 1e8 ? 0 : 1 })} ล้านบาท`
 const INCOME_STEP = 500 // แถบเลื่อนเงินเดือนขยับทีละ 500 บาท
 
 // ขอบเขตช่อง/แถบเงินเดือนเป็นบาท: ขั้นต่ำคงที่ ขั้นสูงคิดจาก 20,000 ดอลลาร์ × อัตรา (ปัดเป็นขั้นแถบ)
@@ -53,6 +56,25 @@ export function loadMascot() {
     return MASCOTS.includes(v) ? v : MASCOTS[0]
   } catch {
     return MASCOTS[0]
+  }
+}
+
+// พนักงานที่เพิ่งดู (ปุ่มลัดใต้ช่องรหัส) ใหม่สุดอยู่หน้า ไม่ซ้ำ เก็บแค่ RECENT_MAX คน แยกตามบริษัท
+const RECENT_MAX = 5
+export const pushRecent = (list, item) => [item, ...list.filter((r) => r.id !== item.id)].slice(0, RECENT_MAX)
+export function loadRecent(tenant) {
+  try {
+    const v = JSON.parse(localStorage.getItem(`recent:${tenant}`))
+    return Array.isArray(v) ? v : []
+  } catch {
+    return []
+  }
+}
+export function saveRecent(tenant, list) {
+  try {
+    localStorage.setItem(`recent:${tenant}`, JSON.stringify(list))
+  } catch {
+    // private mode / storage ปิด: ใช้ได้แค่จนปิดหน้า
   }
 }
 

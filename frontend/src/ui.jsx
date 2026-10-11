@@ -137,7 +137,8 @@ export function CountUp({ value, format = Math.round }) {
 }
 
 // คะแนนใหญ่ + แถบไล่สีเขียว เหลือง แดง พร้อมหมุดตำแหน่งคะแนนและเส้นเกณฑ์
-export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = 'lg' }) {
+// avg (0–1, ไม่บังคับ) = ค่าเฉลี่ยบริษัท วาดเป็นขีดบนแถบ + บอกว่าคนนี้สูง/ต่ำกว่าค่าเฉลี่ยกี่คะแนน
+export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = 'lg', avg }) {
   const b = BAND[band]
   const pct = Math.min(100, Math.max(0, score * 100))
   return (
@@ -161,6 +162,9 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
         aria-valuenow={Math.round(pct)}
         aria-label={title}
       >
+        {avg != null && (
+          <div className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fg/45" style={{ left: `${avg * 100}%` }} aria-hidden="true" />
+        )}
         <div
           className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-card bg-fg ring-1 ring-line transition-[left] duration-300"
           style={{ left: `${pct}%` }}
@@ -172,6 +176,20 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
         <span className="absolute -translate-x-1/2" style={{ left: `${HIGH * 100}%` }}>{HIGH * 100}</span>
         <span className="absolute right-0">100</span>
       </div>
+      {avg != null && <AvgNote pct={pct} avg={Math.round(avg * 100)} />}
+    </div>
+  )
+}
+
+function AvgNote({ pct, avg }) {
+  const diff = Math.round(pct) - avg
+  return (
+    <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-fg">
+      <span className="h-3 w-0.5 shrink-0 rounded-full bg-fg/45" aria-hidden="true" />
+      ค่าเฉลี่ยบริษัท {avg}
+      <span className="text-fg">
+        · {diff === 0 ? 'เท่าค่าเฉลี่ย' : `${diff > 0 ? 'สูงกว่า' : 'ต่ำกว่า'}ค่าเฉลี่ย ${Math.abs(diff)} คะแนน`}
+      </span>
     </div>
   )
 }

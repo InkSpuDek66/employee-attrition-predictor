@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { featureLabel, featurePhrase, featureValue } from './featureLabels'
 import Logo from '../logo/Logo'
-import { api, baht, bandOf, friendly, loadSession } from './theme'
+import { api, baht, bandOf, friendly, loadSession, useApi } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
@@ -98,7 +99,9 @@ function ShapBars({ rows, maxAbs }) {
 
 // พิมพ์/บันทึก PDF ด้วยหน้าต่างพิมพ์ของเบราว์เซอร์ ไม่ต้องลง library
 // โหมดมืดสลับเป็นสว่างชั่วคราวตอนพิมพ์ (กระดาษพื้นขาว) window.print() รอจนปิดหน้าต่างพิมพ์ แล้วค่อยคืนค่า
-function printReport() {
+// setPrintedAt: ใส่วันที่ลงหัวรายงานก่อนเปิดหน้าต่างพิมพ์ (flushSync = render ให้เสร็จก่อน print)
+function printReport(setPrintedAt) {
+  flushSync(() => setPrintedAt(new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })))
   const html = document.documentElement
   const dark = html.classList.contains('dark')
   html.classList.remove('dark')
@@ -107,7 +110,7 @@ function printReport() {
 }
 
 // หัวรายงาน แสดงเฉพาะตอนพิมพ์ (บนจอมีหัวหน้าเว็บอยู่แล้ว)
-function PrintHeader({ id }) {
+function PrintHeader({ id, printedAt }) {
   const user = loadSession()?.user
   return (
     <div className="hidden items-center gap-3 border-b border-line pb-4 print:flex">
@@ -115,7 +118,7 @@ function PrintHeader({ id }) {
       <div className="flex-1">
         <div className="text-lg font-semibold text-fg">รายงานความเสี่ยงการลาออก · พนักงาน #{id}</div>
         <div className="text-sm text-muted-fg">
-          {user?.tenant_name ?? user?.tenant_id} · พิมพ์เมื่อ {new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })}
+          {user?.tenant_name ?? user?.tenant_id} · พิมพ์เมื่อ {printedAt}
           {user?.name && ` · โดย ${user.name}`}
         </div>
       </div>
@@ -125,6 +128,9 @@ function PrintHeader({ id }) {
 
 export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick }) {
   const [topN, setTopN] = useState(10)
+  const [printedAt, setPrintedAt] = useState('')
+  // ค่าเฉลี่ยทั้งบริษัท (คะแนนชุดเดียวกับคนนี้: ปรับเทียบแล้วถ้าบริษัทปรับเทียบ) โหลดไม่ได้ = ไม่แสดงขีด
+  const company = useApi(['/company-summary?top_n=1']).data?.[0]
   // ผลล่าสุดผูกกับ key ของคำขอ ถ้า key ไม่ตรงกับที่ขออยู่ = กำลังโหลด (ข้อมูลเก่ายังโชว์แบบจางๆ)
   const [res, setRes] = useState({ key: null })
   const key = query && `${query.n}|${topN}`
@@ -189,11 +195,11 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
 
   return (
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
-      <PrintHeader id={query.id} />
+      <PrintHeader id={query.id} printedAt={printedAt} />
       <div className="flex justify-end print:hidden">
         <button
           type="button"
-          onClick={printReport}
+          onClick={() => printReport(setPrintedAt)}
           className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
           <Icon name="download" className="size-4" />
@@ -202,7 +208,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
       </div>
       <div className="grid gap-4 lg:grid-cols-3 print:grid-cols-3">
         <Card>
-          <RiskGauge title={`ความเสี่ยงที่จะลาออก · พนักงาน #${query.id}`} score={score} />
+          <RiskGauge title={`ความเสี่ยงที่จะลาออก · พนักงาน #${query.id}`} score={score} avg={company?.mean_risk_score} />
           <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-fg">
             <Icon name="info" className="size-4 shrink-0" />
             คะแนนใช้เทียบว่าใครเสี่ยงกว่าใคร ไม่ใช่โอกาสลาออกจริง

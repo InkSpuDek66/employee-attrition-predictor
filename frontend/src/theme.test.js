@@ -1,7 +1,7 @@
 // test ตรรกะเงิน/เกณฑ์ และการเรียก API (ใช้ node:test ในตัว ไม่ต้องลง library) รัน: npm test
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { api, bandOf, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
+import { api, bahtShort, bandOf, pushRecent, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
 
 test('ขอบเขตเงินเดือน: ขั้นต่ำ 15,000 บาท ขั้นสูง 20,000 ดอลลาร์ × อัตรา', () => {
   assert.deepEqual(incomeBounds(35), [15000, 700000])
@@ -20,6 +20,18 @@ test('ส่งเงินเดือนเข้า API เป็นดอล
   assert.deepEqual(toApiChanges({ MonthlyIncome: 50000 / 35, OverTime: 'No' }), { MonthlyIncome: 1429, OverTime: 'No' })
   const other = { OverTime: 'No' }
   assert.equal(toApiChanges(other), other)
+})
+
+test('ย่อเงินก้อนใหญ่เป็นล้านบาท ต่ำกว่าล้านแสดงเต็ม', () => {
+  assert.equal(bahtShort(457969584), '~458 ล้านบาท')
+  assert.equal(bahtShort(2450000), '~2.5 ล้านบาท')
+  assert.equal(bahtShort(45000), '45,000 บาท')
+})
+
+test('พนักงานที่เพิ่งดู: ใหม่สุดอยู่หน้า ไม่ซ้ำ ไม่เกิน 5 คน', () => {
+  const list = [1, 2, 3, 4, 5].map((id) => ({ id }))
+  assert.deepEqual(pushRecent(list, { id: 3, band: 'High' }).map((r) => r.id), [3, 1, 2, 4, 5])
+  assert.deepEqual(pushRecent(list, { id: 9 }).map((r) => r.id), [9, 1, 2, 3, 4])
 })
 
 test('แบ่งระดับความเสี่ยงที่ 40/70 (README 6.1)', () => {

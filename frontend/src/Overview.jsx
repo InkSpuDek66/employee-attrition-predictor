@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { featureLabel, JOB_LEVELS } from './featureLabels'
 import { AssistantHint, SorryState } from './mascot/Mascot'
-import { api, baht, BAND, friendly, useApi } from './theme'
+import { api, baht, BAND, bahtShort, friendly, useApi } from './theme'
 import { Alert, Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
@@ -109,10 +109,14 @@ export function EmptyPicker({ who, title, children, onPick }) {
 }
 
 // num + format = ตัวเลขนับขึ้นตอนเปิด/สลับแผนก
-function Kpi({ label, num, format, sub, tone = 'text-fg', small = false }) {
+// action = ปุ่มเล็กมุมขวาบน (เช่น สลับดูจำนวนเต็ม), title = ข้อความตอนชี้
+function Kpi({ label, num, format, sub, tone = 'text-fg', small = false, action, title }) {
   return (
-    <div className="rounded-xl border border-line bg-card p-5">
-      <div className="text-xs font-medium text-muted-fg">{label}</div>
+    <div className="rounded-xl border border-line bg-card p-5" title={title}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs font-medium text-muted-fg">{label}</div>
+        {action}
+      </div>
       <div className={`mt-1 font-semibold tabular-nums ${small ? 'text-2xl' : 'text-3xl'} ${tone}`}>
         <CountUp value={num} format={format} />
       </div>
@@ -132,14 +136,14 @@ const C = 2 * Math.PI * R
 const GAP = 1.5 // ช่องว่างสีพื้นระหว่างช่วง (หน่วยเดียวกับ viewBox)
 
 function BandDonut({ bands, total }) {
-  let start = 0
+  const lens = BANDS.map(([k]) => (bands[k] / total) * C)
+  const starts = lens.map((_, i) => lens.slice(0, i).reduce((a, b) => a + b, 0)) // แต่ละช่วงเริ่มต่อจากช่วงก่อนหน้า
   return (
     <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
       <svg viewBox="0 0 100 100" className="size-40 shrink-0 -rotate-90" role="img" aria-label={`พนักงาน ${total} คน: ${BANDS.map(([k]) => `เสี่ยง${BAND[k].th} ${bands[k]} คน`).join(', ')}`}>
         <circle cx="50" cy="50" r={R} fill="none" className="stroke-muted" strokeWidth="12" />
-        {BANDS.map(([k, stroke]) => {
-          const len = (bands[k] / total) * C
-          const arc = (
+        {BANDS.map(([k, stroke], i) =>
+          bands[k] > 0 && (
             <circle
               key={k}
               cx="50"
@@ -148,15 +152,13 @@ function BandDonut({ bands, total }) {
               fill="none"
               strokeWidth="12"
               className={`donut-arc ${stroke}`}
-              strokeDasharray={`${Math.max(len - GAP, 0)} ${C}`}
-              strokeDashoffset={-start}
+              strokeDasharray={`${Math.max(lens[i] - GAP, 0)} ${C}`}
+              strokeDashoffset={-starts[i]}
             >
               <title>{`เสี่ยง${BAND[k].th} ${bands[k].toLocaleString()} คน`}</title>
             </circle>
-          )
-          start += len
-          return bands[k] > 0 && arc
-        })}
+          ),
+        )}
         <g className="rotate-90 [transform-origin:50px_50px]">
           <text x="50" y="49" textAnchor="middle" className="fill-fg text-[15px] font-semibold tabular-nums">
             {total.toLocaleString()}
@@ -166,17 +168,23 @@ function BandDonut({ bands, total }) {
           </text>
         </g>
       </svg>
-      <ul className="grid w-full grid-cols-3 gap-3">
+      <ul className="grid w-full grid-cols-3 gap-2 sm:gap-3">
         {BANDS.map(([k, , fill]) => (
           <li key={k} className="rounded-lg bg-canvas px-3 py-2.5">
-            <div className="flex items-center gap-1.5 text-xs text-muted-fg">
-              <span className={`size-2.5 rounded-sm ${fill}`} />
-              เสี่ยง{BAND[k].th}
+            <div className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-fg">
+              <span className={`size-2.5 shrink-0 rounded-sm ${fill}`} />
+              {/* จอแคบ (มือถือ) ตัดคำว่า "เสี่ยง" / "ของพนักงาน" ออก กล่องแคบจนข้อความตกบรรทัด */}
+              <span>
+                <span className="hidden sm:inline">เสี่ยง</span>
+                {BAND[k].th}
+              </span>
             </div>
             <div className={`mt-1 text-2xl font-semibold tabular-nums ${BAND[k].text}`}>
               <CountUp value={bands[k]} format={(v) => Math.round(v).toLocaleString()} />
             </div>
-            <div className="text-xs tabular-nums text-muted-fg">{Math.round((bands[k] / total) * 100)}% ของพนักงาน</div>
+            <div className="text-xs tabular-nums text-muted-fg">
+              {Math.round((bands[k] / total) * 100)}%<span className="hidden sm:inline"> ของพนักงาน</span>
+            </div>
           </li>
         ))}
       </ul>
@@ -186,6 +194,8 @@ function BandDonut({ bands, total }) {
 
 export default function Overview({ rate, onPick, onCsv }) {
   const [department, setDepartment] = useState('')
+  const [fullBaht, setFullBaht] = useState(false) // false = ย่อเป็นล้านบาท, true = จำนวนเต็มทุกหลัก
+  const money = fullBaht ? baht : bahtShort
   const q = new URLSearchParams({ top_n: 5, ...(department && { department }) })
   const { loading, data, error } = useApi([`/company-summary?${q}`, '/company-summary/departments'])
 
@@ -222,7 +232,24 @@ export default function Overview({ rate, onPick, onCsv }) {
         <Kpi label="พนักงานทั้งหมด" num={s.n_employees} format={(v) => Math.round(v).toLocaleString()} sub={department || 'ทุกแผนก'} />
         <Kpi label="คะแนนความเสี่ยงเฉลี่ย" num={s.mean_risk_score * 100} format={Math.round} sub="จาก 100" />
         <Kpi label="เสี่ยงสูง" num={s.risk_bands.High} format={(v) => `${Math.round(v).toLocaleString()} คน`} sub={`${highPct}% ของพนักงาน`} tone="text-risk-high" />
-        <Kpi small label="มูลค่าความเสี่ยงรวม" num={s.expected_loss_total * rate} format={baht} sub="คะแนน × ต้นทุนหาคนแทน (ใช้เทียบ ไม่ใช่ยอดจริง)" />
+        <Kpi
+          small={fullBaht}
+          label="มูลค่าความเสี่ยงรวม"
+          num={s.expected_loss_total * rate}
+          format={money}
+          title={fullBaht ? undefined : baht(s.expected_loss_total * rate)}
+          sub="คะแนน × ต้นทุนหาคนแทน (ใช้เทียบ ไม่ใช่ยอดจริง)"
+          action={
+            <button
+              type="button"
+              onClick={() => setFullBaht((v) => !v)}
+              aria-pressed={fullBaht}
+              className="-mr-1 -mt-1 shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 text-[11px] font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
+            </button>
+          }
+        />
       </div>
 
       <Card icon="chart" title="สัดส่วนระดับความเสี่ยง">
@@ -300,7 +327,9 @@ export default function Overview({ rate, onPick, onCsv }) {
                   <td className="px-2 py-2.5 text-right tabular-nums">{d.n_employees.toLocaleString()}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums text-risk-high">{d.risk_bands.High}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{Math.round(d.mean_risk_score * 100)}</td>
-                  <td className="px-5 py-2.5 text-right tabular-nums sm:px-6">{baht(d.expected_loss_total * rate)}</td>
+                  <td className="whitespace-nowrap px-5 py-2.5 text-right tabular-nums sm:px-6" title={baht(d.expected_loss_total * rate)}>
+                    {money(d.expected_loss_total * rate)}
+                  </td>
                 </tr>
               ))}
             </tbody>

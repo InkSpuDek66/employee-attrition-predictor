@@ -3,7 +3,7 @@ import Logo from '../logo/Logo'
 import Login from './Login'
 import Mascot from './mascot/Mascot'
 import Overview from './Overview'
-import { inputClass, loadMascot, loadSession, saveMascot, saveSession, THB_PER_USD } from './theme'
+import { inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
@@ -93,7 +93,22 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
   const [risk, setRisk] = useState({}) // ความเสี่ยงล่าสุดแยกตามแท็บ
   const [who, setWho] = useState(loadMascot) // ผู้ช่วยที่เลือก ใช้ทั้ง sidebar และหน้าว่าง
   // handler คงที่ต่อแท็บ ใส่ใน deps ของ effect ได้โดยไม่ทำให้โหลดซ้ำ
-  const onRisk = useMemo(() => Object.fromEntries(PER_EMPLOYEE.map((t) => [t, (r) => setRisk((m) => ({ ...m, [t]: r }))])), [])
+  // โหลดสำเร็จ (มี band) = จำไว้ในรายการที่เพิ่งดู รหัสที่พิมพ์ผิด/โหลดไม่ได้ไม่ถูกจำ
+  const [recent, setRecent] = useState(() => loadRecent(tenant))
+  useEffect(() => saveRecent(tenant, recent), [tenant, recent])
+  const onRisk = useMemo(
+    () =>
+      Object.fromEntries(
+        PER_EMPLOYEE.map((t) => [
+          t,
+          (r) => {
+            setRisk((m) => ({ ...m, [t]: r }))
+            if (r.band) setRecent((l) => pushRecent(l, { id: r.id }))
+          },
+        ]),
+      ),
+    [],
+  )
   const onDone = useMemo(() => Object.fromEntries(PER_EMPLOYEE.map((t) => [t, () => setPending((p) => ({ ...p, [t]: false }))])), [])
   const current = TABS.find((t) => t.id === tab)
 
@@ -258,6 +273,33 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
               <PrimaryButton loading={!!pending[tab]}>
                 โหลด <Icon name="right" className="size-4" />
               </PrimaryButton>
+              {recent.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs sm:col-span-2">
+                  <span className="mr-0.5 flex items-center gap-1 text-muted-fg">
+                    <Icon name="clock" className="size-3.5" />
+                    ดูล่าสุด
+                  </span>
+                  {recent.map((r) => {
+                    const current = query?.id === Number(r.id)
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => pick(r.id)}
+                        disabled={current}
+                        aria-current={current ? 'true' : undefined}
+                        className={`h-6 rounded-md border px-2 font-medium tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                          current
+                            ? 'cursor-default border-transparent bg-primary-soft text-on-primary dark:text-fg'
+                            : 'cursor-pointer border-line bg-card text-fg hover:border-accent/40 hover:text-accent'
+                        }`}
+                      >
+                        #{r.id}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </form>
           )}
         </header>
