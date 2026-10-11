@@ -1,7 +1,7 @@
 // test ตรรกะเงิน/เกณฑ์ และการเรียก API (ใช้ node:test ในตัว ไม่ต้องลง library) รัน: npm test
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { api, bahtShort, bandOf, employeeLabel, pushRecent, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
+import { api, bahtShort, bandOf, csvCell, employeeLabel, pushRecent, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
 
 test('ขอบเขตเงินเดือน: ขั้นต่ำ 15,000 บาท ขั้นสูง 20,000 ดอลลาร์ × อัตรา', () => {
   assert.deepEqual(incomeBounds(35), [15000, 700000])
@@ -33,6 +33,13 @@ test('พนักงานที่เพิ่งดู: ใหม่สุด
   assert.deepEqual(pushRecent(list, { id: 3, band: 'High' }).map((r) => r.id), [3, 1, 2, 4, 5])
   assert.deepEqual(pushRecent(list, { id: 9 }).map((r) => r.id), [9, 1, 2, 3, 4])
   assert.equal(pushRecent([{ id: 3, name: 'สมชาย' }], { id: 3 })[0].name, 'สมชาย') // ไม่มีชื่อมา ไม่ลบชื่อเดิม
+})
+
+test('CSV: กันสูตร Excel ในช่องข้อความ ตัวเลขไม่ถูกแตะ', () => {
+  assert.equal(csvCell('=HYPERLINK("x")'), `"'=HYPERLINK(""x"")"`)
+  assert.equal(csvCell('+66 1'), `"'+66 1"`)
+  assert.equal(csvCell('สมชาย'), '"สมชาย"')
+  assert.equal(csvCell(-5), '"-5"')
 })
 
 test('ชื่อพนักงาน: มีชื่อแสดงคู่รหัส ไม่มีแสดงแค่รหัส', () => {

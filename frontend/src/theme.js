@@ -64,19 +64,26 @@ const RECENT_MAX = 5
 // item ที่ไม่มีชื่อ (เช่น What-if แจ้งมา) ไม่ลบชื่อที่จำไว้จากหน้า SHAP
 export const pushRecent = (list, item) =>
   [{ ...list.find((r) => r.id === item.id), ...item }, ...list.filter((r) => r.id !== item.id)].slice(0, RECENT_MAX)
+// ช่องใน CSV: ครอบด้วย " และกันสูตร Excel (ค่าที่ขึ้นต้นด้วย = + - @ tab CR ถูกรันเป็นสูตรเมื่อเปิดไฟล์)
+// ใส่ ' นำหน้าให้ Excel อ่านเป็นข้อความ ตัวเลขจริง (คะแนน รหัส) ไม่ใช่ string จึงไม่ถูกแตะ
+export const csvCell = (v) => {
+  const s = typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? `'${v}` : String(v)
+  return `"${s.replaceAll('"', '""')}"`
+}
 // ชื่อที่แสดงของพนักงาน: มีชื่อ (บริษัทกรอกตอนนำเข้า) = "ชื่อ · #id" ไม่มี = "พนักงาน #id"
 export const employeeLabel = (id, name) => (name ? `${name} · #${id}` : `พนักงาน #${id}`)
 export function loadRecent(tenant) {
   try {
     const v = JSON.parse(localStorage.getItem(`recent:${tenant}`))
-    return Array.isArray(v) ? v : []
+    return Array.isArray(v) ? v.map(({ id }) => ({ id })) : [] // ข้อมูลเก่าที่เคยมีชื่อ ไม่อ่านชื่อกลับมา
   } catch {
     return []
   }
 }
+// เก็บลงเครื่องแค่รหัส ชื่อ (ข้อมูลส่วนบุคคล) อยู่ในหน่วยความจำของหน้าเท่านั้น logout/ปิดหน้าแล้วหาย
 export function saveRecent(tenant, list) {
   try {
-    localStorage.setItem(`recent:${tenant}`, JSON.stringify(list))
+    localStorage.setItem(`recent:${tenant}`, JSON.stringify(list.map(({ id }) => ({ id }))))
   } catch {
     // private mode / storage ปิด: ใช้ได้แค่จนปิดหน้า
   }
