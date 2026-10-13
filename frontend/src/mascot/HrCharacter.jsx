@@ -166,6 +166,27 @@ function Face({ mood, girl }) {
   )
 }
 
+// มือชี้แบบ ☝: นิ้วชี้ตั้งขึ้นจากมุมซ้ายบน ข้อนิ้วที่กำอยู่เรียงเป็นแถวนอนตามขอบบนกำปั้น นิ้วโป้งพับขวางด้านล่าง
+// (ข้อนิ้วเรียงแนวตั้งด้านข้าง = ท่ากดไลค์, นิ้วเดียวกลางกำปั้นกลม = นิ้วกลาง จึงวาดแบบนี้)
+function PointingHand() {
+  return (
+    <g>
+      <path d="M118.5 71 L118.5 51" stroke={LINE} strokeWidth="7.2" strokeLinecap="round" />
+      <path d="M118.5 71.5 L118.5 51" stroke={SKIN} strokeWidth="4.4" strokeLinecap="round" />
+      {/* กำปั้น: ขอบบนเป็นข้อนิ้ว 3 ข้อเรียงกัน */}
+      <path
+        d="M115 73 Q115 68.5 118.5 68.5 L121.5 68.5 Q123.5 65.5 125.5 68.5 Q127.5 65.5 129.5 68.5 Q131.8 66 132 70.5 L131.5 78.5 Q131 83.5 125.5 83.5 L120.5 83.5 Q115 83.5 115 78 Z"
+        fill={SKIN}
+        {...o}
+        strokeWidth="1.8"
+      />
+      <path d="M125.5 68.5 v2.6 M129.5 68.5 v2.6" stroke={LINE} strokeWidth="1.2" strokeLinecap="round" />
+      {/* นิ้วโป้งพับขวางหน้ากำปั้น */}
+      <path d="M115.6 78.5 Q120.5 75.5 127 77.5" fill="none" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
+    </g>
+  )
+}
+
 function Pose({ mood, suit }) {
   if (mood === 'Sorry') {
     // มือประสานไว้หน้าตัว + เหงื่อหยด (หัวก้มด้วย mascot-bow)
@@ -278,11 +299,8 @@ function Pose({ mood, suit }) {
         <g className="mascot-point">
           {/* แขนกางออกนอกหัว (สูทสีเข้มไม่กลืนกับผม) นิ้วชี้ตั้งขึ้น */}
           <Arm suit={suit} d="M88 120 Q114 110 122 80" />
-          <Hand cx={123} cy={76} r={6.2} />
-          {/* นิ้วชี้วาดทับมือ ให้ต่อกันเป็นชิ้นเดียว */}
-          <path d="M123 74 L123 56" stroke={LINE} strokeWidth="6.5" strokeLinecap="round" />
-          <path d="M123 74.5 L123 56" stroke={SKIN} strokeWidth="3.6" strokeLinecap="round" />
-          <path d="M115 52 l-4 -4 M131 52 l4 -4 M123 47 v-5" stroke={LINE} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+          <PointingHand />
+          <path d="M109 52 l-4 -4 M125 51 l4 -4 M116.5 47 v-5" stroke={LINE} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
         </g>
       </>
     )
