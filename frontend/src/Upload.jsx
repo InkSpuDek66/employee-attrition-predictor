@@ -246,7 +246,7 @@ function ChangesToCheck({ result }) {
   return (
     <div className="mt-4">
       <Alert tone="warning">
-        <b>{total.toLocaleString()} รหัสข้อมูลเปลี่ยนแปลก</b> อาจเป็นคนใหม่ที่ได้รหัสซ้ำ หรือพิมพ์รหัสผิด ถ้าเป็นคนละคนให้ใช้รหัสใหม่
+        <b>{total.toLocaleString()} รหัสที่ควรตรวจก่อนบันทึก</b> อาจเป็นคนใหม่ที่ได้รหัสซ้ำ พิมพ์รหัสผิด หรือคนเดียวกันที่กรอกซ้ำด้วยรหัสใหม่
         <ul className="mt-2 space-y-1">
           {list.slice(0, peek.count).map((c, i) => (
             <li key={c.employee_id} className={peek.fade(i)}>
@@ -273,7 +273,7 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
   const [rosterMissing, setRosterMissing] = useState(false)
   const rosterBox = useRef(null)
   const rosterField = (roster) => (roster == null ? {} : { full_roster: roster })
-  const confirmBox = useRef(null) // หน้าต่างถามยืนยันเมื่อมีรหัสที่ข้อมูลเปลี่ยนแปลก (<dialog>)
+  const confirmBox = useRef(null) // หน้าต่างถามยืนยันเมื่อมีรหัสที่ควรตรวจ (ข้อมูลเปลี่ยนแปลก / อาจกรอกคนเดิมซ้ำ) (<dialog>)
   const nChanges = (result?.changes_to_check?.length ?? 0) + (result?.changes_truncated ?? 0)
 
   function askSave() {
@@ -482,10 +482,10 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
             </span>
             <div>
               <h2 id="confirm-title" className="font-semibold">
-                มี {nChanges.toLocaleString()} รหัสที่ข้อมูลเปลี่ยนแปลก
+                มี {nChanges.toLocaleString()} รหัสที่ควรตรวจก่อนบันทึก
               </h2>
               <p className="mt-1 text-sm text-muted-fg">
-                ระบบจะเขียนทับข้อมูลเดิมของรหัสเหล่านี้ ถ้าเป็นคนใหม่ที่ได้รหัสซ้ำ ข้อมูลของคนเดิมจะหาย ตรวจรายการในหน้านี้แล้ว ต้องการบันทึกใช่หรือไม่
+                รหัสเดิมที่ข้อมูลเปลี่ยนแปลกจะถูกเขียนทับ (ถ้าเป็นคนใหม่ที่ได้รหัสซ้ำ ข้อมูลของคนเดิมจะหาย) และคนที่อาจกรอกซ้ำจะถูกนับเป็นสองคน ตรวจรายการในหน้านี้แล้ว ต้องการบันทึกใช่หรือไม่
               </p>
             </div>
           </div>

@@ -150,3 +150,12 @@ def test_real_department_and_title_with_model_groups():
     assert len(errors) == 1 and errors[0]["column"] == "กลุ่มแผนก (ให้โมเดล)" and "ฝ่ายการเงิน" in errors[0]["message"]
     old = df.drop(columns=["แผนก", "ตำแหน่งงาน"]).rename(columns={"กลุ่มแผนก (ให้โมเดล)": "Department", "กลุ่มตำแหน่ง (ให้โมเดล)": "JobRole"})
     assert _upload(old).json()["n_valid"] == 3  # ไฟล์ที่ใช้หัวคอลัมน์แบบ IBM ยังใช้ได้
+
+
+def test_same_person_twice_with_different_ids_is_flagged():
+    df = _template()
+    twin = df.iloc[[0]].assign(**{"รหัสพนักงาน": 999})  # คัดลอกแถวแรก เปลี่ยนแค่รหัส
+    flagged = _upload(pd.concat([df, twin], ignore_index=True)).json()["changes_to_check"]
+    assert [c["employee_id"] for c in flagged] == [999] and "แถว 2 ในไฟล์นี้" in flagged[0]["reasons"][0]
+    twin.loc[0, "อายุ"] = int(twin.loc[0, "อายุ"]) + 1  # ชื่อซ้ำแต่ข้อมูลอื่นต่าง = น่าจะคนละคน
+    assert _upload(pd.concat([df, twin], ignore_index=True)).json()["changes_to_check"] == []

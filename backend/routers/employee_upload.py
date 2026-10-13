@@ -265,7 +265,9 @@ def _check(file: UploadFile, label: bool = False):
     errors: list[RowError] = []
     seen_ids: dict = {}
     preview, valid, n_valid, n_imputed = [], [], 0, 0
-    invalid_rows: list = []  # (เลขแถว, ค่าที่กรอก, {หัวคอลัมน์: ปัญหา}) สร้าง InvalidRow หลังรู้คอลัมน์ที่ผิดทั้งหมด
+    invalid_rows: list = []
+    seen_people: dict = {}  # person_key -> (เลขแถว, รหัส) แถวแรกที่เจอ
+    duplicates: list[ChangeToCheck] = []  # (เลขแถว, ค่าที่กรอก, {หัวคอลัมน์: ปัญหา}) สร้าง InvalidRow หลังรู้คอลัมน์ที่ผิดทั้งหมด
     for i, raw in enumerate(df.to_dict("records")):
         excel_row = i + 2
         row = {mapped[h]: _clean(v) for h, v in raw.items() if h in mapped}
@@ -342,6 +344,13 @@ def _check(file: UploadFile, label: bool = False):
                     # มีคอลัมน์นั้นเท่านั้นถึงบันทึก: ไฟล์ที่ไม่มีคอลัมน์ชื่อ/แผนกจริง อัปเดตแล้วค่าเดิมใน DB ไม่หาย
                     | ({f: shown_as[f] for f, _, _ in DISPLAY if f in mapped.values()} if not label else {})
                 )
+                key = None if label else person_key(valid[-1])
+                if key in seen_people:
+                    first_row, first_id = seen_people[key]
+                    duplicates.append(ChangeToCheck(employee_id=emp_id, name=shown_as[NAME[0]], reasons=[
+                        f"อาจเป็นคนเดียวกับ #{first_id} แถว {first_row} ในไฟล์นี้ ({SAME_PERSON})"]))
+                elif key:
+                    seen_people[key] = (excel_row, emp_id)
             if len(preview) < 5:
                 preview.append(
                     {THAI["EmployeeNumber"]: str(emp_id)}
@@ -367,6 +376,8 @@ def _check(file: UploadFile, label: bool = False):
         errors_truncated=max(0, len(errors) - MAX_ERRORS),
         preview=preview,
         invalid_preview=invalid_preview,
+        changes_to_check=duplicates[:MAX_ERRORS],
+        changes_truncated=max(0, len(duplicates) - MAX_ERRORS),
         survey_imputed=n_imputed,
         warnings=[SURVEY_WARNING.format(n=n_imputed)] if n_imputed else [],
     )
@@ -382,6 +393,36 @@ LEAVING_WARN = (
 # ช่องที่คนเดิมมีแต่เพิ่มขึ้น (ลดลง = น่าจะคนละคน) ส่วนอยู่ตำแหน่งปัจจุบัน / ตั้งแต่เลื่อนตำแหน่ง / อยู่กับหัวหน้า
 # กลับเป็น 0 ได้ตามปกติเมื่อเปลี่ยนตำแหน่ง ได้เลื่อน หรือเปลี่ยนหัวหน้า จึงไม่ตรวจ
 NEVER_DECREASE = ("Age", "TotalWorkingYears", "YearsAtCompany")
+
+
+# คนเดียวกันที่กรอกซ้ำด้วยรหัสต่างกัน: ชื่อ + ข้อมูลที่คนเดิมจะไม่ต่างกัน เหมือนกันหมด (ไม่มีชื่อ = เทียบไม่ได้)
+# ชื่อซ้ำแต่ข้อมูลอื่นต่าง = น่าจะคนละคนที่ชื่อเหมือนกัน ไม่เตือน
+SAME_PERSON = "ชื่อ อายุ เพศ แผนก ตำแหน่ง และอายุงานในบริษัทเหมือนกันทุกอย่าง"
+
+
+def person_key(r: dict):
+    """r = แถวแบบ IBM (ชื่อ/แผนกจริง/ตำแหน่งจริงถ้ามี ไม่งั้นกลุ่มของโมเดล) คืน None ถ้าไม่มีชื่อ"""
+    name = r.get(NAME[0])
+    if not name:
+        return None
+    dept = r.get(DEPT_NAME[0]) or r["Department"]
+    job = r.get(JOB_TITLE[0]) or r["JobRole"]
+    return (" ".join(name.split()), r["Age"], r.get("Gender"), dept, job, r["YearsAtCompany"])
+
+
+def _same_in_system(valid: list, people: list[dict]) -> dict[int, list[str]]:
+    """{รหัสในไฟล์: เหตุผล} เมื่อตรงกับพนักงานปัจจุบันที่รหัสอื่น (รหัสนั้นไม่อยู่ในไฟล์ ถ้าอยู่ = ตรวจซ้ำในไฟล์แล้ว)"""
+    in_file = {r["EmployeeNumber"] for r in valid}
+    stored: dict = {}
+    for p in people:
+        if p["EmployeeNumber"] not in in_file:
+            stored.setdefault(person_key(p), []).append(p["EmployeeNumber"])
+    out: dict[int, list[str]] = {}
+    for r in valid:
+        for other in stored.get(person_key(r), []):
+            if other != r["EmployeeNumber"]:
+                out.setdefault(r["EmployeeNumber"], []).append(f"อาจเป็นคนเดียวกับ #{other} ที่มีอยู่ในระบบแล้ว ({SAME_PERSON})")
+    return out
 
 
 def _changes_to_check(valid: list, stored: dict) -> list[ChangeToCheck]:
@@ -415,8 +456,21 @@ def _with_plan(result: ValidateResponse, valid: list, tenant: str, full_roster: 
     except Exception as e:  # noqa: BLE001  เช่น DB เก่ายังไม่มีคอลัมน์ใหม่ (QA-06): ข้ามการนับ ตอนบันทึกจะได้ข้อความให้อัปเดต schema
         log.warning("employees: นับก่อนบันทึกไม่ได้ (%s)", type(e).__name__)  # ชนิดเท่านั้น ข้อความอาจมีข้อมูลพนักงาน
         return result
+    try:
+        people = db.people_named(tenant, [r[NAME[0]] for r in valid if r.get(NAME[0])])
+    except Exception as e:  # noqa: BLE001
+        log.warning("employees: หาคนที่อาจกรอกซ้ำไม่ได้ (%s)", type(e).__name__)
+        people = []
     plan = {"n_new": len(ids - active - left), "n_update": len(ids & (active | left))}
-    changes = _changes_to_check(valid, stored)
+    # รวมทุกเรื่องที่ควรตรวจของแต่ละรหัส: ซ้ำกันในไฟล์ (จาก _check) + ข้อมูลเปลี่ยนแปลก + ตรงกับคนในระบบที่รหัสอื่น
+    merged = {c.employee_id: c for c in result.changes_to_check}
+    for c in _changes_to_check(valid, stored):
+        merged[c.employee_id] = c.model_copy(update={"reasons": merged[c.employee_id].reasons + c.reasons}) if c.employee_id in merged else c
+    names = {r["EmployeeNumber"]: r.get(NAME[0]) for r in valid}
+    for emp_id, reasons in _same_in_system(valid, people).items():
+        old = merged.get(emp_id) or ChangeToCheck(employee_id=emp_id, name=names[emp_id], reasons=[])
+        merged[emp_id] = old.model_copy(update={"reasons": old.reasons + reasons})
+    changes = list(merged.values())
     plan |= {"changes_to_check": changes[:MAX_ERRORS], "changes_truncated": max(0, len(changes) - MAX_ERRORS)}
     warnings = list(result.warnings)
     if full_roster:

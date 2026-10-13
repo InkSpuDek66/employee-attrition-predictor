@@ -48,6 +48,21 @@ def real_db(monkeypatch):
     ms.clear_cache()
 
 
+@pytest.fixture
+def newco(real_db, monkeypatch):
+    """เรียก API ในนามบริษัทใหม่ (newco_demo) ล้างพนักงานของบริษัทนี้ทั้งก่อนและหลัง test
+    (ข้อมูลที่ค้างจาก test/การลองมือก่อนหน้าเคยทำให้รหัส 1–3 "มีอยู่แล้ว" แล้วได้ 409 แบบสุ่ม)"""
+    def wipe():
+        with db.connect() as conn:
+            conn.execute("DELETE FROM employees WHERE tenant_id = 'newco_demo'")
+
+    monkeypatch.setitem(conftest.TEST_USER, "tenant_id", "newco_demo")
+    assert conftest.TEST_USER["tenant_id"] == "newco_demo"  # ห้ามรันในนามบริษัทเดโม (จะเขียนทับพนักงาน IBM)
+    wipe()
+    yield
+    wipe()
+
+
 def test_calibration_saved_in_db_latest_wins(real_db):
     try:
         calibration.save(db.DEMO_TENANT, "platt", {"coef": 1.0, "intercept": 0.0}, 60, 0.2, {})
@@ -103,7 +118,7 @@ def test_import_name_is_shown_but_never_reaches_the_model(real_db):
             conn.execute("DELETE FROM employees WHERE tenant_id = %s AND employee_id = %s", (db.DEMO_TENANT, NEW_ID))
 
 
-def test_new_company_sees_only_its_own_employees_with_real_departments(real_db, monkeypatch):
+def test_new_company_sees_only_its_own_employees_with_real_departments(newco):
     """บริษัทใหม่นำเข้าพนักงานของตัวเอง: ไม่เห็น IBM และภาพรวมแยกแผนกตามชื่อจริงของบริษัท ไม่ใช่กลุ่มของโมเดล"""
     template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 3}).content), sheet_name="พนักงาน")
     template["รหัสพนักงาน"] = [1, 2, 3]  # รหัสเดียวกับ IBM ได้ เพราะคนละบริษัท
@@ -113,28 +128,22 @@ def test_new_company_sees_only_its_own_employees_with_real_departments(real_db, 
     template["กลุ่มตำแหน่ง (ให้โมเดล)"] = ["Sales Executive", "Sales Executive", "Research Scientist"]
     buf = io.BytesIO()
     template.to_excel(buf, index=False)
-    monkeypatch.setitem(conftest.TEST_USER, "tenant_id", "newco_demo")
     ibm_first = ms.employee_record(1, db.DEMO_TENANT)
-    try:
-        r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
-        assert r.status_code == 200, r.text
-        assert client.get("/company-summary").json()["n_employees"] == 3
-        assert {d["department"] for d in client.get("/company-summary/departments").json()["departments"]} == {"ฝ่ายการเงิน", "ฝ่ายไอที"}
-        assert client.get("/company-summary", params={"department": "ฝ่ายการเงิน"}).json()["n_employees"] == 2
-        top = client.get("/company-summary/top-employees").json()["employees"]
-        assert {e["department"] for e in top} == {"ฝ่ายการเงิน", "ฝ่ายไอที"} and {e["job_role"] for e in top} == {"นักบัญชี"}
-        shap = client.get("/shap/3").json()
-        assert shap["department"] == "ฝ่ายไอที" and shap["job_role"] == "นักบัญชี"
-        assert ms.employee_record(1, db.DEMO_TENANT) == ibm_first  # พนักงาน #1 ของ IBM ไม่ถูกเขียนทับ
-    finally:
-        with db.connect() as conn:
-            conn.execute("DELETE FROM employees WHERE tenant_id = 'newco_demo'")
+    r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
+    assert r.status_code == 200, r.text
+    assert client.get("/company-summary").json()["n_employees"] == 3
+    assert {d["department"] for d in client.get("/company-summary/departments").json()["departments"]} == {"ฝ่ายการเงิน", "ฝ่ายไอที"}
+    assert client.get("/company-summary", params={"department": "ฝ่ายการเงิน"}).json()["n_employees"] == 2
+    top = client.get("/company-summary/top-employees").json()["employees"]
+    assert {e["department"] for e in top} == {"ฝ่ายการเงิน", "ฝ่ายไอที"} and {e["job_role"] for e in top} == {"นักบัญชี"}
+    shap = client.get("/shap/3").json()
+    assert shap["department"] == "ฝ่ายไอที" and shap["job_role"] == "นักบัญชี"
+    assert ms.employee_record(1, db.DEMO_TENANT) == ibm_first  # พนักงาน #1 ของ IBM ไม่ถูกเขียนทับ
 
 
-def test_full_roster_import_marks_missing_as_left_and_they_can_come_back(real_db, monkeypatch):
+def test_full_roster_import_marks_missing_as_left_and_they_can_come_back(newco):
     """ไม่ออกรหัสให้เอง (รหัส = รหัสพนักงานของบริษัท) และ "ถือว่าลาออกแล้ว" = คนที่ไม่อยู่ในไฟล์ถูกบันทึกว่าออก ไม่ลบ"""
     template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 4}).content), sheet_name="พนักงาน")
-    monkeypatch.setitem(conftest.TEST_USER, "tenant_id", "newco_demo")
 
     def send(path, ids, full_roster):
         df = template.head(len(ids)).assign(**{"รหัสพนักงาน": ids})
@@ -144,29 +153,24 @@ def test_full_roster_import_marks_missing_as_left_and_they_can_come_back(real_db
         data = {"full_roster": str(full_roster).lower(), "confirm_changes": "true"}
         return client.post(path, files={"file": ("e.xlsx", buf.getvalue(), XLSX)}, data=data)
 
-    try:
-        assert send("/employees/import", [1, 2, 3], False).status_code == 200
-        plan = send("/employees/validate", [2, 3, 4], True).json()  # บอกก่อนบันทึก
-        assert (plan["n_new"], plan["n_update"], plan["n_leaving"]) == (1, 2, 1)
-        assert send("/employees/validate", [2, 3, 4], False).json()["n_leaving"] is None
-        r = send("/employees/import", [2, 3, 4], True).json()
-        assert "บันทึกว่าออกแล้ว 1 คน" in r["note"] and r["n_leaving"] == 1
-        assert client.get("/company-summary").json()["n_employees"] == 3 and client.get("/shap/1").status_code == 404
-        with db.connect() as conn:  # ไม่ลบ เก็บไว้พร้อมวันที่ออก
-            assert conn.execute("SELECT left_at IS NOT NULL FROM employees WHERE tenant_id = 'newco_demo' AND employee_id = 1").fetchone() == (True,)
-        warned = send("/employees/validate", [4], True).json()  # เกินครึ่งจะถูกบันทึกว่าออก = น่าจะเลือกไฟล์ผิด
-        assert warned["n_leaving"] == 2 and any("จะถูกบันทึกว่าออกแล้ว" in w for w in warned["warnings"])
-        assert send("/employees/import", [1], False).status_code == 200  # กลับมา (นำเข้าแบบเพิ่ม/อัปเดต)
-        assert client.get("/company-summary").json()["n_employees"] == 4 and client.get("/shap/1").status_code == 200
-    finally:
-        with db.connect() as conn:
-            conn.execute("DELETE FROM employees WHERE tenant_id = 'newco_demo'")
+    assert send("/employees/import", [1, 2, 3], False).status_code == 200
+    plan = send("/employees/validate", [2, 3, 4], True).json()  # บอกก่อนบันทึก
+    assert (plan["n_new"], plan["n_update"], plan["n_leaving"]) == (1, 2, 1)
+    assert send("/employees/validate", [2, 3, 4], False).json()["n_leaving"] is None
+    r = send("/employees/import", [2, 3, 4], True).json()
+    assert "บันทึกว่าออกแล้ว 1 คน" in r["note"] and r["n_leaving"] == 1
+    assert client.get("/company-summary").json()["n_employees"] == 3 and client.get("/shap/1").status_code == 404
+    with db.connect() as conn:  # ไม่ลบ เก็บไว้พร้อมวันที่ออก
+        assert conn.execute("SELECT left_at IS NOT NULL FROM employees WHERE tenant_id = 'newco_demo' AND employee_id = 1").fetchone() == (True,)
+    warned = send("/employees/validate", [4], True).json()  # เกินครึ่งจะถูกบันทึกว่าออก = น่าจะเลือกไฟล์ผิด
+    assert warned["n_leaving"] == 2 and any("จะถูกบันทึกว่าออกแล้ว" in w for w in warned["warnings"])
+    assert send("/employees/import", [1], False).status_code == 200  # กลับมา (นำเข้าแบบเพิ่ม/อัปเดต)
+    assert client.get("/company-summary").json()["n_employees"] == 4 and client.get("/shap/1").status_code == 200
 
 
-def test_same_id_with_odd_changes_needs_confirmation(real_db, monkeypatch):
+def test_same_id_with_odd_changes_needs_confirmation(newco):
     """รหัสเดิมแต่ชื่อเปลี่ยน / อายุหรืออายุงานลดลง / เคยออกแล้ว = เตือนก่อนบันทึก และบันทึกได้เมื่อยืนยันเท่านั้น"""
     template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
-    monkeypatch.setitem(conftest.TEST_USER, "tenant_id", "newco_demo")
 
     def send(path, **change):
         confirm = change.pop("_confirm", None)
@@ -176,24 +180,36 @@ def test_same_id_with_odd_changes_needs_confirmation(real_db, monkeypatch):
         return client.post(path, files={"file": ("e.xlsx", buf.getvalue(), XLSX)}, data={"confirm_changes": confirm or "false"})
 
     age = int(template.loc[0, "อายุ"])
-    try:
-        assert send("/employees/import", **{"ชื่อ-นามสกุล": "สมชาย ใจดี"}).status_code == 200
-        same = send("/employees/validate", **{"ชื่อ-นามสกุล": "สมชาย ใจดี", "อายุ": age + 1})  # คนเดิม อายุเพิ่ม = ปกติ
-        assert same.json()["changes_to_check"] == []
-        odd = send("/employees/validate", **{"ชื่อ-นามสกุล": "สมหญิง รักดี", "อายุ": age - 5}).json()["changes_to_check"]
-        assert len(odd) == 1 and odd[0]["employee_id"] == 7
-        assert any("สมชาย ใจดี" in r for r in odd[0]["reasons"]) and any("อายุ ลดลง" in r for r in odd[0]["reasons"])
-        assert send("/employees/import", **{"ชื่อ-นามสกุล": "สมหญิง รักดี"}).status_code == 409  # ไม่ยืนยัน = ไม่บันทึก
-        assert db.employee_names("newco_demo", [7]) == {7: "สมชาย ใจดี"}
-        assert send("/employees/import", **{"ชื่อ-นามสกุล": "สมหญิง รักดี", "_confirm": "true"}).status_code == 200
-        assert db.employee_names("newco_demo", [7]) == {7: "สมหญิง รักดี"}
-        with db.connect() as conn:
-            conn.execute("UPDATE employees SET left_at = current_date WHERE tenant_id = 'newco_demo' AND employee_id = 7")
-        back = send("/employees/validate", **{"ชื่อ-นามสกุล": "สมหญิง รักดี"}).json()["changes_to_check"]
-        assert back and "เคยบันทึกว่าออกแล้ว" in back[0]["reasons"][0]
-    finally:
-        with db.connect() as conn:
-            conn.execute("DELETE FROM employees WHERE tenant_id = 'newco_demo'")
+    assert send("/employees/import", **{"ชื่อ-นามสกุล": "สมชาย ใจดี"}).status_code == 200
+    same = send("/employees/validate", **{"ชื่อ-นามสกุล": "สมชาย ใจดี", "อายุ": age + 1})  # คนเดิม อายุเพิ่ม = ปกติ
+    assert same.json()["changes_to_check"] == []
+    odd = send("/employees/validate", **{"ชื่อ-นามสกุล": "สมหญิง รักดี", "อายุ": age - 5}).json()["changes_to_check"]
+    assert len(odd) == 1 and odd[0]["employee_id"] == 7
+    assert any("สมชาย ใจดี" in r for r in odd[0]["reasons"]) and any("อายุ ลดลง" in r for r in odd[0]["reasons"])
+    assert send("/employees/import", **{"ชื่อ-นามสกุล": "สมหญิง รักดี"}).status_code == 409  # ไม่ยืนยัน = ไม่บันทึก
+    assert db.employee_names("newco_demo", [7]) == {7: "สมชาย ใจดี"}
+    assert send("/employees/import", **{"ชื่อ-นามสกุล": "สมหญิง รักดี", "_confirm": "true"}).status_code == 200
+    assert db.employee_names("newco_demo", [7]) == {7: "สมหญิง รักดี"}
+    with db.connect() as conn:
+        conn.execute("UPDATE employees SET left_at = current_date WHERE tenant_id = 'newco_demo' AND employee_id = 7")
+    back = send("/employees/validate", **{"ชื่อ-นามสกุล": "สมหญิง รักดี"}).json()["changes_to_check"]
+    assert back and "เคยบันทึกว่าออกแล้ว" in back[0]["reasons"][0]
+
+
+def test_same_person_as_an_existing_employee_with_new_id_needs_confirmation(newco):
+    template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
+
+    def send(path, emp_id, confirm="false"):
+        buf = io.BytesIO()
+        template.assign(**{"รหัสพนักงาน": emp_id, "ชื่อ-นามสกุล": "ซ้ำ ทดสอบ"}).to_excel(buf, index=False)
+        return client.post(path, files={"file": ("e.xlsx", buf.getvalue(), XLSX)}, data={"confirm_changes": confirm})
+
+    assert send("/employees/import", 21).status_code == 200
+    flagged = send("/employees/validate", 22).json()["changes_to_check"]  # คนเดิมทุกอย่าง แต่รหัสใหม่
+    assert flagged and flagged[0]["employee_id"] == 22 and "#21 ที่มีอยู่ในระบบแล้ว" in flagged[0]["reasons"][0]
+    assert send("/employees/import", 22).status_code == 409
+    assert send("/employees/import", 22, confirm="true").status_code == 200
+    assert send("/employees/validate", 21).json()["changes_to_check"] != []  # #21 ก็ตรงกับ #22 แล้ว
 
 
 def test_import_needs_db(monkeypatch):

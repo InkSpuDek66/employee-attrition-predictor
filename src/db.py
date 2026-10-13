@@ -143,6 +143,21 @@ def stored_for_check(tenant_id: str, ids) -> dict[int, dict]:
     return {r[0]: dict(zip(keys, r[1:])) for r in rows}
 
 
+def people_named(tenant_id: str, names) -> list[dict]:
+    """พนักงานปัจจุบันที่ชื่อตรงกับในไฟล์ (ไว้หาคนเดียวกันที่กรอกซ้ำด้วยรหัสใหม่) แผนก/ตำแหน่ง = ชื่อจริงถ้ามี ไม่งั้นกลุ่มของโมเดล"""
+    names = sorted(set(names))
+    if not names:
+        return []
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT employee_id, full_name, age, gender, coalesce(department_name, department), coalesce(job_title, job_role), "
+            "years_at_company FROM employees WHERE tenant_id = %s AND left_at IS NULL AND full_name = ANY(%s)",
+            (tenant_id, names),
+        ).fetchall()
+    keys = ("EmployeeNumber", FULL_NAME, "Age", "Gender", "Department", "JobRole", "YearsAtCompany")
+    return [dict(zip(keys, r)) for r in rows]
+
+
 def data_as_of(tenant_id: str):
     """เวลาที่ข้อมูลพนักงานปัจจุบันของบริษัทถูกบันทึก/อัปเดตล่าสุด (นำเข้าครั้งล่าสุด) ไม่มีพนักงาน/ไม่ต่อ DB = None
     ponytail: ใช้ครั้งล่าสุดของทั้งบริษัท นำเข้าบางแผนกแล้วแผนกอื่นที่เก่ากว่าจะดูใหม่ไปด้วย แยกรายแผนกถ้าต้องการ"""
