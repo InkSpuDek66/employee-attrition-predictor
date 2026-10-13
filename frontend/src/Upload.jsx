@@ -143,12 +143,14 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  // ไฟล์นี้คือพนักงานทั้งหมดตอนนี้: คนที่ไม่อยู่ในไฟล์ = บันทึกว่าออกแล้ว (ไม่ลบ) ตรวจไฟล์ใหม่ทุกครั้งที่เปลี่ยน ให้ตัวเลขตรง
+  const [fullRoster, setFullRoster] = useState(false)
 
   async function save() {
     setSaving(true)
     setError('')
     try {
-      setResult(await postFile('/employees/import', file))
+      setResult(await postFile('/employees/import', file, { full_roster: fullRoster }))
       onSaved()
     } catch (err) {
       setError(friendly(err))
@@ -157,14 +159,14 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
     }
   }
 
-  async function check(f) {
+  async function check(f, roster = fullRoster) {
     if (!f) return
     setFile(f)
     setBusy(true)
     setError('')
     setResult(null)
     try {
-      setResult(await postFile('/employees/validate', f))
+      setResult(await postFile('/employees/validate', f, { full_roster: roster }))
     } catch (err) {
       setError(friendly(err))
     } finally {
@@ -201,7 +203,23 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
         </Card>
 
         <Card icon="upload" title="2. อัปโหลดไฟล์เพื่อตรวจ" subtitle=".xlsx หรือ .csv ไม่เกิน 5 MB / 10,000 แถว">
-          <DropZone busy={busy} file={file} onFile={check} name="employees_file" />
+          <DropZone busy={busy} file={file} onFile={(f) => check(f)} name="employees_file" />
+          {canSave && (
+            <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-sm">
+              <input
+                type="checkbox"
+                checked={fullRoster}
+                onChange={(e) => (setFullRoster(e.target.checked), file && check(file, e.target.checked))}
+                className="mt-0.5 size-4 shrink-0 cursor-pointer"
+              />
+              <span>
+                <span className="font-medium text-fg">ไฟล์นี้คือพนักงานทั้งหมดตอนนี้</span>
+                <span className="block text-xs text-muted-fg">
+                  คนที่ไม่อยู่ในไฟล์จะถูกบันทึกว่าออกแล้ว (ไม่ลบ ไม่นับในภาพรวม) ไม่ติ๊ก = เพิ่ม/อัปเดตเฉพาะคนในไฟล์ คนอื่นอยู่เหมือนเดิม
+                </span>
+              </span>
+            </label>
+          )}
         </Card>
       </div>
 
@@ -220,6 +238,19 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
           subtitle={`${result.filename} · ${result.note}`}
         >
           <CheckDetails result={result} />
+          {/* บอกก่อนกดบันทึกว่าจะเกิดอะไร (ต้องต่อ database) */}
+          {!result.saved && ok && result.n_new != null && (
+            <p className="mt-4 rounded-lg bg-canvas px-4 py-3 text-sm text-fg" aria-live="polite">
+              ถ้าบันทึก: เพิ่มใหม่ <b className="tabular-nums">{result.n_new.toLocaleString()}</b> คน · อัปเดต{' '}
+              <b className="tabular-nums">{result.n_update.toLocaleString()}</b> คน
+              {result.n_leaving != null && (
+                <>
+                  {' '}
+                  · บันทึกว่าออกแล้ว <b className={`tabular-nums ${result.n_leaving ? 'text-risk-high' : ''}`}>{result.n_leaving.toLocaleString()}</b> คน
+                </>
+              )}
+            </p>
+          )}
 
           <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
             {result.saved ? (

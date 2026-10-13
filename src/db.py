@@ -51,9 +51,10 @@ def db_column(ibm_column: str) -> str:
 
 
 def read_employees(tenant_id: str = DEMO_TENANT) -> pd.DataFrame:
-    """พนักงานของบริษัทเดียว ชื่อคอลัมน์แบบ IBM (เหมือน CSV) เรียงตามรหัสพนักงาน"""
+    """พนักงานปัจจุบันของบริษัทเดียว (ไม่รวมคนที่บันทึกว่าออกแล้ว) ชื่อคอลัมน์แบบ IBM (เหมือน CSV) เรียงตามรหัสพนักงาน"""
     with connect() as conn, conn.cursor() as cur:
-        cur.execute("SELECT * FROM employees WHERE tenant_id = %s ORDER BY employee_id", (tenant_id,))
+        # left_at ไม่ว่าง = บันทึกว่าออกแล้ว ไม่ใช่พนักงานปัจจุบัน
+        cur.execute("SELECT * FROM employees WHERE tenant_id = %s AND left_at IS NULL ORDER BY employee_id", (tenant_id,))
         df = pd.DataFrame(cur.fetchall(), columns=[d.name for d in cur.description])
     ibm = {db_column(c): c for c in [*load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME)).columns, *EXTRA_COLUMNS]}
     # บริษัทที่ยังไม่มีพนักงาน (เช่น บริษัทใหม่ก่อนนำเข้า) = ตารางว่างที่มีคอลัมน์ครบ ไม่ใช่ error
@@ -96,13 +97,13 @@ def employee_names(tenant_id: str, ids) -> dict[int, str]:
 
 
 def upsert_employees(conn, df: pd.DataFrame, tenant_id: str, source: str) -> int:
-    """บันทึกพนักงาน (ชื่อคอลัมน์แบบ IBM) ถ้ารหัสซ้ำในบริษัทเดียวกัน = อัปเดตเป็นค่าใหม่"""
+    """บันทึกพนักงาน (ชื่อคอลัมน์แบบ IBM) ถ้ารหัสซ้ำในบริษัทเดียวกัน = อัปเดตเป็นค่าใหม่ (คนที่เคยบันทึกว่าออกแล้ว = กลับมา)"""
     df = df.drop(columns=[c for c in SKIP_COLUMNS if c in df.columns])
     cols = ["tenant_id", "source"] + [db_column(c) for c in df.columns]
     update = ", ".join(f"{c} = EXCLUDED.{c}" for c in cols[2:] if c != "employee_id")
     sql = (
         f"INSERT INTO employees ({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))}) "
-        f"ON CONFLICT (tenant_id, employee_id) DO UPDATE SET {update}, source = EXCLUDED.source, updated_at = now()"
+        f"ON CONFLICT (tenant_id, employee_id) DO UPDATE SET {update}, source = EXCLUDED.source, left_at = NULL, updated_at = now()"
     )
     rows = [(tenant_id, source, *r) for r in df.astype(object).where(df.notna(), None).itertuples(index=False)]
     import psycopg
@@ -115,6 +116,23 @@ def upsert_employees(conn, df: pd.DataFrame, tenant_id: str, source: str) -> int
     except (psycopg.errors.UndefinedColumn, psycopg.errors.UndefinedTable) as e:
         raise SchemaOutdated(type(e).__name__) from None  # ข้อความของ Postgres อาจมีค่าในแถว ไม่ส่งต่อ
     return len(rows)
+
+
+def mark_left(conn, tenant_id: str, keep_ids) -> int:
+    """พนักงานปัจจุบันที่ไม่อยู่ใน keep_ids = บันทึกว่าออกแล้ววันนี้ (ไม่ลบแถว) คืนจำนวนคน"""
+    cur = conn.execute(
+        "UPDATE employees SET left_at = current_date, updated_at = now() "
+        "WHERE tenant_id = %s AND left_at IS NULL AND NOT (employee_id = ANY(%s))",
+        (tenant_id, [int(i) for i in keep_ids]),
+    )
+    return cur.rowcount
+
+
+def current_ids(tenant_id: str) -> tuple[set[int], set[int]]:
+    """รหัสพนักงานปัจจุบัน และคนที่บันทึกว่าออกแล้ว ของบริษัท (ไว้บอกก่อนบันทึกว่าจะเพิ่ม/อัปเดต/ออกกี่คน)"""
+    with connect() as conn:
+        rows = conn.execute("SELECT employee_id, left_at IS NULL FROM employees WHERE tenant_id = %s", (tenant_id,)).fetchall()
+    return {i for i, active in rows if active}, {i for i, active in rows if not active}
 
 
 if __name__ == "__main__":

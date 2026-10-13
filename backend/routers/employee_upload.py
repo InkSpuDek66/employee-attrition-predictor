@@ -16,7 +16,7 @@ import zipfile
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
@@ -162,6 +162,10 @@ class ValidateResponse(BaseModel):
     saved: bool = False
     saved_ids: list[int] = []  # รหัสพนักงานที่เพิ่งบันทึก (ไม่เกิน 20 คนแรก) ให้หน้าเว็บกดไปดูได้
     saved_names: dict[int, str] = {}  # ชื่อของคนใน saved_ids (เฉพาะคนที่กรอกชื่อ)
+    # บอกก่อนบันทึก (ต้องต่อ DB): รหัสใหม่ / รหัสที่มีอยู่แล้ว (รวมคนที่เคยออกแล้วกลับมา) / คนที่จะถูกบันทึกว่าออกแล้ว
+    n_new: Optional[int] = None
+    n_update: Optional[int] = None
+    n_leaving: Optional[int] = None  # มีเมื่อเลือก "ไฟล์นี้คือพนักงานทั้งหมดตอนนี้" (full_roster)
     note: str = "ตรวจไฟล์อย่างเดียว ยังไม่ได้บันทึกเข้าระบบ"
 
 
@@ -336,29 +340,62 @@ def _check(file: UploadFile, label: bool = False):
     )
 
 
+# full_roster: เลือกเกินครึ่งของพนักงานปัจจุบันจะถูกบันทึกว่าออก = น่าจะเลือกไฟล์ผิด (เช่น ไฟล์แผนกเดียว) เตือนก่อนบันทึก
+LEAVING_WARN = (
+    "พนักงาน {n:,} จาก {total:,} คนไม่อยู่ในไฟล์นี้ จะถูกบันทึกว่าออกแล้ว"
+    " ถ้าไฟล์นี้มีแค่บางแผนก ให้เอาเครื่องหมาย \"ไฟล์นี้คือพนักงานทั้งหมดตอนนี้\" ออก"
+)
+
+
+def _with_plan(result: ValidateResponse, valid: list, tenant: str, full_roster: bool) -> ValidateResponse:
+    """เติมจำนวนที่จะเพิ่ม/อัปเดต/บันทึกว่าออก ให้เห็นก่อนกดบันทึก (ไม่ต่อ DB = ไม่เติม)"""
+    if not db.url() or not valid:
+        return result
+    active, left = db.current_ids(tenant)
+    ids = {r["EmployeeNumber"] for r in valid}
+    plan = {"n_new": len(ids - active - left), "n_update": len(ids & (active | left))}
+    warnings = list(result.warnings)
+    if full_roster:
+        plan["n_leaving"] = len(active - ids)
+        if active and plan["n_leaving"] > len(active) / 2:
+            warnings.append(LEAVING_WARN.format(n=plan["n_leaving"], total=len(active)))
+    return result.model_copy(update=plan | {"warnings": warnings})
+
+
 @router.post("/employees/validate", response_model=ValidateResponse)
-def validate_upload(file: UploadFile = File(...), _=Depends(auth.LIMITS["validate"].per_user)):
-    return _check(file)[1]
+def validate_upload(
+    file: UploadFile = File(...),
+    full_roster: bool = Form(False),
+    user: dict = Depends(auth.current_user),
+    _=Depends(auth.LIMITS["validate"].per_user),
+):
+    valid, result = _check(file)
+    return _with_plan(result, valid, user["tenant_id"], full_roster)
 
 
 @router.post("/employees/import", response_model=ValidateResponse)
 def import_employees(
     background: BackgroundTasks,
     file: UploadFile = File(...),
+    full_roster: bool = Form(False),  # ไฟล์นี้คือพนักงานทั้งหมดตอนนี้: คนที่ไม่อยู่ในไฟล์ = บันทึกว่าออกแล้ว (ไม่ลบ)
     user: dict = Depends(auth.require_admin),
     _=Depends(auth.LIMITS["import"].per_user),
 ):
-    """บันทึกทั้งไฟล์ (ทุกแถวต้องถูกต้อง) รหัสพนักงานที่มีอยู่แล้ว = อัปเดตเป็นข้อมูลใหม่"""
+    """บันทึกทั้งไฟล์ (ทุกแถวต้องถูกต้อง) รหัสพนักงานที่มีอยู่แล้ว = อัปเดตเป็นข้อมูลใหม่ ระบบไม่ออกรหัสให้เอง
+    (รหัส = รหัสพนักงานของบริษัท นำเข้าไฟล์เดือนใหม่แล้วคนเดิมไม่ซ้ำเป็นสองคน)"""
     if not db.url():
         raise HTTPException(503, "ระบบยังไม่ได้ต่อฐานข้อมูล บันทึกไม่ได้ (ผู้ดูแลต้องตั้ง DATABASE_URL)")
     valid, result = _check(file)
     if result.missing_columns or result.n_invalid or not valid:
         raise HTTPException(422, "ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด กด \"ตรวจไฟล์\" แล้วแก้ให้ครบก่อนบันทึก")
     rows = to_model_units(pd.DataFrame(valid))
+    n_leaving = None
     try:
-        with db.connect() as conn:
+        with db.connect() as conn:  # transaction เดียว: บันทึกไม่ผ่าน = ไม่มีใครถูกบันทึกว่าออก
             existing = {r[0] for r in conn.execute("SELECT employee_id FROM employees WHERE tenant_id = %s", (user["tenant_id"],))}
             db.upsert_employees(conn, rows, user["tenant_id"], "upload")
+            if full_roster:
+                n_leaving = db.mark_left(conn, user["tenant_id"], rows["EmployeeNumber"])
     except db.IntegrityError as e:  # ด่านสุดท้าย: schemas.py ตรวจช่วงเดียวกับ CHECK แล้ว (test_schemas.py) ทั้งไฟล์ไม่ถูกบันทึก
         log.warning("employees/import: ฐานข้อมูลไม่รับ constraint=%s", e)  # ชื่อ constraint เท่านั้น ไม่มีข้อมูลพนักงาน
         raise HTTPException(422, "มีค่าบางแถวเกินช่วงที่ฐานข้อมูลรับ (เช่น อายุ 15–80 ปี) ยังไม่ได้บันทึกอะไร ตรวจไฟล์แล้วลองใหม่")
@@ -373,7 +410,11 @@ def import_employees(
     return result.model_copy(
         update={
             "saved": True,
-            "note": f"บันทึกแล้ว: เพิ่มใหม่ {len(rows) - n_updated:,} คน อัปเดต {n_updated:,} คน",
+            "note": f"บันทึกแล้ว: เพิ่มใหม่ {len(rows) - n_updated:,} คน อัปเดต {n_updated:,} คน"
+            + (f" บันทึกว่าออกแล้ว {n_leaving:,} คน" if n_leaving is not None else ""),
+            "n_new": len(rows) - n_updated,
+            "n_update": n_updated,
+            "n_leaving": n_leaving,
             "saved_ids": [int(i) for i in first["EmployeeNumber"]],
             "saved_names": {int(i): n for i, n in names.items() if isinstance(n, str)},
         }

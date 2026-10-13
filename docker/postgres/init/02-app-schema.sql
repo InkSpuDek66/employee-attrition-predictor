@@ -68,6 +68,8 @@ CREATE TABLE IF NOT EXISTS employees (
     job_title                   text CHECK (char_length(job_title) <= 100),
     -- ผลจริง: ใช้กับ /recalibrate และการวัดผล (Measure) ว่างได้สำหรับคนที่ยังทำงานอยู่
     attrition                   text CHECK (attrition IN ('Yes', 'No')),
+    -- วันที่บันทึกว่าออกแล้ว (นำเข้าแบบ "ไฟล์นี้คือพนักงานทั้งหมดตอนนี้" แล้วไม่มีชื่อในไฟล์) ไม่ลบแถว เก็บประวัติไว้
+    -- ไม่ว่าง = ไม่นับในภาพรวม/SHAP/What-if, นำเข้าใหม่ที่มีรหัสนี้ = กลับมาเป็นพนักงานปัจจุบัน
     left_at                     date,
     source                      text NOT NULL DEFAULT 'upload' CHECK (source IN ('ibm_dataset', 'upload')),
     updated_at                  timestamptz NOT NULL DEFAULT now(),

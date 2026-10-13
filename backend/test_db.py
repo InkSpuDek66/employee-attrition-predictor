@@ -131,6 +131,36 @@ def test_new_company_sees_only_its_own_employees_with_real_departments(real_db, 
             conn.execute("DELETE FROM employees WHERE tenant_id = 'newco_demo'")
 
 
+def test_full_roster_import_marks_missing_as_left_and_they_can_come_back(real_db, monkeypatch):
+    """ไม่ออกรหัสให้เอง (รหัส = รหัสพนักงานของบริษัท) และ "ไฟล์นี้คือพนักงานทั้งหมดตอนนี้" = คนที่ไม่อยู่ในไฟล์ถูกบันทึกว่าออก ไม่ลบ"""
+    template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 4}).content), sheet_name="พนักงาน")
+    monkeypatch.setitem(conftest.TEST_USER, "tenant_id", "newco_demo")
+
+    def send(path, ids, full_roster):
+        df = template.head(len(ids)).assign(**{"รหัสพนักงาน": ids})
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False)
+        return client.post(path, files={"file": ("e.xlsx", buf.getvalue(), XLSX)}, data={"full_roster": str(full_roster).lower()})
+
+    try:
+        assert send("/employees/import", [1, 2, 3], False).status_code == 200
+        plan = send("/employees/validate", [2, 3, 4], True).json()  # บอกก่อนบันทึก
+        assert (plan["n_new"], plan["n_update"], plan["n_leaving"]) == (1, 2, 1)
+        assert send("/employees/validate", [2, 3, 4], False).json()["n_leaving"] is None
+        r = send("/employees/import", [2, 3, 4], True).json()
+        assert "บันทึกว่าออกแล้ว 1 คน" in r["note"] and r["n_leaving"] == 1
+        assert client.get("/company-summary").json()["n_employees"] == 3 and client.get("/shap/1").status_code == 404
+        with db.connect() as conn:  # ไม่ลบ เก็บไว้พร้อมวันที่ออก
+            assert conn.execute("SELECT left_at IS NOT NULL FROM employees WHERE tenant_id = 'newco_demo' AND employee_id = 1").fetchone() == (True,)
+        warned = send("/employees/validate", [4], True).json()  # เกินครึ่งจะถูกบันทึกว่าออก = น่าจะเลือกไฟล์ผิด
+        assert warned["n_leaving"] == 2 and any("จะถูกบันทึกว่าออกแล้ว" in w for w in warned["warnings"])
+        assert send("/employees/import", [1], False).status_code == 200  # กลับมา (นำเข้าแบบเพิ่ม/อัปเดต)
+        assert client.get("/company-summary").json()["n_employees"] == 4 and client.get("/shap/1").status_code == 200
+    finally:
+        with db.connect() as conn:
+            conn.execute("DELETE FROM employees WHERE tenant_id = 'newco_demo'")
+
+
 def test_import_needs_db(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "")
     r = client.post("/employees/import", files={"file": ("e.csv", b"x", "text/csv")})
