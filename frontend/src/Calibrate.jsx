@@ -249,7 +249,7 @@ export default function Calibrate({ who, onChanged }) {
             <DownloadButton path="/recalibrate/template" filename="recalibrate_template.xlsx" onError={setError}>
               ไฟล์ตัวอย่าง (เปล่า)
             </DownloadButton>
-            <DownloadButton path="/recalibrate/template?demo=true" filename="recalibrate_demo_ibm.xlsx" onError={setError}>
+            <DownloadButton path="/recalibrate/template?demo=true" filename="recalibrate_demo.xlsx" onError={setError}>
               ข้อมูลทดลอง 300 คน
             </DownloadButton>
           </div>
@@ -258,7 +258,7 @@ export default function Calibrate({ who, onChanged }) {
               คอลัมน์ “ลาออกแล้วหรือยัง” กรอก <b>ลาออก</b> หรือ <b>ยังอยู่</b>
             </li>
             <li>ใช้พนักงานในช่วงเวลาเดียวกัน เช่น ทุกคนที่อยู่เมื่อต้นปีที่แล้ว แล้วดูว่าใครลาออกภายในปีนั้น</li>
-            <li>“ข้อมูลทดลอง” เป็นพนักงาน IBM พร้อมผลจริง ไว้ลองระบบตอน demo ห้ามใช้ข้อมูลพนักงานจริงจนกว่าจะมีระบบผู้ใช้จริง</li>
+            <li>“ข้อมูลทดลอง” เป็นพนักงานจำลอง (ไม่ใช่คนใน IBM ที่โมเดลเคยเห็นตอนเทรน) ผลลาออกสุ่มขึ้นแบบบริษัทที่ลาออกน้อยกว่าที่โมเดลคิด ไว้ลองระบบตอน demo ห้ามใช้ข้อมูลพนักงานจริงจนกว่าจะมีระบบผู้ใช้จริง</li>
           </ul>
         </Card>
 

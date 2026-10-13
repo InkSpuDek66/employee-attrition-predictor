@@ -4,6 +4,8 @@ import os
 import re
 import sys
 
+import typing
+
 import annotated_types
 import pandas as pd
 import pytest
@@ -59,7 +61,10 @@ def test_model_ranges_not_looser_than_db_checks():
             continue
         compared += 1
         if isinstance(rule, set):
-            assert set(EmployeeInput.model_fields[field].annotation.__args__) <= rule, field
+            ann = EmployeeInput.model_fields[field].annotation
+            # Optional[Literal[...]] (เช่น Gender ไม่บังคับ) = ค่าว่างได้ ตรวจเฉพาะตัวเลือกใน Literal
+            literal = next((a for a in typing.get_args(ann) if typing.get_origin(a) is typing.Literal), ann)
+            assert set(typing.get_args(literal)) <= rule, field
             continue
         (db_lo, db_hi), (lo, hi) = rule, _model_range(field)
         assert lo is not None and lo >= db_lo, f"{field}: schemas ต่ำสุด {lo} แต่ DB รับตั้งแต่ {db_lo}"

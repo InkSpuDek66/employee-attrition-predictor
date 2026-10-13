@@ -87,7 +87,7 @@ pip install -r requirements-dev.txt
 
 backend โหลดโมเดลจาก MLflow Model Registry จึงต้องตั้ง `.env` ก่อน (`cp .env.example .env`)
 
-- DagsHub (ทีมใช้ช่วงพัฒนา): ใส่ `MLFLOW_TRACKING_URI`, ชื่อผู้ใช้ และ token ของตัวเอง ตามขั้นตอนใน [docs/mlflow_setup.md](docs/mlflow_setup.md) โมเดลสุดท้าย `models:/attrition-xgboost-P/1` อยู่บนนั้นแล้ว ไม่ต้องเทรนเอง
+- DagsHub (ทีมใช้ช่วงพัฒนา): ใส่ `MLFLOW_TRACKING_URI`, ชื่อผู้ใช้ และ token ของตัวเอง ตามขั้นตอนใน [docs/mlflow_setup.md](docs/mlflow_setup.md) โมเดลที่ใช้ `models:/attrition-xgboost-P/2` อยู่บนนั้นแล้ว ไม่ต้องเทรนเอง (v2 ไม่ใช้เพศ/สถานภาพสมรสในการทำนาย, v1 = รุ่นแรกที่ยังใช้)
 - Self-host ด้วย docker compose: ตั้ง `POSTGRES_PASSWORD` และ `MLFLOW_TRACKING_URI=http://localhost:5000` แล้วรัน
   ```bash
   docker compose up -d --build --wait

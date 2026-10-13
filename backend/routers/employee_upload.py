@@ -41,7 +41,7 @@ MAX_UNZIPPED = 60 * 1024 * 1024  # .xlsx คือ zip: 10,000 แถวจร�
 COLUMNS = [
     ("EmployeeNumber", "รหัสพนักงาน", "ตัวเลข ไม่ซ้ำกัน"),
     ("Age", "อายุ", "ปี"),
-    ("Gender", "เพศ", "ชาย / หญิง"),
+    ("Gender", "เพศ", "ชาย / หญิง · ไม่บังคับ ระบบไม่นำไปคำนวณ ใช้ตรวจความเป็นธรรมของโมเดลเท่านั้น"),
     ("MaritalStatus", "สถานภาพสมรส", "โสด / สมรส / หย่า"),
     ("Education", "ระดับการศึกษา", "1 ต่ำกว่า ป.ตรี, 2 อนุปริญญา, 3 ป.ตรี, 4 ป.โท, 5 ป.เอก"),
     ("EducationField", "สาขาที่เรียน", "Life Sciences / Medical / Marketing / Technical Degree / Human Resources / Other"),
@@ -92,6 +92,8 @@ SURVEY_WARNING = (
 )
 # ช่องที่เว้นว่าง/ไม่มีคอลัมน์ได้ -> ค่าที่ใส่ให้ (วันเข้าออฟฟิศ: ไม่มีข้อมูล = เข้าทุกวันเหมือน IBM)
 OPTIONAL_DEFAULTS = {**{f: SURVEY_DEFAULT for f in SURVEY_FIELDS}, "OfficeDaysPerWeek": 5}
+# ช่องที่เว้นว่าง/ไม่มีคอลัมน์ได้ และไม่ใส่ค่าแทน (บันทึกเป็นว่าง): เพศ ไม่ใช้คำนวณตั้งแต่โมเดล v2
+NULLABLE = {"Gender"}
 # ระดับตำแหน่งเป็นคำ (ตรงกับ JOB_LEVELS ใน frontend/src/featureLabels.js) ค่าที่ส่งเข้าโมเดลยังเป็น 1–5
 JOB_LEVELS = {1: "จูเนียร์", 2: "พนักงานระดับกลาง", 3: "ซีเนียร์", 4: "ผู้จัดการแผนก", 5: "ผู้จัดการใหญ่"}
 THAI = {f: th for f, th, _ in COLUMNS + [LABEL, NAME]}
@@ -208,7 +210,7 @@ def _check(file: UploadFile, label: bool = False):
     df.columns = headers
     mapped = {h: HEADER_TO_FIELD[h] for h in headers if h in HEADER_TO_FIELD}
     present = set(mapped.values())
-    missing = [THAI[f] for f, _, _ in COLUMNS + ([LABEL] if label else []) if f not in present and f not in OPTIONAL_DEFAULTS]
+    missing = [THAI[f] for f, _, _ in COLUMNS + ([LABEL] if label else []) if f not in present and f not in OPTIONAL_DEFAULTS and f not in NULLABLE]
     unknown = [h for h in headers if h not in HEADER_TO_FIELD and not h.startswith("Unnamed")]
 
     errors: list[RowError] = []
@@ -341,7 +343,11 @@ def _example_rows(n: int = 2, label: bool = False) -> list[dict]:
     """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือน × 35 เป็นบาท ให้ดูเป็นตัวอย่างเท่านั้น)
     label=True (ไฟล์ปรับเทียบ): เอาเฉพาะคนที่รู้ผลจริงแล้ว พนักงานที่นำเข้าเองยังไม่มีผลลาออก ใส่ไปจะทำให้ไฟล์ไม่ผ่าน"""
     raw = ms.raw_employees()
-    raw = (raw[raw["Attrition"].isin(["Yes", "No"])] if label else raw).head(n)
+    return template_rows((raw[raw["Attrition"].isin(["Yes", "No"])] if label else raw).head(n), label)
+
+
+def template_rows(raw: pd.DataFrame, label: bool = False) -> list[dict]:
+    """ข้อมูลแบบ IBM (หน่วยของโมเดล) -> แถวในไฟล์ Excel (หัวคอลัมน์/ค่าภาษาไทย เงินเดือน × 35 เป็นบาท)"""
     back = {
         "Attrition": {"Yes": "ลาออก", "No": "ยังอยู่"},
         "JobLevel": JOB_LEVELS,
@@ -354,7 +360,7 @@ def _example_rows(n: int = 2, label: bool = False) -> list[dict]:
     for rec in raw.to_dict("records"):
         out = {}
         for field, th, _ in COLUMNS + ([LABEL] if label else []):
-            v = rec[field]
+            v = rec.get(field)
             out[th] = round(v * THB_PER_USD / 100) * 100 if field == "MonthlyIncome" else back.get(field, {}).get(v, v)
         rows.append(out)
     return rows
@@ -372,7 +378,7 @@ def _required(field: str) -> str:
         return "ไม่บังคับ (ว่าง = พอใจ/ดี)"
     if field in OPTIONAL_DEFAULTS:
         return "ไม่บังคับ (ว่าง = 5 วัน)"
-    return "ไม่บังคับ" if field == NAME[0] else "ต้อง"
+    return "ไม่บังคับ" if field == NAME[0] or field in NULLABLE else "ต้อง"
 
 
 def template_response(rows: list[dict], columns: list, filename: str) -> StreamingResponse:

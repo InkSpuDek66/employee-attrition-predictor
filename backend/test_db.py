@@ -216,22 +216,12 @@ def test_background_refresh_runs_again_instead_of_overlapping(monkeypatch):
     assert len(calls) == 2
 
 
-def test_demo_calibration_file_skips_employees_without_outcome(real_db):
-    """พนักงานที่นำเข้าเองยังไม่มีผลลาออก ต้องไม่ถูกใส่ในไฟล์ข้อมูลทดลอง (เคยทำให้ไฟล์ทดลองไม่ผ่านเอง)"""
-    template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 1}).content), sheet_name="พนักงาน")
-    # รหัสที่ IBM ไม่มี และน้อยพอจะอยู่ในช่วง 300 คนแรก ข้ามถ้ามีพนักงานรหัสนี้อยู่แล้ว (ไม่ทับข้อมูลของใคร)
-    free = sorted(set(range(1, 300)) - set(ms.raw_employees()["EmployeeNumber"]))
-    if not free:
-        pytest.skip("ไม่มีรหัสว่างในช่วง 300 คนแรก")
-    emp_id = free[-1]
-    template.loc[0, "รหัสพนักงาน"] = emp_id
-    buf = io.BytesIO()
-    template.to_excel(buf, index=False)
-    try:
-        assert client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)}).status_code == 200
-        demo = client.get("/recalibrate/template", params={"demo": True})
-        df = pd.read_excel(io.BytesIO(demo.content), sheet_name="พนักงาน")
-        assert emp_id not in set(df["รหัสพนักงาน"]) and df["ลาออกแล้วหรือยัง"].notna().all() and len(df) == 300
-    finally:
-        with db.connect() as conn:
-            conn.execute("DELETE FROM employees WHERE tenant_id = %s AND employee_id = %s AND source = 'upload'", (db.DEMO_TENANT, emp_id))
+def test_demo_calibration_file_is_synthetic_not_ibm():
+    """ไฟล์ทดลองปรับเทียบเป็นพนักงานจำลอง ไม่ใช่คนใน IBM ที่โมเดลเคยเห็นตอนเทรน และผ่านการตรวจไฟล์ของหน้าปรับเทียบเอง"""
+    demo = client.get("/recalibrate/template", params={"demo": True})
+    df = pd.read_excel(io.BytesIO(demo.content), sheet_name="พนักงาน")
+    assert len(df) == 300 and df["ลาออกแล้วหรือยัง"].isin(["ลาออก", "ยังอยู่"]).all()
+    assert df["รหัสพนักงาน"].min() >= 90001  # รหัส IBM อยู่ที่ 1–2068
+    assert 0.05 < (df["ลาออกแล้วหรือยัง"] == "ลาออก").mean() < 0.3  # อัตราลาออกสมเหตุสมผล
+    again = pd.read_excel(io.BytesIO(client.get("/recalibrate/template", params={"demo": True}).content), sheet_name="พนักงาน")
+    assert again.equals(df)  # ไฟล์เดิมทุกครั้ง (ผ่านการตรวจไฟล์ + ปรับเทียบได้: test_api.test_recalibrate_from_excel_then_history_and_reset)

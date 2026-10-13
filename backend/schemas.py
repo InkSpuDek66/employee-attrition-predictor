@@ -35,7 +35,8 @@ class EmployeeInput(BaseModel):
     Education: int = Field(ge=1, le=5)
     EducationField: Literal["Life Sciences", "Medical", "Marketing", "Technical Degree", "Other", "Human Resources"]
     EnvironmentSatisfaction: Likert4
-    Gender: Literal["Female", "Male"]
+    # ไม่บังคับ: โมเดลตั้งแต่ v2 ไม่ใช้เพศ (src/train.py EXCLUDED) เก็บไว้ตรวจ Fairness เท่านั้น
+    Gender: Optional[Literal["Female", "Male"]] = None
     HourlyRate: int = Field(gt=0)
     JobInvolvement: Likert4
     JobLevel: int = Field(ge=1, le=5)

@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS employees (
     tenant_id                   text NOT NULL REFERENCES tenants ON DELETE CASCADE,
     employee_id                 integer NOT NULL CHECK (employee_id > 0),  -- EmployeeNumber
     age                         smallint NOT NULL CHECK (age BETWEEN 15 AND 80),
-    gender                      text NOT NULL CHECK (gender IN ('Male', 'Female')),
+    gender                      text CHECK (gender IN ('Male', 'Female')),  -- ไม่บังคับ: โมเดล v2 ไม่ใช้ เก็บไว้ตรวจ Fairness
     marital_status              text NOT NULL CHECK (marital_status IN ('Single', 'Married', 'Divorced')),
     education                   smallint NOT NULL CHECK (education BETWEEN 1 AND 5),
     education_field             text NOT NULL,
@@ -71,6 +71,7 @@ CREATE INDEX IF NOT EXISTS employees_department_idx ON employees (tenant_id, dep
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS office_days_per_week smallint NOT NULL DEFAULT 5
     CHECK (office_days_per_week BETWEEN 0 AND 5);
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS full_name text CHECK (char_length(full_name) <= 100);
+ALTER TABLE employees ALTER COLUMN gender DROP NOT NULL;
 
 -- โมเดลที่เคยใช้ให้คะแนน (อ้างอิง MLflow Model Registry) เช่น 'attrition-xgboost-P/1'
 CREATE TABLE IF NOT EXISTS model_runs (

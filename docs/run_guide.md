@@ -78,10 +78,10 @@ copy .env.example .env              # Git Bash / macOS / Linux: cp .env.example 
 MLFLOW_TRACKING_URI=https://dagshub.com/InkSpuDek66/employee-attrition-predictor.mlflow
 MLFLOW_TRACKING_USERNAME=<dagshub-username>
 MLFLOW_TRACKING_PASSWORD=<dagshub-access-token>
-MODEL_URI=models:/attrition-xgboost-P/1
+MODEL_URI=models:/attrition-xgboost-P/2
 ```
 
-- โมเดลที่ทีมเลือกคือ `attrition-xgboost-P` v1 อยู่บน DagsHub แล้ว ไม่ต้องเทรนเอง
+- โมเดลที่ใช้คือ `attrition-xgboost-P` v2 (ไม่ใช้เพศ/สถานภาพสมรสในการทำนาย) อยู่บน DagsHub แล้ว ไม่ต้องเทรนเอง ถ้า `.env` เดิมยังเป็น `/1` ให้แก้เป็น `/2` แล้วปรับเทียบใหม่ (ค่าปรับเทียบผูกกับเวอร์ชันโมเดล)
 - `.env` มีรหัสผ่าน อยู่ใน `.gitignore` แล้ว **ห้าม commit**
 - MLflow บน DagsHub ของทีมเป็นสาธารณะ ห้ามใช้กับข้อมูลพนักงานจริง
 

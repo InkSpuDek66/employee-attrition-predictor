@@ -16,7 +16,7 @@ jobs:
     env:
       POSTGRES_PASSWORD: ci-only-password
       MLFLOW_TRACKING_URI: http://localhost:5000
-      MODEL_URI: models:/attrition-xgboost-P/1
+      MODEL_URI: models:/attrition-xgboost-P/2
       MLFLOW_DISABLE_AGENT_HINT: "1"
     steps:
       - uses: actions/checkout@v7

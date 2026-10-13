@@ -1,7 +1,7 @@
 """ปรับเทียบคะแนนกับข้อมูลลาออกจริงของบริษัท (README 6.5) เฉพาะผู้ดูแลระบบ บริษัทมาจาก token (SEC-02)
 
 POST   /recalibrate            records เป็น JSON (คอลัมน์แบบ IBM) สำหรับเรียกจากระบบอื่น
-GET    /recalibrate/template   ไฟล์ Excel ตัวอย่าง (demo=true = ข้อมูล IBM 300 คนไว้ทดลอง)
+GET    /recalibrate/template   ไฟล์ Excel ตัวอย่าง (demo=true = พนักงานจำลอง 300 คนไว้ทดลอง ไม่ใช่คนใน IBM)
 POST   /recalibrate/upload     ไฟล์ Excel/CSV หัวคอลัมน์ไทย ตรวจด้วยกฎเดียวกับหน้านำเข้า แล้วปรับเทียบ
 GET    /recalibrate/history    ประวัติการปรับเทียบของบริษัท (ล่าสุดก่อน)
 DELETE /recalibrate            ยกเลิกการปรับเทียบ กลับไปใช้คะแนนของโมเดลกลาง
@@ -28,6 +28,11 @@ log = logging.getLogger(__name__)
 MIN_ROWS = 50  # ponytail: ค่าขั้นต่ำแบบประมาณ ต่ำกว่านี้ผลปรับเทียบไม่น่าเชื่อถือ ปรับเมื่อทีมตกลง
 MAX_ROWS = 10_000  # SEC-03 (~8 MB ไม่เกินเพดาน body ใน main.py)
 DEMO_ROWS = 300
+DEMO_SEED = 2026  # ไฟล์ทดลองเหมือนเดิมทุกครั้งที่ดาวน์โหลด
+DEMO_FIRST_ID = 90001  # รหัสของพนักงานจำลอง ไม่ชนกับ IBM (1–2068)
+# ผลลาออกของพนักงานจำลอง = สุ่มจากคะแนนโมเดลที่ลดลง (logit - DEMO_SHIFT): สมมติว่า "บริษัทนี้" ลาออกน้อยกว่าที่โมเดลคิด
+# เหมือนบริษัทจริงที่อัตราลาออกต่างจาก IBM หน้าปรับเทียบจึงมีอะไรให้ปรับให้เห็น
+DEMO_SHIFT = 1.0
 EXAMPLE_SCORES = (0.2, 0.4, 0.6, 0.8)  # ให้หน้าเว็บโชว์ว่าคะแนนเดิมเท่านี้ หลังปรับเป็นเท่าไหร่
 
 Method = Literal["platt", "isotonic"]
@@ -128,11 +133,43 @@ def recalibrate(req: RecalibrateRequest, background: BackgroundTasks, user: dict
     return result
 
 
+def demo_employees(n: int = DEMO_ROWS, seed: int = DEMO_SEED) -> pd.DataFrame:
+    """พนักงานจำลอง n คน (ไม่ใช่คนใน IBM ที่โมเดลเคยเห็นตอนเทรน) พร้อมผลลาออกที่สุ่มขึ้น
+    แต่ละคนตั้งต้นจากคนใน IBM แบบสุ่ม แล้วสุ่มปรับอายุ เงินเดือน ระยะทาง ความพึงพอใจ OT ฯลฯ
+    แผนก/ตำแหน่ง/ระดับยังคู่กันแบบสมเหตุสมผล และคุมให้ผ่านกฎของ schemas.EmployeeInput (อายุงาน <= อายุ ฯลฯ)"""
+    rng = np.random.default_rng(seed)
+    ibm = ms.raw_employees()
+    df = ibm.iloc[rng.integers(0, len(ibm), n)].reset_index(drop=True).copy()
+    jitter = lambda col, lo, hi: df[col] + rng.integers(lo, hi + 1, n)  # noqa: E731
+    df["Age"] = jitter("Age", -4, 4).clip(18, 60)
+    df["TotalWorkingYears"] = jitter("TotalWorkingYears", -2, 2).clip(lower=0).clip(upper=df["Age"] - 18)
+    df["YearsAtCompany"] = jitter("YearsAtCompany", -2, 2).clip(lower=0).clip(upper=df["TotalWorkingYears"])
+    for col in ("YearsInCurrentRole", "YearsSinceLastPromotion", "YearsWithCurrManager"):
+        df[col] = df[col].clip(upper=df["YearsAtCompany"])
+    df["NumCompaniesWorked"] = jitter("NumCompaniesWorked", -1, 1).clip(0, 9)
+    df["DistanceFromHome"] = jitter("DistanceFromHome", -3, 3).clip(1, 29)
+    df["MonthlyIncome"] = (df["MonthlyIncome"] * rng.uniform(0.85, 1.15, n)).round().astype(int).clip(lower=1009)
+    df["PercentSalaryHike"] = jitter("PercentSalaryHike", -2, 2).clip(11, 25)
+    for col in eu.SURVEY_FIELDS:  # 30% ของคนได้คำตอบแบบสำรวจใหม่
+        redraw = rng.random(n) < 0.3
+        df.loc[redraw, col] = rng.integers(1, 5, redraw.sum())
+    flip = rng.random(n) < 0.15
+    df.loc[flip, "OverTime"] = df.loc[flip, "OverTime"].map({"Yes": "No", "No": "Yes"})
+    df["Gender"] = rng.choice(["Male", "Female"], n)
+    for col, (lo, hi) in {"DailyRate": (102, 1499), "HourlyRate": (30, 100), "MonthlyRate": (2094, 26999)}.items():
+        df[col] = rng.integers(lo, hi + 1, n)
+    df["EmployeeNumber"] = range(DEMO_FIRST_ID, DEMO_FIRST_ID + n)
+    score = np.clip(ms.risk_scores(ms.to_features(df)), 1e-6, 1 - 1e-6)
+    true_p = 1 / (1 + np.exp(-(np.log(score / (1 - score)) - DEMO_SHIFT)))
+    df["Attrition"] = np.where(rng.random(n) < true_p, "Yes", "No")
+    return df
+
+
 @router.get("/recalibrate/template")
 def recalibrate_template(demo: bool = False, _: dict = Depends(auth.require_admin)):
-    """demo=false: หัวคอลัมน์ + 2 แถวตัวอย่าง, demo=true: พนักงาน IBM 300 คนพร้อมผลจริง ไว้ทดลองปรับเทียบ"""
-    rows = eu._example_rows(DEMO_ROWS if demo else 2, label=True)
-    name = "recalibrate_demo_ibm.xlsx" if demo else "recalibrate_template.xlsx"
+    """demo=false: หัวคอลัมน์ + 2 แถวตัวอย่าง, demo=true: พนักงานจำลอง 300 คนพร้อมผลลาออก ไว้ทดลองปรับเทียบ"""
+    rows = eu.template_rows(demo_employees(), label=True) if demo else eu._example_rows(2, label=True)
+    name = "recalibrate_demo.xlsx" if demo else "recalibrate_template.xlsx"
     return eu.template_response(rows, eu.COLUMNS + [eu.LABEL], name)
 
 

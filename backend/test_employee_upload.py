@@ -120,3 +120,12 @@ def test_name_column_optional_shown_in_preview():
     assert no_name["n_valid"] == 3 and no_name["missing_columns"] == [] and "ชื่อ-นามสกุล" not in no_name["preview"][0]
     df.loc[0, "ชื่อ-นามสกุล"] = "ก" * 101
     assert any(e["column"] == "ชื่อ-นามสกุล" and "100" in e["message"] for e in _upload(df).json()["errors"])
+
+
+def test_gender_optional_not_used_by_model():
+    df = _template()
+    df.loc[0, "เพศ"] = None  # เว้นว่าง 1 คน
+    body = _upload(df).json()
+    assert body["n_valid"] == 3 and body["errors"] == []
+    no_col = _upload(df.drop(columns=["เพศ"])).json()  # ไม่มีทั้งคอลัมน์
+    assert no_col["n_valid"] == 3 and no_col["missing_columns"] == []

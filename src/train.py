@@ -37,6 +37,10 @@ MIN_TEST_AUC = 0.75
 BOOT_N = 10_000
 BOOT_SEED = 42
 RAW_PATH = f"data/raw/{RAW_FILENAME}"  # relative เพราะ source ถูก log ขึ้น MLflow ห้ามมี path ในเครื่อง
+# protected attribute: ไม่ให้โมเดลใช้ (v2 เป็นต้นไป) แต่ยังอยู่ในข้อมูลที่คลีนแล้ว ไว้ตรวจ Fairness (README 6.4)
+# เทียบกับ v1 (มีเพศ+สถานภาพ) ด้วย split/params เดียวกัน: CV AUC 0.827 -> 0.826, Recall@top20% 0.596 เท่าเดิม
+# ข้อมูลที่เหลือเดาเพศได้แค่ AUC 0.53 (ไม่มี proxy) ส่วนอายุยังใช้ เพราะอายุงาน/ระดับตำแหน่งแทนอายุได้อยู่ดี (AUC 0.86)
+EXCLUDED = ["Gender", "MaritalStatus"]
 
 
 def bootstrap_auc_ci(y, p, n=BOOT_N, seed=BOOT_SEED):
@@ -49,7 +53,8 @@ def bootstrap_auc_ci(y, p, n=BOOT_N, seed=BOOT_SEED):
 def train(name: str) -> str:
     raw = load_raw_data(os.path.join(mlflow_setup.ROOT, RAW_PATH))
     df = add_features(clean_data(raw), only=SELECTED_FEATURES)
-    X, y = df.drop(columns=TARGET_COLUMN), df[TARGET_COLUMN]
+    excluded = [c for c in df if c in EXCLUDED or c.startswith(tuple(f"{e}_" for e in EXCLUDED))]  # รวม one-hot
+    X, y = df.drop(columns=[TARGET_COLUMN, *excluded]), df[TARGET_COLUMN]
     Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)  # เหมือน notebook 04
     spw = (ytr == 0).sum() / (ytr == 1).sum()
     model = XGBClassifier(**PARAMS, scale_pos_weight=spw, random_state=42, n_jobs=N_JOBS).fit(Xtr, ytr)
@@ -67,7 +72,7 @@ def train(name: str) -> str:
 
     with mlflow.start_run(run_name=f"train-{name}"):
         # mlflow.source.name ค่าเดิมเป็น path เต็มในเครื่อง (MLflow ติด commit ของ git ให้เองใน mlflow.source.git.commit)
-        mlflow.set_tags({"source": "src/train.py", "mlflow.source.name": "src/train.py", "feature_set": "P_selected",
+        mlflow.set_tags({"source": "src/train.py", "mlflow.source.name": "src/train.py", "feature_set": "P_selected", "excluded_features": ",".join(EXCLUDED),
                          "platform": platform.platform(), "n_jobs": N_JOBS, "cpu_count": os.cpu_count(),
                          # hash จากค่าในตาราง ไม่ใช่ byte ของไฟล์ จึงไม่เปลี่ยนตาม line ending ของแต่ละ OS
                          "data_sha256": hashlib.sha256(pd.util.hash_pandas_object(raw, index=False).values).hexdigest()})

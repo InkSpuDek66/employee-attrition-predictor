@@ -24,8 +24,9 @@ from feature_pipeline import SELECTED_FEATURES, add_features  # noqa: E402
 import mlflow_setup  # noqa: E402  (โหลด .env)
 import db  # noqa: E402
 
-MODEL_URI = os.getenv("MODEL_URI", "models:/attrition-xgboost-P/1")
-MODEL_VERSION = MODEL_URI.removeprefix("models:/")  # ชื่อที่บันทึกใน model_runs เช่น 'attrition-xgboost-P/1'
+# v2 = ไม่ใช้เพศ/สถานภาพสมรส (src/train.py EXCLUDED) ส่วน v1 ใช้ทั้งสองอย่าง ค่าปรับเทียบผูกกับเวอร์ชัน เปลี่ยนแล้วต้องปรับเทียบใหม่
+MODEL_URI = os.getenv("MODEL_URI", "models:/attrition-xgboost-P/2")
+MODEL_VERSION = MODEL_URI.removeprefix("models:/")  # ชื่อที่บันทึกใน model_runs เช่น 'attrition-xgboost-P/2'
 
 
 @lru_cache

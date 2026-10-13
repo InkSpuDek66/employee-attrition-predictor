@@ -18,10 +18,11 @@ def test_shap():
 
 
 def test_shap_marks_factors_that_are_not_reasons():
-    """UX-06/07: อายุ/เพศ/สถานภาพ = personal, อัตราค่าจ้างรายวัน ฯลฯ = unexplained หน้าเว็บจะไม่ยกเป็นสาเหตุ"""
+    """UX-06/07: อายุ = personal, อัตราค่าจ้างรายวัน ฯลฯ = unexplained หน้าเว็บจะไม่ยกเป็นสาเหตุ
+    เพศ/สถานภาพสมรส: โมเดลตั้งแต่ v2 ไม่ใช้เลย (src/train.py EXCLUDED) จึงไม่มีใน SHAP"""
     kinds = {c["feature"]: c for c in client.get("/shap/811", params={"top_n": 100}).json()["contributions"]}
-    assert kinds["Age"]["kind"] == "personal" and kinds["Gender"]["kind"] == "personal"
-    assert all(c["kind"] == "personal" for f, c in kinds.items() if f.startswith("MaritalStatus_"))
+    assert kinds["Age"]["kind"] == "personal"
+    assert not any(f == "Gender" or f.startswith("MaritalStatus") for f in kinds)
     assert kinds["DailyRate"]["kind"] == "unexplained"
     assert kinds["OverTime"]["kind"] == "actionable" and kinds["OverTime"]["recommendation"]
     assert all(c["recommendation"] is None for c in kinds.values() if c["kind"] != "actionable")

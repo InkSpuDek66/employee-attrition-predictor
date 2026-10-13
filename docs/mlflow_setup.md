@@ -39,7 +39,7 @@ DagsHub ยังใช้ได้ช่วงพัฒนา เพราะ d
    python src/train.py            # พิมพ์ registered: models:/attrition-xgboost-P/<version>
    ```
    ```
-   MODEL_URI=models:/attrition-xgboost-P/1
+   MODEL_URI=models:/attrition-xgboost-P/2
    ```
 4. ปิด: `docker compose down` (ข้อมูลยังอยู่ใน volume) ลบข้อมูลทั้งหมด: `docker compose down -v`
 
