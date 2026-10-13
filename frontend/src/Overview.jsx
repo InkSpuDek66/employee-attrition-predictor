@@ -109,6 +109,34 @@ export function EmptyPicker({ who, title, children, onPick }) {
   )
 }
 
+// ข้อมูลพนักงานเก่าแค่ไหน: ระบบไม่เพิ่มอายุ/อายุงานให้เอง (คนที่ได้เลื่อนตำแหน่ง/เปลี่ยนเงินเดือนระบบไม่รู้)
+// จึงบอกวันที่ของข้อมูล และเตือนให้นำเข้าไฟล์ใหม่จากระบบ HR เมื่อเก่าเกิน STALE_DAYS วัน
+const STALE_DAYS = 90
+function ageText(days) {
+  if (days < 1) return 'วันนี้'
+  if (days < 31) return `ผ่านมา ${days} วัน`
+  return `ผ่านมาประมาณ ${Math.round(days / 30)} เดือน`
+}
+
+function DataAsOf({ asOf, days }) {
+  if (!asOf) return null
+  const when = new Date(asOf).toLocaleDateString('th-TH', { dateStyle: 'long' })
+  if (days > STALE_DAYS) {
+    return (
+      <Alert tone="warning">
+        ข้อมูลพนักงานบันทึกล่าสุดเมื่อ {when} ({ageText(days)}) อายุงาน เงินเดือน และตำแหน่งอาจไม่ตรงกับปัจจุบันแล้ว
+        นำเข้าไฟล์ล่าสุดจากระบบ HR ในแท็บ “นำเข้าข้อมูล” เพื่อให้คะแนนตรงขึ้น
+      </Alert>
+    )
+  }
+  return (
+    <p className="flex items-center gap-1.5 text-xs text-muted-fg">
+      <Icon name="clock" className="size-3.5" />
+      ข้อมูลพนักงาน ณ {when} ({ageText(days)})
+    </p>
+  )
+}
+
 // num + format = ตัวเลขนับขึ้นตอนเปิด/สลับแผนก
 // action = ปุ่มเล็กมุมขวาบน (เช่น สลับดูจำนวนเต็ม), title = ข้อความตอนชี้
 function Kpi({ label, num, format, sub, tone = 'text-fg', small = false, action, title }) {
@@ -244,6 +272,7 @@ export default function Overview({ rate, who, onPick, onImport, onCsv }) {
   return (
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
       <Segmented label="เลือกแผนก" options={deptOptions} value={department} onChange={setDepartment} />
+      <DataAsOf asOf={s.data_as_of} days={s.data_age_days} />
 
       {/* UX-17: หน้าแรกที่มีตัวเลขเยอะสุดต้องบอกข้อจำกัดเหมือนหน้า SHAP / What-if */}
       {(s.warning || s.data_note) && (

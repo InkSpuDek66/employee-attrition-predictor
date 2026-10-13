@@ -8,6 +8,7 @@
 """
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -50,6 +51,9 @@ class CompanySummary(Summary):
     department: Optional[str]
     note: str = cs.NOTE
     warning: Optional[str] = None  # ยังไม่ปรับเทียบ (README 6.5) ข้อความเดียวกับหน้า SHAP / What-if
+    # ข้อมูลพนักงานบันทึกล่าสุดเมื่อไหร่ / ผ่านมากี่วัน (หน้าเว็บเตือนให้นำเข้าใหม่เมื่อเก่าเกิน) ไม่ต่อ DB = None
+    data_as_of: Optional[str] = None
+    data_age_days: Optional[int] = None
     data_note: Optional[str] = None
 
 
@@ -86,6 +90,17 @@ def _inputs(record, tenant: str):
     raw = ms.risk_scores(X)
     shown = calibration.apply(record, raw) if record else raw
     return ms.explainer()(X).values, list(X.columns), shown, ms.display_employees(tenant)
+
+
+def _as_of(tenant: str) -> dict:
+    try:
+        when = db.data_as_of(tenant)
+    except Exception as e:  # noqa: BLE001  ข้อมูลเสริม อ่านไม่ได้ก็ไม่ให้หน้าภาพรวมพัง
+        log.warning("company-summary: อ่านวันที่ของข้อมูลไม่ได้ (%s)", type(e).__name__)
+        return {}
+    if when is None:
+        return {}
+    return {"data_as_of": when.date().isoformat(), "data_age_days": (datetime.now(when.tzinfo) - when).days}
 
 
 def _empty(department):
@@ -129,7 +144,9 @@ def company_summary(
 ):
     tenant = user["tenant_id"]
     record = calibration.load(tenant)
+    as_of = _as_of(tenant)
     notes = {
+        **as_of,
         "warning": None if record else UNCALIBRATED_WARNING,
         "data_note": IN_SAMPLE_NOTE if user["tenant_id"] == db.DEMO_TENANT else None,
     }

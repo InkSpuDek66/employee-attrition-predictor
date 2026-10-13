@@ -128,6 +128,32 @@ def mark_left(conn, tenant_id: str, keep_ids) -> int:
     return cur.rowcount
 
 
+def stored_for_check(tenant_id: str, ids) -> dict[int, dict]:
+    """ค่าที่บันทึกไว้ของรหัสในไฟล์ ไว้เทียบหาการเปลี่ยนแปลงที่แปลก (ชื่อเปลี่ยน อายุ/อายุงานลดลง เคยออกแล้ว)"""
+    ids = [int(i) for i in ids]
+    if not ids:
+        return {}
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT employee_id, full_name, age, total_working_years, years_at_company, left_at IS NOT NULL "
+            "FROM employees WHERE tenant_id = %s AND employee_id = ANY(%s)",
+            (tenant_id, ids),
+        ).fetchall()
+    keys = (FULL_NAME, "Age", "TotalWorkingYears", "YearsAtCompany", "left")
+    return {r[0]: dict(zip(keys, r[1:])) for r in rows}
+
+
+def data_as_of(tenant_id: str):
+    """เวลาที่ข้อมูลพนักงานปัจจุบันของบริษัทถูกบันทึก/อัปเดตล่าสุด (นำเข้าครั้งล่าสุด) ไม่มีพนักงาน/ไม่ต่อ DB = None
+    ponytail: ใช้ครั้งล่าสุดของทั้งบริษัท นำเข้าบางแผนกแล้วแผนกอื่นที่เก่ากว่าจะดูใหม่ไปด้วย แยกรายแผนกถ้าต้องการ"""
+    if not url():
+        return None
+    with connect() as conn:
+        return conn.execute(
+            "SELECT max(updated_at) FROM employees WHERE tenant_id = %s AND left_at IS NULL", (tenant_id,)
+        ).fetchone()[0]
+
+
 def current_ids(tenant_id: str) -> tuple[set[int], set[int]]:
     """รหัสพนักงานปัจจุบัน และคนที่บันทึกว่าออกแล้ว ของบริษัท (ไว้บอกก่อนบันทึกว่าจะเพิ่ม/อัปเดต/ออกกี่คน)"""
     with connect() as conn:

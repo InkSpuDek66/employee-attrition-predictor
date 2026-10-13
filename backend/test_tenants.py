@@ -28,3 +28,16 @@ def test_empty_company_sees_no_ibm_employees(new_company):
 def test_demo_company_still_has_ibm():
     assert client.get("/company-summary").json()["n_employees"] == 1470
     assert client.get("/shap/1").status_code == 200
+
+
+def test_overview_says_how_old_the_employee_data_is(monkeypatch):
+    """ระบบไม่เพิ่มอายุ/อายุงานให้เอง จึงบอกว่าข้อมูลบันทึกเมื่อไหร่ หน้าเว็บเตือนเมื่อเกิน 90 วัน"""
+    from datetime import datetime, timedelta, timezone
+
+    import db
+
+    monkeypatch.setattr(db, "data_as_of", lambda tenant: datetime.now(timezone.utc) - timedelta(days=100, hours=1))
+    s = client.get("/company-summary").json()
+    assert s["data_age_days"] == 100 and len(s["data_as_of"]) == 10  # YYYY-MM-DD
+    monkeypatch.setattr(db, "data_as_of", lambda tenant: None)  # ไม่ต่อ DB / ไม่มีพนักงาน
+    assert client.get("/company-summary").json()["data_as_of"] is None

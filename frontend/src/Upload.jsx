@@ -1,7 +1,7 @@
 // นำเข้าข้อมูลพนักงานจาก Excel/CSV: GET /employees/template, POST /employees/validate (ตรวจ), POST /employees/import (บันทึก)
 // บันทึกได้เฉพาะผู้ดูแลระบบ (canSave) และ backend ต้องต่อ database (ไม่งั้นได้ข้อความ 503 จาก backend)
 // ชิ้นส่วนที่ export (DownloadButton, DropZone, CheckDetails) ใช้ร่วมกับหน้าปรับเทียบโมเดล (Calibrate.jsx)
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AssistantHint, MascotLoader } from './mascot/Mascot'
 import { download, employeeLabel, friendly, postFile } from './theme'
 import { Alert, Card, Icon } from './ui'
@@ -137,6 +137,28 @@ export function CheckDetails({ result }) {
 }
 
 // onSaved() = ข้อมูลพนักงานเปลี่ยน ให้หน้าอื่นโหลดใหม่, onPick(id) = ไปดูพนักงานคนนั้นในหน้า SHAP
+// รหัสเดิมแต่ข้อมูลเปลี่ยนแบบที่คนเดิมไม่น่าเป็น (ชื่อเปลี่ยน อายุ/อายุงานลดลง เคยออกแล้ว) แสดงก่อนกดบันทึก
+function ChangesToCheck({ result }) {
+  const list = result.changes_to_check ?? []
+  if (!list.length) return null
+  const total = list.length + (result.changes_truncated ?? 0)
+  return (
+    <div className="mt-4">
+      <Alert tone="warning">
+        <b>{total.toLocaleString()} รหัสข้อมูลเปลี่ยนแปลก</b> อาจเป็นคนใหม่ที่ได้รหัสซ้ำ หรือพิมพ์รหัสผิด ถ้าเป็นคนละคนให้ใช้รหัสใหม่
+        <ul className="mt-2 space-y-1">
+          {list.slice(0, 10).map((c) => (
+            <li key={c.employee_id}>
+              <span className="font-medium">{employeeLabel(c.employee_id, c.name)}</span>: {c.reasons.join(' · ')}
+            </li>
+          ))}
+        </ul>
+        {total > 10 && <p className="mt-1 text-xs">และอีก {(total - 10).toLocaleString()} รหัส</p>}
+      </Alert>
+    </div>
+  )
+}
+
 export default function Upload({ who, canSave, onSaved, onPick }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -145,12 +167,20 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
   const [saving, setSaving] = useState(false)
   // ไฟล์นี้คือพนักงานทั้งหมดตอนนี้: คนที่ไม่อยู่ในไฟล์ = บันทึกว่าออกแล้ว (ไม่ลบ) ตรวจไฟล์ใหม่ทุกครั้งที่เปลี่ยน ให้ตัวเลขตรง
   const [fullRoster, setFullRoster] = useState(false)
+  const confirmBox = useRef(null) // หน้าต่างถามยืนยันเมื่อมีรหัสที่ข้อมูลเปลี่ยนแปลก (<dialog>)
+  const nChanges = (result?.changes_to_check?.length ?? 0) + (result?.changes_truncated ?? 0)
 
-  async function save() {
+  function askSave() {
+    if (nChanges) confirmBox.current.showModal()
+    else save(false)
+  }
+
+  async function save(confirmChanges) {
+    confirmBox.current?.close()
     setSaving(true)
     setError('')
     try {
-      setResult(await postFile('/employees/import', file, { full_roster: fullRoster }))
+      setResult(await postFile('/employees/import', file, { full_roster: fullRoster, confirm_changes: confirmChanges }))
       onSaved()
     } catch (err) {
       setError(friendly(err))
@@ -238,6 +268,7 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
           subtitle={`${result.filename} · ${result.note}`}
         >
           <CheckDetails result={result} />
+          {!result.saved && <ChangesToCheck result={result} />}
           {/* บอกก่อนกดบันทึกว่าจะเกิดอะไร (ต้องต่อ database) */}
           {!result.saved && ok && result.n_new != null && (
             <p className="mt-4 rounded-lg bg-canvas px-4 py-3 text-sm text-fg" aria-live="polite">
@@ -285,7 +316,7 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
               <>
                 <button
                   type="button"
-                  onClick={save}
+                  onClick={askSave}
                   disabled={!ok || !canSave || saving}
                   className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -304,6 +335,44 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
           </div>
         </Card>
       )}
+
+      <dialog
+        ref={confirmBox}
+        aria-labelledby="confirm-title"
+        className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-line bg-card p-0 text-fg shadow-xl backdrop:bg-ink/40"
+      >
+        <div className="p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-risk-mid-soft text-risk-mid">
+              <Icon name="warning" className="size-5" />
+            </span>
+            <div>
+              <h2 id="confirm-title" className="font-semibold">
+                มี {nChanges.toLocaleString()} รหัสที่ข้อมูลเปลี่ยนแปลก
+              </h2>
+              <p className="mt-1 text-sm text-muted-fg">
+                ระบบจะเขียนทับข้อมูลเดิมของรหัสเหล่านี้ ถ้าเป็นคนใหม่ที่ได้รหัสซ้ำ ข้อมูลของคนเดิมจะหาย ตรวจรายการในหน้านี้แล้ว ต้องการบันทึกใช่หรือไม่
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => confirmBox.current.close()}
+              className="inline-flex h-10 cursor-pointer items-center rounded-lg border border-line px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              ยกเลิก กลับไปแก้ไฟล์
+            </button>
+            <button
+              type="button"
+              onClick={() => save(true)}
+              className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-primary px-4 text-sm font-medium text-on-primary hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30"
+            >
+              ใช่ บันทึก
+            </button>
+          </div>
+        </div>
+      </dialog>
     </div>
   )
 }

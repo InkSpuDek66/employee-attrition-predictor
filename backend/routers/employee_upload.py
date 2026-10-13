@@ -147,6 +147,13 @@ class RowError(BaseModel):
     message: str
 
 
+class ChangeToCheck(BaseModel):
+    """รหัสเดิมแต่ข้อมูลเปลี่ยนแบบที่คนเดิมไม่น่าเป็น = อาจเป็นคนใหม่ที่ได้รหัสซ้ำ หรือพิมพ์รหัสผิด"""
+    employee_id: int
+    name: Optional[str] = None
+    reasons: list[str]
+
+
 class ValidateResponse(BaseModel):
     filename: str
     n_rows: int
@@ -166,6 +173,9 @@ class ValidateResponse(BaseModel):
     n_new: Optional[int] = None
     n_update: Optional[int] = None
     n_leaving: Optional[int] = None  # มีเมื่อเลือก "ไฟล์นี้คือพนักงานทั้งหมดตอนนี้" (full_roster)
+    # รหัสที่มีอยู่แล้วแต่ข้อมูลเปลี่ยนแปลก (ไม่เกิน MAX_ERRORS คน) บันทึกได้เมื่อยืนยัน (confirm_changes)
+    changes_to_check: list[ChangeToCheck] = []
+    changes_truncated: int = 0
     note: str = "ตรวจไฟล์อย่างเดียว ยังไม่ได้บันทึกเข้าระบบ"
 
 
@@ -347,13 +357,45 @@ LEAVING_WARN = (
 )
 
 
+# ช่องที่คนเดิมมีแต่เพิ่มขึ้น (ลดลง = น่าจะคนละคน) ส่วนอยู่ตำแหน่งปัจจุบัน / ตั้งแต่เลื่อนตำแหน่ง / อยู่กับหัวหน้า
+# กลับเป็น 0 ได้ตามปกติเมื่อเปลี่ยนตำแหน่ง ได้เลื่อน หรือเปลี่ยนหัวหน้า จึงไม่ตรวจ
+NEVER_DECREASE = ("Age", "TotalWorkingYears", "YearsAtCompany")
+
+
+def _changes_to_check(valid: list, stored: dict) -> list[ChangeToCheck]:
+    out = []
+    for r in valid:
+        old = stored.get(r["EmployeeNumber"])
+        if old is None:
+            continue
+        reasons = []
+        new_name = r.get(NAME[0])
+        if old[NAME[0]] and new_name and old[NAME[0]].strip() != new_name.strip():
+            reasons.append(f"ชื่อเดิม “{old[NAME[0]]}” ในไฟล์เป็น “{new_name}”")
+        for f in NEVER_DECREASE:
+            if old[f] is not None and r[f] < old[f]:
+                reasons.append(f"{THAI[f]} ลดลงจาก {old[f]} เป็น {r[f]}")
+        if old["left"]:
+            reasons.append("เคยบันทึกว่าออกแล้ว จะกลับมาเป็นพนักงานปัจจุบัน")
+        if reasons:
+            out.append(ChangeToCheck(employee_id=r["EmployeeNumber"], name=new_name or old[NAME[0]], reasons=reasons))
+    return out
+
+
 def _with_plan(result: ValidateResponse, valid: list, tenant: str, full_roster: bool) -> ValidateResponse:
     """เติมจำนวนที่จะเพิ่ม/อัปเดต/บันทึกว่าออก ให้เห็นก่อนกดบันทึก (ไม่ต่อ DB = ไม่เติม)"""
     if not db.url() or not valid:
         return result
-    active, left = db.current_ids(tenant)
     ids = {r["EmployeeNumber"] for r in valid}
+    try:
+        active, left = db.current_ids(tenant)
+        stored = db.stored_for_check(tenant, ids & (active | left))
+    except Exception as e:  # noqa: BLE001  เช่น DB เก่ายังไม่มีคอลัมน์ใหม่ (QA-06): ข้ามการนับ ตอนบันทึกจะได้ข้อความให้อัปเดต schema
+        log.warning("employees: นับก่อนบันทึกไม่ได้ (%s)", type(e).__name__)  # ชนิดเท่านั้น ข้อความอาจมีข้อมูลพนักงาน
+        return result
     plan = {"n_new": len(ids - active - left), "n_update": len(ids & (active | left))}
+    changes = _changes_to_check(valid, stored)
+    plan |= {"changes_to_check": changes[:MAX_ERRORS], "changes_truncated": max(0, len(changes) - MAX_ERRORS)}
     warnings = list(result.warnings)
     if full_roster:
         plan["n_leaving"] = len(active - ids)
@@ -378,6 +420,7 @@ def import_employees(
     background: BackgroundTasks,
     file: UploadFile = File(...),
     full_roster: bool = Form(False),  # ไฟล์นี้คือพนักงานทั้งหมดตอนนี้: คนที่ไม่อยู่ในไฟล์ = บันทึกว่าออกแล้ว (ไม่ลบ)
+    confirm_changes: bool = Form(False),  # ผู้ใช้ยืนยันแล้วว่ารหัสที่ข้อมูลเปลี่ยนแปลก (changes_to_check) เป็นคนเดิมจริง
     user: dict = Depends(auth.require_admin),
     _=Depends(auth.LIMITS["import"].per_user),
 ):
@@ -388,6 +431,10 @@ def import_employees(
     valid, result = _check(file)
     if result.missing_columns or result.n_invalid or not valid:
         raise HTTPException(422, "ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด กด \"ตรวจไฟล์\" แล้วแก้ให้ครบก่อนบันทึก")
+    planned = _with_plan(result, valid, user["tenant_id"], full_roster)
+    if planned.changes_to_check and not confirm_changes:  # กันเรียก API ตรงโดยไม่ได้เห็นคำเตือน
+        raise HTTPException(409, f"มี {len(planned.changes_to_check) + planned.changes_truncated:,} รหัสที่ข้อมูลเปลี่ยนแปลก ตรวจไฟล์แล้วยืนยันก่อนบันทึก")
+    result = planned
     rows = to_model_units(pd.DataFrame(valid))
     n_leaving = None
     try:
