@@ -249,7 +249,8 @@ def test_demo_calibration_file_is_synthetic_not_ibm():
     demo = client.get("/recalibrate/template", params={"demo": True})
     df = pd.read_excel(io.BytesIO(demo.content), sheet_name="พนักงาน")
     assert len(df) == 300 and df["ลาออกแล้วหรือยัง"].isin(["ลาออก", "ยังอยู่"]).all()
-    assert df["รหัสพนักงาน"].min() >= 90001  # รหัส IBM อยู่ที่ 1–2068
+    assert list(df["รหัสพนักงาน"]) == list(range(1, 301))  # เรียงต่อกันไม่มีช่องว่าง
+    assert df["ชื่อ-นามสกุล"].notna().all() and df["ชื่อ-นามสกุล"].nunique() > 200  # ชื่อจำลอง ไม่ซ้ำกันเกือบทั้งหมด
     assert 0.05 < (df["ลาออกแล้วหรือยัง"] == "ลาออก").mean() < 0.3  # อัตราลาออกสมเหตุสมผล
     again = pd.read_excel(io.BytesIO(client.get("/recalibrate/template", params={"demo": True}).content), sheet_name="พนักงาน")
     assert again.equals(df)  # ไฟล์เดิมทุกครั้ง (ผ่านการตรวจไฟล์ + ปรับเทียบได้: test_api.test_recalibrate_from_excel_then_history_and_reset)
