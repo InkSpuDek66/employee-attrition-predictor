@@ -11,6 +11,7 @@ import WhatIfSimulator from './WhatIfSimulator'
 const ShapViewer = lazy(() => import('./ShapViewer'))
 const Upload = lazy(() => import('./Upload'))
 const Calibrate = lazy(() => import('./Calibrate'))
+const Users = lazy(() => import('./Users'))
 
 // หน้าหลัก: แต่ละคนเพิ่ม component ของตัวเอง (เช่น Intervention Tracker) เป็นแท็บใหม่ใน TABS
 // component ของเครื่องมือรายคนได้ prop:
@@ -26,6 +27,7 @@ const TABS = [
   { id: 'whatif', icon: 'sliders', label: 'What-if Simulator', short: 'What-if', hint: 'ถ้าปรับเงื่อนไข ความเสี่ยงจะเปลี่ยนไหม', Component: WhatIfSimulator },
   { id: 'calibrate', icon: 'scale', label: 'ปรับเทียบโมเดล', short: 'ปรับเทียบ', hint: 'ปรับคะแนนให้ตรงกับอัตราลาออกจริงของบริษัท', admin: true },
   { id: 'import', icon: 'upload', label: 'นำเข้าข้อมูล', short: 'นำเข้า', hint: 'อัปโหลดรายชื่อพนักงานของบริษัท' },
+  { id: 'users', icon: 'user', label: 'บัญชีผู้ใช้', short: 'บัญชี', hint: 'ใครเข้าระบบของบริษัทนี้ได้บ้าง', admin: true },
 ]
 const PER_EMPLOYEE = TABS.filter((t) => t.Component).map((t) => t.id)
 
@@ -224,7 +226,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
               >
                 {active && <span className="absolute inset-y-2 left-0 hidden w-1 rounded-r bg-accent lg:block" />}
                 <Icon name={t.icon} className="size-5" />
-                <span className="lg:hidden">{t.short}</span>
+                <span className="whitespace-nowrap text-[11px] sm:text-xs lg:hidden">{t.short}</span>
                 <span className="hidden lg:inline">{t.label}</span>
               </button>
             )
@@ -365,7 +367,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
             onCsv={() => speak('ดาวน์โหลดรายชื่อให้แล้ว', 'เปิดใน Excel ได้เลย')}
           />
         </div>
-        <Suspense fallback={tab === 'import' || tab === 'calibrate' ? <Skeleton className="h-96" /> : null}>
+        <Suspense fallback={['import', 'calibrate', 'users'].includes(tab) ? <Skeleton className="h-96" /> : null}>
           <div hidden={tab !== 'import'} className="fade-up">
             <Upload
               who={who}
@@ -385,6 +387,11 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
                     : speak('ปรับเทียบเสร็จแล้ว!', 'ทุกหน้าใช้คะแนนที่ตรงกับบริษัทแล้วนะ')
                 )}
               />
+            </div>
+          )}
+          {user.role === 'admin' && tab === 'users' && (
+            <div className="fade-up">
+              <Users />
             </div>
           )}
         </Suspense>

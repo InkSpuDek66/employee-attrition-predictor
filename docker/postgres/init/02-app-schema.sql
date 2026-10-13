@@ -22,6 +22,18 @@ ON CONFLICT (tenant_id) DO NOTHING;
 INSERT INTO tenants (tenant_id, name) VALUES ('newco_demo', 'บริษัทตัวอย่าง (เริ่มจากว่าง)')
 ON CONFLICT (tenant_id) DO NOTHING;
 
+-- บัญชีผู้ใช้ที่สร้างจากหน้าเว็บ (สร้างบริษัทใหม่ / admin เพิ่มบัญชี) บัญชีทดลองยังอยู่ในโค้ด (backend/auth.py)
+-- password_hash = PBKDF2-SHA256 จาก stdlib (pbkdf2_sha256$รอบ$salt$hash) ไม่เก็บรหัสผ่านจริง
+CREATE TABLE IF NOT EXISTS app_users (
+    username        text PRIMARY KEY CHECK (username ~ '^[a-z0-9_.-]{3,32}$'),
+    tenant_id       text NOT NULL REFERENCES tenants ON DELETE CASCADE,
+    role            text NOT NULL CHECK (role IN ('admin', 'hr')),
+    name            text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
+    password_hash   text NOT NULL,
+    created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS app_users_tenant_idx ON app_users (tenant_id);
+
 -- ข้อมูลพนักงาน (snapshot ล่าสุดต่อคน) จาก IBM dataset หรือไฟล์ Excel/CSV ที่บริษัทอัปโหลด
 -- CHECK ใช้ช่วงค่าเดียวกับ IBM dataset/schemas.py เป็นด่านสุดท้ายกันข้อมูลผิดตอนอัปโหลด
 CREATE TABLE IF NOT EXISTS employees (

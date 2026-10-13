@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import Logo from '../logo/Logo'
 import { WelcomeMascots } from './mascot/Mascot'
-import { api, friendly, inputClass } from './theme'
+import { accountProblem, api, friendly, inputClass } from './theme'
 import { Alert, Field, Icon, PrimaryButton, ThemeToggle } from './ui'
 
 const DEMO_ACCOUNTS = [
@@ -22,6 +22,32 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
   const [showPassword, setShowPassword] = useState(false)
   const demo = useRef(null) // กล่องบัญชีทดลองมุมซ้ายล่าง (<details>) ปิดเองหลังเลือกบัญชี
   const [error, setError] = useState('')
+  // สร้างบริษัทใหม่: ได้บริษัทว่าง (ไม่เห็นข้อมูลบริษัทอื่น) + บัญชี admin แล้วเข้าระบบให้เลย (POST /auth/register)
+  const [mode, setMode] = useState('login') // 'login' | 'register'
+  const [company, setCompany] = useState({ company_name: '', name: '', username: '', password: '', confirm: '' })
+  const setField = (k) => (e) => setCompany((c) => ({ ...c, [k]: e.target.value }))
+  const switchTo = (m) => (setMode(m), setError(''))
+
+  async function createCompany(e) {
+    e.preventDefault()
+    const problem = !company.company_name.trim() ? 'กรอกชื่อบริษัท' : accountProblem(company)
+    if (problem) return setError(problem)
+    setBusy(true)
+    setError('')
+    try {
+      const { confirm: _, ...body } = company
+      onLogin(
+        await api('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...body, company_name: body.company_name.trim(), name: body.name.trim() }),
+        }),
+      )
+    } catch (err) {
+      setError(friendly(err))
+      setBusy(false)
+    }
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -58,6 +84,43 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
         </div>
 
         <div>
+          {mode === 'register' ? (
+          <form onSubmit={createCompany} className="space-y-3 rounded-xl border border-line bg-card p-6">
+            <div>
+              <h1 className="text-xl font-semibold text-fg">สร้างบริษัทใหม่</h1>
+              <p className="text-sm text-muted-fg">ได้บริษัทว่างพร้อมบัญชีผู้ดูแลระบบ แล้วนำเข้าพนักงานของบริษัทเองได้ ไม่เห็นข้อมูลบริษัทอื่น</p>
+            </div>
+            <Field label="ชื่อบริษัท">
+              <input className={inputClass} value={company.company_name} onChange={setField('company_name')} maxLength={100} required />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="ชื่อของคุณ">
+                <input className={inputClass} value={company.name} onChange={setField('name')} maxLength={100} required />
+              </Field>
+              <Field label="ชื่อผู้ใช้ (a-z ตัวเลข)">
+                <input className={inputClass} value={company.username} onChange={setField('username')} autoComplete="username" spellCheck={false} required />
+              </Field>
+              <Field label="รหัสผ่าน (8 ตัวขึ้นไป)">
+                <input className={inputClass} type="password" value={company.password} onChange={setField('password')} autoComplete="new-password" required />
+              </Field>
+              <Field label="ยืนยันรหัสผ่าน">
+                <input className={inputClass} type="password" value={company.confirm} onChange={setField('confirm')} autoComplete="new-password" required />
+              </Field>
+            </div>
+            {error && <Alert>{error}</Alert>}
+            <div className="grid">
+              <PrimaryButton loading={busy} loadingText="กำลังสร้าง…">
+                สร้างบริษัทและเข้าสู่ระบบ <Icon name="right" className="size-4" />
+              </PrimaryButton>
+            </div>
+            <p className="text-center text-sm text-muted-fg">
+              มีบัญชีแล้ว?{' '}
+              <button type="button" onClick={() => switchTo('login')} className="cursor-pointer font-medium text-accent hover:underline">
+                เข้าสู่ระบบ
+              </button>
+            </p>
+          </form>
+          ) : (
           <form onSubmit={submit} style={{ '--enter': '120ms' }} className="login-enter space-y-4 rounded-xl border border-line bg-card p-6">
           <div>
             <h1 className="text-xl font-semibold text-fg">เข้าสู่ระบบ</h1>
@@ -103,7 +166,14 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
               เข้าสู่ระบบ <Icon name="right" className="size-4" />
             </PrimaryButton>
           </div>
+          <p className="text-center text-sm text-muted-fg">
+            ยังไม่มีบัญชี?{' '}
+            <button type="button" onClick={() => switchTo('register')} className="cursor-pointer font-medium text-accent hover:underline">
+              สร้างบริษัทใหม่
+            </button>
+          </p>
           </form>
+          )}
         </div>
         </div>
         <WelcomeMascots keys={['kit', 'cat']} enter="right" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />

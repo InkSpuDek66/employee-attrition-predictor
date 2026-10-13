@@ -1,7 +1,7 @@
 // test ตรรกะเงิน/เกณฑ์ และการเรียก API (ใช้ node:test ในตัว ไม่ต้องลง library) รัน: npm test
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { api, bahtShort, bandOf, csvCell, employeeLabel, loadMascot, pushRecent, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
+import { accountProblem, api, bahtShort, bandOf, csvCell, employeeLabel, loadMascot, pushRecent, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
 
 test('ขอบเขตเงินเดือน: ขั้นต่ำ 15,000 บาท ขั้นสูง 20,000 ดอลลาร์ × อัตรา', () => {
   assert.deepEqual(incomeBounds(35), [15000, 700000])
@@ -138,4 +138,14 @@ test('มาสคอตที่เคยเลือกไว้ด้วย�
     assert.equal(loadMascot(), now)
   }
   globalThis.localStorage = saved
+})
+
+test('ตรวจข้อมูลบัญชีก่อนส่ง: ชื่อผู้ใช้ตามกติกาเดียวกับ backend, รหัสผ่าน 8 ตัวขึ้นไปและตรงกัน', () => {
+  const ok = { name: 'สมชาย', username: 'somchai.k', password: 'abcd1234', confirm: 'abcd1234' }
+  assert.equal(accountProblem(ok), '')
+  assert.match(accountProblem({ ...ok, username: 'Somchai' }), /a-z/)
+  assert.match(accountProblem({ ...ok, username: 'ab' }), /3–32/)
+  assert.match(accountProblem({ ...ok, password: 'short', confirm: 'short' }), /8 ตัว/)
+  assert.match(accountProblem({ ...ok, confirm: 'abcd12345' }), /ไม่ตรงกัน/)
+  assert.match(accountProblem({ ...ok, name: '  ' }), /ชื่อ/)
 })

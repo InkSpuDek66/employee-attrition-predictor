@@ -51,6 +51,17 @@ export const toastKind = (from, to) =>
 export const MASCOTS = ['joy', 'kit', 'cat', 'dog']
 const OLD_MASCOT_KEYS = { chibiGirl: 'joy', chibiBoy: 'kit' } // ชื่อรุ่นก่อนที่อาจจำไว้ในเบราว์เซอร์
 
+const USERNAME = /^[a-z0-9_.-]{3,32}$/ // ตรงกับ backend (auth.USERNAME)
+
+// ตรวจก่อนส่ง ให้ได้ข้อความภาษาไทยที่บอกว่าต้องแก้ช่องไหน (backend ตรวจซ้ำอีกชั้น)
+export function accountProblem({ username, password, confirm, name }) {
+  if (!name.trim()) return 'กรอกชื่อที่จะแสดง'
+  if (!USERNAME.test(username)) return 'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z ตัวเล็ก ตัวเลข _ . - ยาว 3–32 ตัว'
+  if (password.length < 8) return 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัว'
+  if (password !== confirm) return 'รหัสผ่านสองช่องไม่ตรงกัน'
+  return ''
+}
+
 export function loadMascot() {
   try {
     const saved = localStorage.getItem('mascot')

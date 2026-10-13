@@ -3,8 +3,10 @@
 POST /auth/login {username, password} -> token แนบเป็น "Authorization: Bearer <token>" ทุก request
 tenant ของผู้ใช้มาจาก token เท่านั้น request ที่ส่ง tenant_id ของบริษัทอื่นมาได้ 403 (SEC-02)
 
-ponytail: บัญชีทดลองเขียนไว้ในโค้ด (หน้า login แสดงรหัสให้ด้วย) ใช้กับข้อมูลตัวอย่างเท่านั้น
-ก่อน deploy/ใช้ข้อมูลจริง ต้องย้ายไปตาราง users ใน DB + hash รหัสผ่าน (เช่น bcrypt) และให้ทีมตกลงวิธี auth (SEC-01)
+POST /auth/register สร้างบริษัทใหม่ (บริษัทว่าง) + บัญชี admin แล้ว login ให้เลย (ต้องต่อ DB)
+GET/POST /auth/users admin ดู/เพิ่มบัญชีของบริษัทตัวเอง บัญชีเหล่านี้อยู่ในตาราง app_users รหัสผ่านเก็บเป็น PBKDF2
+ponytail: บัญชีทดลองยังเขียนไว้ในโค้ด (หน้า login แสดงรหัสให้ด้วย) ใช้กับข้อมูลตัวอย่างเท่านั้น
+ยังไม่มีเปลี่ยน/รีเซ็ตรหัสผ่าน ลบบัญชี หรือยืนยันอีเมล ก่อนใช้ข้อมูลจริงให้ทีมตกลงวิธี auth (SEC-01)
 token เซ็นด้วย HMAC-SHA256 (stdlib) ไม่ตั้ง AUTH_SECRET = สุ่มใหม่ทุกครั้งที่เปิด backend ทุกคนต้อง login ใหม่หลัง restart
 rate limit เก็บในหน่วยความจำของ process เดียว ถ้ารันหลาย worker/เครื่อง ให้ย้ายไป Redis หรือ reverse proxy
 """
@@ -19,11 +21,14 @@ import secrets
 import time
 from collections import defaultdict, deque
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 import calibration
+import db  # noqa: E402
 import business_rules  # noqa: E402  (ต้องอยู่หลัง calibration ซึ่ง import model_store ที่เพิ่ม src/ เข้า sys.path)
 
 router = APIRouter(tags=["auth"])
@@ -64,23 +69,67 @@ def read_token(token: str):
         data = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
     except ValueError:
         return None
-    return data["sub"] if data.get("exp", 0) > time.time() and data.get("sub") in DEMO_USERS else None
+    return data.get("sub") if data.get("exp", 0) > time.time() else None
 
 
 TENANT_NAMES = {"ibm_demo": "IBM HR Analytics (ข้อมูลตัวอย่าง)", "newco_demo": "บริษัทตัวอย่าง (เริ่มจากว่าง)"}  # ชื่อเดียวกับตาราง tenants ใน DB
 
+# ---- รหัสผ่านของบัญชีใน DB: PBKDF2-SHA256 (stdlib) salt สุ่มต่อบัญชี ----
+PBKDF2_ROUNDS = 240_000
 
-def public(username: str) -> dict:
-    u = DEMO_USERS[username]
-    t = u["tenant_id"]
-    return {"username": username, "name": u["name"], "role": u["role"], "tenant_id": t, "tenant_name": TENANT_NAMES.get(t, t)}
+
+def hash_password(password: str, salt: bytes = None, rounds: int = PBKDF2_ROUNDS) -> str:
+    salt = salt or secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, rounds)
+    return f"pbkdf2_sha256${rounds}${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    try:
+        _, rounds, salt, _ = stored.split("$")
+        return hmac.compare_digest(hash_password(password, bytes.fromhex(salt), int(rounds)).encode(), stored.encode())
+    except ValueError:
+        return False
+
+
+DUMMY_HASH = hash_password(secrets.token_hex(8))  # ชื่อผู้ใช้ไม่มี = ยังคำนวณ hash เวลาเท่ากัน เดาไม่ได้ว่าชื่อไหนมีอยู่
+
+
+def _db_user(username: str):
+    """บัญชีจากตาราง app_users พร้อมชื่อบริษัท ไม่ต่อ DB / ไม่มี / DB เก่ายังไม่มีตาราง = None"""
+    if not db.url():
+        return None
+    try:
+        with db.connect() as conn:
+            row = conn.execute(
+                "SELECT u.username, u.name, u.role, u.tenant_id, t.name, u.password_hash "
+                "FROM app_users u JOIN tenants t USING (tenant_id) WHERE u.username = %s",
+                (username,),
+            ).fetchone()
+    except Exception:  # noqa: BLE001  เช่น DB เก่ายังไม่มีตาราง app_users (QA-06): ใช้ได้แค่บัญชีทดลอง
+        return None
+    if row is None:
+        return None
+    keys = ("username", "name", "role", "tenant_id", "tenant_name", "password_hash")
+    return dict(zip(keys, row))
+
+
+def public(username: str):
+    """ข้อมูลผู้ใช้ที่ส่งให้หน้าเว็บ/endpoint (ไม่มีรหัสผ่าน) ไม่พบบัญชี = None"""
+    if username in DEMO_USERS:
+        u = DEMO_USERS[username]
+        t = u["tenant_id"]
+        return {"username": username, "name": u["name"], "role": u["role"], "tenant_id": t, "tenant_name": TENANT_NAMES.get(t, t)}
+    u = _db_user(username)
+    return None if u is None else {k: v for k, v in u.items() if k != "password_hash"}
 
 
 def current_user(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
     username = read_token(creds.credentials) if creds else None
-    if not username:
+    user = public(username) if username else None  # บัญชีที่ถูกลบไปแล้ว token เดิมใช้ไม่ได้
+    if not user:
         raise HTTPException(401, "กรุณาเข้าสู่ระบบก่อน (หรือหมดเวลาแล้ว เข้าสู่ระบบใหม่)", headers={"WWW-Authenticate": "Bearer"})
-    return public(username)
+    return user
 
 
 def require_admin(user: dict = Depends(current_user)) -> dict:
@@ -130,6 +179,7 @@ class RateLimit:
 
 
 login_limit = RateLimit(10)  # กันเดารหัสผ่าน
+register_limit = RateLimit(5, per=3600)  # สร้างบริษัทใหม่ได้ไม่เกิน 5 ครั้ง/ชั่วโมง/IP กันสร้างบริษัทขยะรัวๆ
 LIMITS = {  # ใช้ใน main.py
     "whatif": RateLimit(240),  # หน้า What-if เรียกทุกครั้งที่ปรับค่า
     "recalibrate": RateLimit(30),  # รวมดูประวัติ/ดาวน์โหลดไฟล์ตัวอย่างในแท็บปรับเทียบ
@@ -150,16 +200,98 @@ class LoginResponse(BaseModel):
     settings: dict = {}  # ค่าที่หน้าเว็บต้องใช้ตรงกับ backend เช่น อัตราบาท/ดอลลาร์ (DE-01)
 
 
+def _session(username: str) -> LoginResponse:
+    return LoginResponse(access_token=issue_token(username), user=public(username), settings={"thb_per_usd": business_rules.THB_PER_USD})
+
+
 @router.post("/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest, request: Request):
     login_limit.check(request.client.host if request.client else "?")
-    u = DEMO_USERS.get(req.username)
-    # เทียบแบบเวลาคงที่ และตอบข้อความเดียวกันไม่ว่าผิดชื่อหรือผิดรหัส
-    if not hmac.compare_digest((u or {}).get("password", "").encode(), req.password.encode()) or not u:
+    username = req.username.strip()
+    demo = DEMO_USERS.get(username)
+    if demo:  # เทียบแบบเวลาคงที่
+        ok = hmac.compare_digest(demo["password"].encode(), req.password.encode())
+    else:
+        stored = _db_user(username.lower())
+        ok = verify_password(req.password, stored["password_hash"] if stored else DUMMY_HASH) and stored is not None
+        username = username.lower()
+    if not ok:  # ข้อความเดียวกันไม่ว่าผิดชื่อหรือผิดรหัส
         raise HTTPException(401, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-    return LoginResponse(
-        access_token=issue_token(req.username), user=public(req.username), settings={"thb_per_usd": business_rules.THB_PER_USD}
-    )
+    return _session(username)
+
+
+# ---- สร้างบริษัท / บัญชีจากหน้าเว็บ (เก็บใน DB) ----
+USERNAME = r"^[a-z0-9_.-]{3,32}$"  # ตรงกับ CHECK ของตาราง app_users
+
+
+class NewAccount(BaseModel):
+    username: str = Field(pattern=USERNAME, description="a-z 0-9 _ . - ยาว 3–32 ตัว")
+    password: str = Field(min_length=8, max_length=128)
+    name: str = Field(min_length=1, max_length=100)
+
+
+class RegisterRequest(NewAccount):
+    company_name: str = Field(min_length=1, max_length=100)
+
+
+class NewUser(NewAccount):
+    role: Literal["admin", "hr"] = "hr"
+
+
+def _need_db():
+    if not db.url():
+        raise HTTPException(503, "ระบบยังไม่ได้ต่อฐานข้อมูล สร้างบัญชีไม่ได้ (ผู้ดูแลต้องตั้ง DATABASE_URL)")
+
+
+def _taken(conn, username: str) -> bool:
+    return username in DEMO_USERS or conn.execute("SELECT 1 FROM app_users WHERE username = %s", (username,)).fetchone() is not None
+
+
+TAKEN = "ชื่อผู้ใช้นี้มีคนใช้แล้ว ลองชื่ออื่น"
+
+
+@router.post("/auth/register", response_model=LoginResponse)
+def register(req: RegisterRequest, request: Request):
+    """สร้างบริษัทใหม่ (เริ่มจากว่าง ไม่เห็นข้อมูลของบริษัทอื่น) + บัญชี admin ของบริษัทนั้น แล้ว login ให้เลย"""
+    register_limit.check(request.client.host if request.client else "?")
+    _need_db()
+    tenant = f"co_{secrets.token_hex(5)}"  # ผู้ใช้ไม่ต้องตั้งรหัสบริษัทเอง ไม่ชนกับบริษัทอื่น
+    with db.connect() as conn:  # transaction เดียว: สร้างบัญชีไม่ได้ = ไม่มีบริษัทค้าง
+        if _taken(conn, req.username):
+            raise HTTPException(409, TAKEN)
+        conn.execute("INSERT INTO tenants (tenant_id, name) VALUES (%s, %s)", (tenant, req.company_name.strip()))
+        conn.execute(
+            "INSERT INTO app_users (username, tenant_id, role, name, password_hash) VALUES (%s, %s, 'admin', %s, %s)",
+            (req.username, tenant, req.name.strip(), hash_password(req.password)),
+        )
+    return _session(req.username)
+
+
+@router.get("/auth/users")
+def list_users(user: dict = Depends(require_admin)):
+    """บัญชีทั้งหมดของบริษัทตัวเอง (บัญชีทดลองในโค้ด + บัญชีที่สร้างจากหน้าเว็บ) ไม่มีรหัสผ่าน"""
+    demo = [{"username": k, "name": v["name"], "role": v["role"], "demo": True} for k, v in DEMO_USERS.items() if v["tenant_id"] == user["tenant_id"]]
+    rows = []
+    if db.url():
+        with db.connect() as conn:
+            rows = conn.execute(
+                "SELECT username, name, role FROM app_users WHERE tenant_id = %s ORDER BY created_at", (user["tenant_id"],)
+            ).fetchall()
+    return {"users": demo + [{"username": u, "name": n, "role": r, "demo": False} for u, n, r in rows]}
+
+
+@router.post("/auth/users", status_code=201)
+def add_user(req: NewUser, user: dict = Depends(require_admin)):
+    """admin เพิ่มบัญชี (HR หรือ admin) ให้บริษัทตัวเองเท่านั้น"""
+    _need_db()
+    with db.connect() as conn:
+        if _taken(conn, req.username):
+            raise HTTPException(409, TAKEN)
+        conn.execute(
+            "INSERT INTO app_users (username, tenant_id, role, name, password_hash) VALUES (%s, %s, %s, %s, %s)",
+            (req.username, user["tenant_id"], req.role, req.name.strip(), hash_password(req.password)),
+        )
+    return {"username": req.username, "name": req.name.strip(), "role": req.role, "demo": False}
 
 
 @router.get("/auth/me")
