@@ -36,12 +36,14 @@ Course Milestones ที่ต้องเจอระหว่างทาง: 
 - [ ] FastAPI endpoint รอง: `/interventions`, `/health` ร่วมกับ Nanthamon (Nanthamon ทำ `/calibration-status`, `/dashboard/summary`)
   - วิธีทำ: สร้าง `routers/interventions.py` เชื่อม dev database กลาง (Supabase/Neon) ตาม schema ที่ตกลงไว้ใน README หัวข้อ 7
   - ผลลัพธ์ที่ต้องส่ง: endpoint ทำงานได้จริง + ตัวอย่าง request/response
-- [ ] Survival Analysis ร่วมกับ Nanthamon
+- [x] Survival Analysis ร่วมกับ Nanthamon
   - วิธีทำ: เริ่มจาก tutorial ของ `lifelines` library ก่อน แล้ว apply Kaplan-Meier/Cox Proportional Hazards กับ dataset (duration = YearsAtCompany, event = Attrition)
   - ผลลัพธ์ที่ต้องส่ง: notebook survival curve + สรุปการตีความผล (ตอบคำถาม "จะลาออกเมื่อไหร่")
-- [ ] Fairness check ร่วมกับ Nanthamon (ต่อจาก Survival Analysis)
+  - สถานะ: `notebooks/08_survival_analysis_Y.ipynb` (Kaplan-Meier, อัตราลาออกรายปี, log-rank, Cox + ตรวจ proportional hazards) รูปอยู่ที่ `docs/figures/survival_Y/` ใช้ statsmodels แทน lifelines เพราะ lifelines ยังไม่รองรับ pandas 3 รอ Nanthamon ตรวจตาม `docs/review_guide_survival_fairness_Y.md`
+- [x] Fairness check ร่วมกับ Nanthamon (ต่อจาก Survival Analysis)
   - วิธีทำ: ใช้ Fairlearn `MetricFrame` เช็ค demographic parity ของ risk_score ระหว่างกลุ่มเพศ/ช่วงอายุ ตาม [6.4](README.md#64-fairness-check)
   - ผลลัพธ์ที่ต้องส่ง: fairness report notebook + สรุปว่าพบ bias ไหม
+  - สถานะ: `notebooks/09_fairness_check_Y.ipynb` (ทำต่อจาก DS-04: TPR รายกลุ่มพร้อม CI, ทดลองสลับเพศ, ทดลองตัดเพศ/สถานภาพ, เสนอเกณฑ์อัตราส่วน TPR ≥ 0.8 และข้อความเตือน) รูปอยู่ที่ `docs/figures/fairness_Y/` รอ Nanthamon ตรวจ และรอ Puripat + Saphondanai ตัดสินใจเรื่องตัด `Gender`
 
 ### wk8–9 (10–23 พ.ย.): BI & Frontend + Closing (Model Gate ใน wk8 และ Product Gate ช่วง buffer)
 - [ ] React: Intervention Tracker component ร่วมกับ Nanthamon
