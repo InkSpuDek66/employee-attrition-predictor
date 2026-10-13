@@ -241,18 +241,21 @@ export default function PetCharacter({ mood, kind = 'cat', mini = false }) {
     kind === 'cat' ? 'M92 140 Q122 140 118 112 Q116 98 126 92' : 'M92 128 Q116 130 116 112 Q116 100 104 102 Q98 106 104 110'
   return (
     <svg
-      viewBox={mini ? '22 26 96 96' : '0 0 140 160'}
+      viewBox={mini === 'head' ? '16 12 108 98' : mini ? '22 26 96 96' : '0 0 140 160'} // head = ทั้งหัวรวมหู (ตัวโหลดในปุ่ม)
       className={mini ? 'mascot-static size-full' : 'mx-auto h-52 w-auto overflow-visible'}
       aria-hidden="true"
     >
       <ellipse cx="70" cy="155" rx="30" ry="4" className="mascot-shadow fill-line" />
       <g className="mascot-body">
         {/* หาง (อยู่หลังตัว) กระดิก; เสี่ยงต่ำกระดิกเร็ว */}
-        <g className="mascot-tail" style={mood === 'Low' ? { animationDuration: '0.6s' } : undefined}>
-          <path d={tail} stroke={LINE} strokeWidth="11" strokeLinecap="round" fill="none" />
-          <path d={tail} stroke={FUR[kind]} strokeWidth="7" strokeLinecap="round" fill="none" />
-          {kind === 'cat' && <path d="M112 128 l6 -3 M118 112 l6 1" stroke={FUR_DARK.cat} strokeWidth="2.4" strokeLinecap="round" />}
-        </g>
+        {/* หัวอย่างเดียว (ตัวโหลด) ไม่วาดหาง: หางม้วนขึ้นข้างหัว ปลายหางจะโผล่มุมภาพ */}
+        {mini !== 'head' && (
+          <g className="mascot-tail" style={mood === 'Low' ? { animationDuration: '0.6s' } : undefined}>
+            <path d={tail} stroke={LINE} strokeWidth="11" strokeLinecap="round" fill="none" />
+            <path d={tail} stroke={FUR[kind]} strokeWidth="7" strokeLinecap="round" fill="none" />
+            {kind === 'cat' && <path d="M112 128 l6 -3 M118 112 l6 1" stroke={FUR_DARK.cat} strokeWidth="2.4" strokeLinecap="round" />}
+          </g>
+        )}
         {/* ตัว + พุงสีครีม + เท้า */}
         <ellipse cx="70" cy="132" rx="27" ry="22" fill={FUR[kind]} {...o} />
         <ellipse cx="70" cy="136" rx="15" ry="14" fill={CREAM} />

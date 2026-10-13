@@ -192,8 +192,8 @@ function Pose({ mood, suit }) {
     // มือประสานไว้หน้าตัว + เหงื่อหยด (หัวก้มด้วย mascot-bow)
     return (
       <>
-        <Arm suit={suit} d="M52 118 Q48 130 63 136" />
-        <Arm suit={suit} d="M88 118 Q92 130 77 136" />
+        <Arm suit={suit} d="M56 118 Q48 130 63 136" />
+        <Arm suit={suit} d="M84 118 Q92 130 77 136" />
         <Hand cx={66} cy={136} />
         <Hand cx={74} cy={136} />
         <path d="M101 56 Q104 61 102 64 Q99 65 98 62 Q98 59 101 56Z" fill="#7cc4f5" stroke="#3b82c4" strokeWidth="1.1" className="mascot-drip" />
@@ -205,8 +205,8 @@ function Pose({ mood, suit }) {
     return (
       <g>
         <g className="mascot-shake">
-          <Arm suit={suit} d="M52 120 Q34 104 32 82" />
-          <Arm suit={suit} d="M88 120 Q106 104 108 82" />
+          <Arm suit={suit} d="M56 120 Q34 104 32 82" />
+          <Arm suit={suit} d="M84 120 Q106 104 108 82" />
           <Hand cx={31} cy={78} r={6.5} />
           <Hand cx={109} cy={78} r={6.5} />
         </g>
@@ -224,7 +224,7 @@ function Pose({ mood, suit }) {
   // แขนซ้ายถือแฟ้ม (ทุกท่ายกเว้นเสี่ยงสูง)
   const folder = (
     <>
-      <Arm suit={suit} d="M52 120 Q42 128 42 136" />
+      <Arm suit={suit} d="M56 120 Q42 128 42 136" />
       <g transform="rotate(-14 34 138)">
         <rect x="24" y="124" width="18" height="23" rx="2" fill="#fff" {...o} strokeWidth="1.5" />
         <path d="M27 130 H39 M27 134 H37" stroke="#a1a1aa" strokeWidth="1.2" strokeLinecap="round" />
@@ -238,8 +238,8 @@ function Pose({ mood, suit }) {
     return (
       <>
         {/* สองมือชูแฟ้มที่อก บนแฟ้มมีเครื่องหมายถูก = เคสนี้ผ่าน (ไม่ใช้ thumbs up: มือจิ๋วแล้วนิ้วโป้งดูเป็นนิ้วอื่น) */}
-        <Arm suit={suit} d="M52 118 Q46 128 57 133" />
-        <Arm suit={suit} d="M88 118 Q94 128 83 133" />
+        <Arm suit={suit} d="M56 118 Q46 128 57 133" />
+        <Arm suit={suit} d="M84 118 Q94 128 83 133" />
         <g className="mascot-check">
           <rect x="58" y="113" width="24" height="8" rx="1.5" fill="#fff" {...o} strokeWidth="1.4" />
           <path d="M55 118 H63 L65 115 H85 V140 H55 Z" fill={FOLDER} {...o} strokeWidth="1.8" />
@@ -258,9 +258,9 @@ function Pose({ mood, suit }) {
     // ครุ่นคิด: กอดอก + ฟองความคิด "…" (ไม่ถึงกับกุมขมับแบบเสี่ยงสูง)
     return (
       <>
-        <Arm suit={suit} d="M52 118 Q52 131 79 128" />
+        <Arm suit={suit} d="M56 118 Q52 131 79 128" />
         <Hand cx={80} cy={127.5} />
-        <Arm suit={suit} d="M88 118 Q88 133 61 130" />
+        <Arm suit={suit} d="M84 118 Q88 133 61 130" />
         <Hand cx={60} cy={129.5} />
         {/* ฟองความคิด "…" (กำลังชั่งใจ) */}
         <g className="mascot-float">
@@ -279,7 +279,7 @@ function Pose({ mood, suit }) {
       <>
         {folder}
         {/* หาไม่เจอ: นิ้วจิ้มแก้ม งงๆ + ฟองความคิด "?" */}
-        <Arm suit={suit} d="M88 120 Q104 112 102 100" />
+        <Arm suit={suit} d="M84 120 Q104 112 102 100" />
         <Hand cx={101} cy={98} />
         <path d="M100 56 Q103 61 101 64 Q98 65 97 62 Q97 59 100 56Z" fill="#7cc4f5" stroke="#3b82c4" strokeWidth="1.1" className="mascot-drip" />
         <g className="mascot-float">
@@ -298,7 +298,7 @@ function Pose({ mood, suit }) {
         {folder}
         <g className="mascot-point">
           {/* แขนกางออกนอกหัว (สูทสีเข้มไม่กลืนกับผม) นิ้วชี้ตั้งขึ้น */}
-          <Arm suit={suit} d="M88 120 Q114 110 122 80" />
+          <Arm suit={suit} d="M84 120 Q114 110 122 80" />
           <PointingHand />
           <path d="M109 52 l-4 -4 M125 51 l4 -4 M116.5 47 v-5" stroke={LINE} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
         </g>
@@ -310,7 +310,7 @@ function Pose({ mood, suit }) {
     <>
       {folder}
       <g className="mascot-wave">
-        <Arm suit={suit} d="M88 120 Q102 112 106 98" />
+        <Arm suit={suit} d="M84 120 Q102 112 106 98" />
         <Hand cx={107} cy={94} />
         <path d="M114 86 Q118 90 116 96 M117 82 Q123 88 121 98" fill="none" stroke={LINE} strokeWidth="1.3" strokeLinecap="round" opacity="0.45" />
       </g>
@@ -324,11 +324,11 @@ export default function HrCharacter({ mood, girl = false, mini = false }) {
   const look = mood === 'Point' ? 'none' : mood // ท่าชี้ใช้หน้า/เนกไทแบบปกติ
   return (
     <svg
-      viewBox={mini ? '22 16 96 96' : '0 0 140 172'}
+      viewBox={mini === 'head' ? '10 2 120 122' : mini ? '22 16 96 96' : '0 0 140 172'} // head = ทั้งหัวไม่ตัดผม (ตัวโหลดในปุ่ม)
       className={mini ? 'mascot-static size-full' : 'mx-auto h-52 w-auto overflow-visible'}
       aria-hidden="true"
     >
-      <ellipse cx="70" cy="167" rx="28" ry="4" className="mascot-shadow fill-line" />
+      <ellipse cx="70" cy="167" rx="22" ry="4" className="mascot-shadow fill-line" />
       <g className="mascot-body">
         {girl ? (
           <>
@@ -339,27 +339,34 @@ export default function HrCharacter({ mood, girl = false, mini = false }) {
             <rect x="60" y="148" width="8" height="12" rx="3" fill={SKIN} {...o} strokeWidth="1.6" />
             <rect x="72" y="148" width="8" height="12" rx="3" fill={SKIN} {...o} strokeWidth="1.6" />
             <path d="M57 159 H69 Q69 165 63 165 H57 Z M71 159 H83 V165 H77 Q71 165 71 159 Z" fill="#1f1a1a" {...o} strokeWidth="1.6" />
-            {/* กระโปรงดินสอ */}
-            <path d="M50 138 L90 138 L92 152 L48 152 Z" className={suit.fill} {...o} />
+            {/* กระโปรงดินสอ: กว้างที่สะโพก สอบลงที่เข่า */}
+            <path d="M53 137 L87 137 L84 153 L56 153 Z" className={suit.fill} {...o} />
           </>
         ) : (
           <>
             {/* ขาจิ๋ว + รองเท้า */}
-            <rect x="57" y="144" width="11" height="17" rx="4" className="fill-pants" {...o} />
-            <rect x="72" y="144" width="11" height="17" rx="4" className="fill-pants" {...o} />
-            <ellipse cx="61" cy="163" rx="8" ry="4.5" fill="#1f1a1a" {...o} />
-            <ellipse cx="79" cy="163" rx="8" ry="4.5" fill="#1f1a1a" {...o} />
+            <rect x="59" y="144" width="10" height="17" rx="4" className="fill-pants" {...o} />
+            <rect x="71" y="144" width="10" height="17" rx="4" className="fill-pants" {...o} />
+            <ellipse cx="63" cy="163" rx="7" ry="4.5" fill="#1f1a1a" {...o} />
+            <ellipse cx="77" cy="163" rx="7" ry="4.5" fill="#1f1a1a" {...o} />
           </>
         )}
-        {/* ตัว: สูท + เชิ้ต (+ เนกไท ผู้ชาย / เข็มกลัดสีตามความเสี่ยง ผู้หญิง) */}
-        <path d="M50 112 Q44 134 48 146 L92 146 Q96 134 90 112 Q70 104 50 112 Z" className={suit.fill} {...o} />
+        {/* ตัว: สูท + เชิ้ต (+ เนกไท ผู้ชาย / เข็มกลัดสีตามความเสี่ยง ผู้หญิง)
+            จอย = นาฬิกาทราย (ไหล่ → เอวคอด → สะโพกผาย สูทจบที่สะโพก) กิต = หุ่นปกติ เรียวลงตรงๆ */}
+        <path
+          d={girl
+            ? 'M55 112 Q52 120 59 128 Q53 133 53 139 L87 139 Q87 133 81 128 Q88 120 85 112 Q70 105 55 112 Z'
+            : 'M55 112 Q51 130 54 146 L86 146 Q89 130 85 112 Q70 105 55 112 Z'}
+          className={suit.fill}
+          {...o}
+        />
         {girl ? (
           <>
             <path d="M60 110 L70 131 L80 110 Z" fill="#fff" {...o} strokeWidth="1.6" />
             <path d="M60 110 L65 121 L61 123 Z M80 110 L75 121 L79 123 Z" fill="#fff" {...o} strokeWidth="1.4" />
             <path d="M59 111 L65 124 L62 126 L70 138 M81 111 L75 124 L78 126 L70 138" fill="none" className={suit.line} strokeWidth="1.6" strokeLinejoin="round" />
-            <circle cx="57" cy="126" r="3.2" className={TIE[look]} {...o} strokeWidth="1.2" />
-            <circle cx="56" cy="125" r="0.9" fill="#fff" />
+            <circle cx="59.5" cy="122" r="3" className={TIE[look]} {...o} strokeWidth="1.2" />
+            <circle cx="58.6" cy="121.1" r="0.9" fill="#fff" />
           </>
         ) : (
           <>
@@ -368,9 +375,9 @@ export default function HrCharacter({ mood, girl = false, mini = false }) {
             <path d="M60 111 L66 124 L63 126 L70 136 M80 111 L74 124 L77 126 L70 136" fill="none" className={suit.line} strokeWidth="1.6" strokeLinejoin="round" />
           </>
         )}
-        <circle cx="70" cy="141" r="1.6" className={suit.button} />
-        <rect x="79" y="128" width="9" height="6" rx="1.5" className="fill-card" {...o} strokeWidth="1.1" />
-        <rect x="79" y="128" width="9" height="2" rx="0.8" className="fill-accent" />
+        <circle cx="70" cy={girl ? 134 : 141} r="1.6" className={suit.button} />
+        <rect x="76" y="119" width="8" height="5.5" rx="1.5" className="fill-card" {...o} strokeWidth="1.1" />
+        <rect x="76" y="119" width="8" height="2" rx="0.8" className="fill-accent" />
         {/* หัว + ผม + หน้า: ท่าขอโทษจะก้มลง (mascot-bow) */}
         <g className={mood === 'Sorry' ? 'mascot-bow' : undefined}>
         {girl ? (
@@ -388,22 +395,29 @@ export default function HrCharacter({ mood, girl = false, mini = false }) {
           </>
         ) : (
           <>
-            {/* หัวโตหน้ากลม + ผมแสกกลาง หน้าม้าเป็นปอยตกลงมาปิดหน้าผาก ด้านบนมีวอลลุ่ม ข้างคลุมหู */}
+            {/* หัวโตหน้ากลม + ผมแสกข้าง หน้าม้าฟูกวาดเฉียงจากซ้ายลงขวา ปลายงอนที่ขมับขวา ข้างสั้นเห็นหู
+                (ขอบล่างหน้าม้าอยู่เหนือคิ้ว ไม่บังสีหน้า) */}
+            {[28, 112].map((cx) => (
+              <g key={cx}>
+                <ellipse cx={cx} cy="86" rx="5.5" ry="8" fill={SKIN} {...o} />
+                <path d={cx < 70 ? 'M29 82 Q25 86 29 90' : 'M111 82 Q115 86 111 90'} fill="none" stroke={SKIN_SHADE} strokeWidth="1.6" strokeLinecap="round" />
+              </g>
+            ))}
             <ellipse cx="70" cy="76" rx="42" ry="37" fill={SKIN} {...o} />
             <path d="M60 110 Q70 114 80 110" fill="none" stroke={SKIN_SHADE} strokeWidth="2" />
             <path
-              d="M30 94 Q20 60 30 40 Q42 18 70 16 Q98 18 110 40 Q120 60 110 94 Q108 80 106 70 Q104 66 101 65 Q100 56 95 51 Q96 58 93 65 Q89 55 82 50 Q84 57 77 64 Q75 52 71 45 L70 43 L69 45 Q65 52 63 64 Q56 57 58 50 Q51 55 47 65 Q44 58 45 51 Q40 56 39 65 Q36 66 34 70 Q32 80 30 94 Z"
+              d="M30 80 Q22 58 30 40 Q42 18 70 16 Q98 18 110 40 Q118 58 110 80 Q108 72 104 66 Q100 72 93 75 Q92 70 88 66 Q86 70 79 72 Q78 66 74 60 Q70 64 63 63 Q62 59 59 55 Q52 58 46 56 Q40 58 37 64 Q33 70 30 80 Z"
               fill={HAIR_M}
               {...o}
             />
-            {/* เส้นผมแยกปอย (ทิศจากแสกกลางออกด้านข้าง) + ไฮไลต์ */}
+            {/* เส้นผมกวาดตามทิศหน้าม้า + ปอยม้วนบนกระหม่อม + ไฮไลต์ */}
             <g fill="none" strokeLinecap="round">
-              <path d="M69 22 Q63 34 64 56" stroke="#000" strokeOpacity="0.35" strokeWidth="1.4" />
-              <path d="M71 22 Q77 34 76 56" stroke="#000" strokeOpacity="0.35" strokeWidth="1.4" />
-              <path d="M52 28 Q44 40 45 56" stroke="#000" strokeOpacity="0.3" strokeWidth="1.3" />
-              <path d="M88 28 Q96 40 95 56" stroke="#000" strokeOpacity="0.3" strokeWidth="1.3" />
-              <path d="M44 32 Q54 22 64 22" stroke={HAIR_M_LIGHT} strokeWidth="2.6" />
-              <path d="M76 22 Q86 22 96 32" stroke={HAIR_M_LIGHT} strokeWidth="2.6" />
+              <path d="M46 28 Q44 36 42 46" stroke="#000" strokeOpacity="0.35" strokeWidth="1.4" />
+              <path d="M50 34 Q76 28 94 48 Q100 58 96 66" stroke="#000" strokeOpacity="0.35" strokeWidth="1.4" />
+              <path d="M56 44 Q72 42 80 58" stroke="#000" strokeOpacity="0.3" strokeWidth="1.3" />
+              <path d="M64 38 Q84 40 90 60" stroke="#000" strokeOpacity="0.3" strokeWidth="1.3" />
+              <path d="M76 26 Q92 28 96 40 Q97 46 92 46" stroke="#000" strokeOpacity="0.3" strokeWidth="1.3" />
+              <path d="M54 24 Q72 18 90 26" stroke={HAIR_M_LIGHT} strokeWidth="2.6" />
             </g>
           </>
         )}

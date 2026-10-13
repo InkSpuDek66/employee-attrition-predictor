@@ -2,8 +2,8 @@
 // ponytail: บัญชีทดลองแสดงบนหน้านี้ชั่วคราวให้ทีม/กรรมการลองได้ ลบกล่อง DEMO_ACCOUNTS ออกเมื่อมีระบบผู้ใช้จริง (SEC-01)
 import { useRef, useState } from 'react'
 import Logo from '../logo/Logo'
-import { WelcomeMascots } from './mascot/Mascot'
-import { accountProblem, api, focusField, friendly, inputClass, serverProblem } from './theme'
+import { PointHint, WelcomeMascots } from './mascot/Mascot'
+import { accountProblem, api, focusField, friendly, inputClass, invalidClass, serverProblem } from './theme'
 import { Alert, CheckedField, Field, Icon, PrimaryButton, ThemeToggle } from './ui'
 
 const DEMO_ACCOUNTS = [
@@ -21,23 +21,31 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
   const [busy, setBusy] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const demo = useRef(null) // กล่องบัญชีทดลองมุมซ้ายล่าง (<details>) ปิดเองหลังเลือกบัญชี
-  const [error, setError] = useState('')
   // สร้างบริษัทใหม่: ได้บริษัทว่าง (ไม่เห็นข้อมูลบริษัทอื่น) + บัญชี admin แล้วเข้าระบบให้เลย (POST /auth/register)
   const [mode, setMode] = useState('login') // 'login' | 'register'
   const [company, setCompany] = useState({ company_name: '', name: '', username: '', password: '', confirm: '' })
   // ช่องแรกที่ผิด { field, text } ผู้ช่วยชี้ช่องนั้น (field null = ข้อความรวมใต้ฟอร์ม) แก้ช่องนั้นแล้วหายเอง
   const [problem, setProblem] = useState(null)
   const registerForm = useRef(null)
+  const loginForm = useRef(null)
   const setField = (k) => (e) => (setCompany((c) => ({ ...c, [k]: e.target.value })), problem?.field === k && setProblem(null))
-  const switchTo = (m) => (setMode(m), setError(''), setProblem(null))
+  const switchTo = (m) => (setMode(m), setProblem(null))
   const point = (p) => (setProblem(p), p.field && focusField(registerForm.current, p.field))
+  // หน้าเข้าสู่ระบบ: credentials = ชื่อผู้ใช้/รหัสผ่านไม่ตรง (backend ไม่บอกว่าช่องไหน) แดงทั้งสองช่อง โฟกัสรหัสผ่าน
+  const pointLogin = (p) => (setProblem(p), p.field && focusField(loginForm.current, p.field === 'credentials' ? 'password' : p.field))
+  const typed = (set, k) => (e) => (set(e.target.value), [k, 'credentials'].includes(problem?.field) && setProblem(null))
+  const loginBad = (k) => [k, 'credentials'].includes(problem?.field)
   // ยังไม่ได้เลือกผู้ช่วย: ช่องฝั่งซ้ายให้จอย+ปุกปุยชี้ ฝั่งขวาให้กิต+ส้มฉุน ตามที่ยืนอยู่ข้างฟอร์ม
   const LEFT = { who: 'joy', pet: 'dog' }
   const RIGHT = { who: 'kit', pet: 'cat' }
   const BOTH = { ...LEFT, partner: RIGHT } // ช่องชื่อบริษัทกว้างเต็มแถว มาทั้งสองคู่
   // ตัวที่ออกมาชี้หายจากข้างฟอร์ม (ช่องซ้าย = จอย+ปุกปุย, ช่องขวา = กิต+ส้มฉุน, ชื่อบริษัท = ทั้งหมด)
-  const pointing = { company_name: ['joy', 'dog', 'kit', 'cat'], name: ['joy', 'dog'], password: ['joy', 'dog'], username: ['kit', 'cat'], confirm: ['kit', 'cat'] }
-  const away = (mode === 'register' && pointing[problem?.field]) || []
+  // หน้าเข้าสู่ระบบ: ชื่อผู้ใช้ = จอย+ปุกปุย, รหัสผ่าน = กิต+ส้มฉุน, รหัสผิด = ทั้งหมด
+  const ALL = ['joy', 'dog', 'kit', 'cat']
+  const pointing = mode === 'register'
+    ? { company_name: ALL, name: ['joy', 'dog'], password: ['joy', 'dog'], username: ['kit', 'cat'], confirm: ['kit', 'cat'] }
+    : { username: ['joy', 'dog'], password: ['kit', 'cat'], credentials: ALL }
+  const away = pointing[problem?.field] || []
 
   async function createCompany(e) {
     e.preventDefault()
@@ -62,8 +70,10 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
 
   async function submit(e) {
     e.preventDefault()
+    const found = !username.trim() ? { field: 'username', text: 'กรอกชื่อผู้ใช้ก่อนนะ' } : !password ? { field: 'password', text: 'กรอกรหัสผ่านก่อนนะ' } : null
+    if (found) return pointLogin(found)
     setBusy(true)
-    setError('')
+    setProblem(null)
     try {
       onLogin(
         await api('/auth/login', {
@@ -73,7 +83,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
         }),
       )
     } catch (err) {
-      setError(friendly(err))
+      pointLogin(err.status === 401 ? { field: 'credentials', text: err.message } : { field: null, text: friendly(err) })
       setBusy(false)
     }
   }
@@ -122,32 +132,37 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
             </p>
           </form>
           ) : (
-          <form onSubmit={submit} style={{ '--enter': '120ms' }} className="login-enter space-y-4 rounded-xl border border-line bg-card p-6">
+          <form ref={loginForm} onSubmit={submit} noValidate style={{ '--enter': '120ms' }} className="login-enter space-y-4 rounded-xl border border-line bg-card p-6">
           <div>
             <h1 className="text-xl font-semibold text-fg">เข้าสู่ระบบ</h1>
             <p className="text-sm text-muted-fg">ข้อมูลพนักงานเป็นข้อมูลส่วนบุคคล ต้องเข้าสู่ระบบก่อนใช้งาน</p>
           </div>
           <Field label="ชื่อผู้ใช้" icon="user">
             <input
-              className={inputClass}
+              className={`${inputClass} ${loginBad('username') ? invalidClass : ''}`}
               name="username"
               autoComplete="username"
               spellCheck={false}
-              required
+              aria-invalid={loginBad('username') || undefined}
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={typed(setUsername, 'username')}
             />
           </Field>
+          {problem?.field === 'username' && (
+            <PointHint key={problem.text} {...LEFT} className="-mt-2">
+              {problem.text}
+            </PointHint>
+          )}
           <Field label="รหัสผ่าน">
             <span className="relative block">
               <input
-                className={`${inputClass} pr-12`}
+                className={`${inputClass} pr-12 ${loginBad('password') ? invalidClass : ''}`}
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                required
+                aria-invalid={loginBad('password') || undefined}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={typed(setPassword, 'password')}
               />
               <button
                 type="button"
@@ -160,8 +175,13 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
               </button>
             </span>
           </Field>
-          {expired && !error && <Alert tone="warning">หมดเวลาการใช้งาน หรือระบบเพิ่งเริ่มใหม่ กรุณาเข้าสู่ระบบอีกครั้ง</Alert>}
-          {error && <Alert>{error}</Alert>}
+          {['password', 'credentials'].includes(problem?.field) && (
+            <PointHint key={problem.text} {...(problem.field === 'password' ? { ...RIGHT, align: 'right' } : BOTH)} className="-mt-2">
+              {problem.text}
+            </PointHint>
+          )}
+          {expired && !problem && <Alert tone="warning">หมดเวลาการใช้งาน หรือระบบเพิ่งเริ่มใหม่ กรุณาเข้าสู่ระบบอีกครั้ง</Alert>}
+          {problem && !problem.field && <Alert>{problem.text}</Alert>}
           <div className="grid">
             <PrimaryButton loading={busy} loadingText="กำลังเข้าสู่ระบบ…">
               เข้าสู่ระบบ <Icon name="right" className="size-4" />
@@ -194,7 +214,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
               <li key={a.username}>
                 <button
                   type="button"
-                  onClick={() => (setUsername(a.username), setPassword(a.password), (demo.current.open = false))}
+                  onClick={() => (setUsername(a.username), setPassword(a.password), setProblem(null), (demo.current.open = false))}
                   className="lift w-full cursor-pointer rounded-lg border border-line bg-card px-3 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">

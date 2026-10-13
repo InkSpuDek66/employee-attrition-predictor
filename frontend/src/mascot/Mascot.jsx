@@ -47,9 +47,8 @@ function Bubble({ tail = 'top', className = '', live = false, children }) {
 export function MascotLoader() {
   return (
     <span className="inline-flex items-center gap-1" aria-hidden="true">
-      <span className="loader-hop mr-0.5 size-5 overflow-hidden rounded-full bg-card/80 ring-1 ring-on-primary/20">
-        {CHARACTERS[loadMascot()]({ mood: 'none', mini: true })}
-      </span>
+      {/* ทั้งหัวไม่ใส่กรอบวงกลม (ตัดเป็นวงกลมแล้วผม/หูขาด ดูแปลก) */}
+      <span className="loader-hop mr-0.5 inline-flex h-6 [&_svg]:h-6 [&_svg]:w-auto">{CHARACTERS[loadMascot()]({ mood: 'none', mini: 'head' })}</span>
       <span className="loader-dot size-1 rounded-full bg-current" />
       <span className="loader-dot size-1 rounded-full bg-current" />
       <span className="loader-dot size-1 rounded-full bg-current" />

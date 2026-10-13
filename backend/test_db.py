@@ -335,3 +335,12 @@ def test_demo_calibration_file_is_synthetic_not_ibm():
     assert 0.05 < (df["ลาออกแล้วหรือยัง"] == "ลาออก").mean() < 0.3  # อัตราลาออกสมเหตุสมผล
     again = pd.read_excel(io.BytesIO(client.get("/recalibrate/template", params={"demo": True}).content), sheet_name="พนักงาน")
     assert again.equals(df)  # ไฟล์เดิมทุกครั้ง (ผ่านการตรวจไฟล์ + ปรับเทียบได้: test_api.test_recalibrate_from_excel_then_history_and_reset)
+
+
+def test_demo_labels_cover_every_ibm_role_and_are_stable():
+    raw = ms.reference_employees()
+    a, b = db.demo_labels(raw), db.demo_labels(raw)
+    assert a[db.DEPARTMENT_NAME].notna().all() and a[db.JOB_TITLE].notna().all()
+    assert a[db.DEPARTMENT_NAME].equals(b[db.DEPARTMENT_NAME])  # รันซ้ำได้ผลเดิม
+    assert a[db.DEPARTMENT_NAME].nunique() == 8 and {"ฝ่ายไอที", "ฝ่ายการตลาด", "ฝ่ายการเงินและบัญชี"} <= set(a[db.DEPARTMENT_NAME])
+    assert (a.drop(columns=[db.DEPARTMENT_NAME, db.JOB_TITLE]) == raw).all().all()  # ข้อมูลที่เข้าโมเดลไม่เปลี่ยน

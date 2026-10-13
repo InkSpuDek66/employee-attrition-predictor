@@ -176,10 +176,37 @@ def current_ids(tenant_id: str) -> tuple[set[int], set[int]]:
     return {i for i, active in rows if active}, {i for i, active in rows if not active}
 
 
+# ชื่อแผนก/ตำแหน่งภาษาไทยของข้อมูลเดโม IBM (แสดงผล + แยกแผนกในหน้าภาพรวมเท่านั้น คะแนนยังใช้กลุ่มเดิมของ IBM)
+# ให้เดโมเห็นแผนกแบบบริษัทจริง (8 แผนก) รวมแผนกที่ IBM ไม่มี แบ่งบางตำแหน่งตามหลักหน่วยของรหัสพนักงาน = รันซ้ำได้ผลเดิม
+# (แผนก IBM, ตำแหน่ง IBM) -> [(หลักหน่วยของรหัส < ค่านี้, แผนก, ตำแหน่ง), ...]
+DEMO_LABELS = {
+    ("Sales", "Sales Executive"): [(7, "ฝ่ายขาย", "เจ้าหน้าที่ขาย"), (10, "ฝ่ายการตลาด", "เจ้าหน้าที่การตลาด")],
+    ("Sales", "Sales Representative"): [(10, "ฝ่ายขาย", "พนักงานขาย")],
+    ("Sales", "Manager"): [(7, "ฝ่ายขาย", "ผู้จัดการฝ่ายขาย"), (10, "ฝ่ายการตลาด", "ผู้จัดการฝ่ายการตลาด")],
+    ("Research & Development", "Research Scientist"): [(10, "ฝ่ายวิจัยและพัฒนา", "นักวิจัย")],
+    ("Research & Development", "Laboratory Technician"): [(6, "ฝ่ายวิจัยและพัฒนา", "นักเทคนิคห้องปฏิบัติการ"), (10, "ฝ่ายไอที", "นักพัฒนาระบบ")],
+    ("Research & Development", "Manufacturing Director"): [(10, "ฝ่ายผลิต", "ผู้อำนวยการฝ่ายผลิต")],
+    ("Research & Development", "Healthcare Representative"): [(10, "ฝ่ายลูกค้าสัมพันธ์", "เจ้าหน้าที่ลูกค้าสัมพันธ์")],
+    ("Research & Development", "Research Director"): [(10, "ฝ่ายวิจัยและพัฒนา", "ผู้อำนวยการฝ่ายวิจัย")],
+    ("Research & Development", "Manager"): [(5, "ฝ่ายวิจัยและพัฒนา", "ผู้จัดการฝ่ายวิจัย"), (8, "ฝ่ายไอที", "ผู้จัดการฝ่ายไอที"), (10, "ฝ่ายผลิต", "ผู้จัดการฝ่ายผลิต")],
+    ("Human Resources", "Human Resources"): [(6, "ฝ่ายบุคคล", "เจ้าหน้าที่ฝ่ายบุคคล"), (10, "ฝ่ายการเงินและบัญชี", "เจ้าหน้าที่บัญชี")],
+    ("Human Resources", "Manager"): [(6, "ฝ่ายบุคคล", "ผู้จัดการฝ่ายบุคคล"), (10, "ฝ่ายการเงินและบัญชี", "ผู้จัดการฝ่ายการเงิน")],
+}
+
+
+def demo_labels(raw: pd.DataFrame) -> pd.DataFrame:
+    """raw (IBM) + คอลัมน์ DepartmentName / JobTitle ตาม DEMO_LABELS"""
+    def pick(r):
+        return next((d, t) for cut, d, t in DEMO_LABELS[(r["Department"], r["JobRole"])] if r["EmployeeNumber"] % 10 < cut)
+
+    labels = raw.apply(pick, axis=1, result_type="expand")
+    return raw.assign(**{DEPARTMENT_NAME: labels[0], JOB_TITLE: labels[1]})
+
+
 if __name__ == "__main__":
     if not url():
         raise SystemExit("ตั้ง DATABASE_URL ใน .env ก่อน (ดู .env.example)")
     raw = load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
     with connect() as conn:
-        n = upsert_employees(conn, raw, DEMO_TENANT, "ibm_dataset")
+        n = upsert_employees(conn, demo_labels(raw), DEMO_TENANT, "ibm_dataset")
     print(f"บันทึกพนักงาน {n} คน ลง tenant '{DEMO_TENANT}' แล้ว")
