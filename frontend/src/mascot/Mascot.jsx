@@ -1,8 +1,9 @@
 // ตัวการ์ตูนผู้ช่วย HR: ใน sidebar เปลี่ยนท่าตามระดับความเสี่ยงของพนักงานที่ดูอยู่ + ใช้ในหน้าว่าง/หน้า error
 // แทน "สถานการณ์" ไม่ใช่ตัวพนักงาน และเป็นของตกแต่ง (aria-hidden) ข้อมูลจริงอยู่ที่ตัวเลข/ป้ายในหน้า
 // แอนิเมชันอยู่ใน index.css (mascot-*) ปิดเองเมื่อผู้ใช้ตั้ง reduced-motion
-// มี 4 ตัว: chibiGirl / chibiBoy (ChibiCharacter.jsx), cat / dog (PetCharacter.jsx) ตัวที่เลือกเก็บใน App (theme.js: loadMascot/saveMascot)
-import ChibiCharacter from './ChibiCharacter'
+// มี 4 ตัว: joy (Joy.jsx) / kit (Kit.jsx), cat / dog (PetCharacter.jsx) ตัวที่เลือกเก็บใน App (theme.js: loadMascot/saveMascot)
+import Joy from './Joy'
+import Kit from './Kit'
 import PetCharacter from './PetCharacter'
 import { loadMascot, MASCOTS } from '../theme'
 
@@ -16,13 +17,13 @@ const MOOD = {
 }
 
 const CHARACTERS = {
-  chibiGirl: (p) => <ChibiCharacter {...p} girl />,
-  chibiBoy: ChibiCharacter,
+  joy: Joy,
+  kit: Kit,
   cat: (p) => <PetCharacter {...p} kind="cat" />,
   dog: (p) => <PetCharacter {...p} kind="dog" />,
 }
 // ชื่อผู้ช่วย ใช้ทั้งปุ่มเลือกผู้ช่วยใน sidebar และป้ายชื่อหน้า login
-const LABELS = { chibiGirl: 'HR จอย', chibiBoy: 'HR กิต', cat: 'น้องส้มฉุน', dog: 'น้องปุกปุย' }
+const LABELS = { joy: 'HR จอย', kit: 'HR กิต', cat: 'น้องส้มฉุน', dog: 'น้องปุกปุย' }
 
 // กล่องคำพูด หางชี้ไปหาตัวการ์ตูน (tail = ทิศที่ตัวการ์ตูนอยู่)
 function Bubble({ tail = 'top', className = '', live = false, children }) {

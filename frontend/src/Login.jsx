@@ -47,7 +47,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
       <ThemeToggle dark={dark} onToggle={onToggleTheme} className="absolute right-4 top-4" />
       {/* จอใหญ่: ปุกปุย + จอย ทางซ้าย, กิต + ส้มฉุน ทางขวา (สัตว์ยืนด้านนอก) ยืนเสมอขอบล่างของฟอร์ม เห็นครบในจอเดียว */}
       <div className="flex w-full items-end justify-center gap-6 xl:gap-10">
-        <WelcomeMascots keys={['dog', 'chibiGirl']} enter="left" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
+        <WelcomeMascots keys={['dog', 'joy']} enter="left" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
         <div className="w-full max-w-md space-y-6">
         <div className="login-enter flex flex-col items-center text-center">
           <Logo className="size-24 sm:size-28" />
@@ -106,7 +106,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
           </form>
         </div>
         </div>
-        <WelcomeMascots keys={['chibiBoy', 'cat']} enter="right" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
+        <WelcomeMascots keys={['kit', 'cat']} enter="right" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
       </div>
 
       {/* บัญชีทดลอง: พับเก็บไว้มุมซ้ายล่าง กดเพื่อเปิด แล้วกดบัญชีเพื่อกรอกให้ */}

@@ -1,7 +1,7 @@
 // test ตรรกะเงิน/เกณฑ์ และการเรียก API (ใช้ node:test ในตัว ไม่ต้องลง library) รัน: npm test
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { api, bahtShort, bandOf, csvCell, employeeLabel, pushRecent, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
+import { api, bahtShort, bandOf, csvCell, employeeLabel, loadMascot, pushRecent, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
 
 test('ขอบเขตเงินเดือน: ขั้นต่ำ 15,000 บาท ขั้นสูง 20,000 ดอลลาร์ × อัตรา', () => {
   assert.deepEqual(incomeBounds(35), [15000, 700000])
@@ -129,4 +129,13 @@ test('What-if: ข้อความเด้งตามทิศที่ร�
   assert.equal(toastKind('Low', 'High'), 'high')
   assert.equal(toastKind('Medium', 'High'), 'high')
   assert.equal(toastKind('Low', 'Low'), null) // ไม่เปลี่ยน = ไม่เด้ง (เดิมเคยฉลองซ้ำตอนปรับครั้งแรกของคนที่ต่ำอยู่แล้ว)
+})
+
+test('มาสคอตที่เคยเลือกไว้ด้วยชื่อรุ่นก่อน (chibiGirl / chibiBoy) ได้ตัวเดิม', () => {
+  const saved = globalThis.localStorage
+  for (const [old, now] of [['chibiGirl', 'joy'], ['chibiBoy', 'kit'], ['cat', 'cat'], ['ไม่รู้จัก', 'joy']]) {
+    globalThis.localStorage = { getItem: () => old }
+    assert.equal(loadMascot(), now)
+  }
+  globalThis.localStorage = saved
 })

@@ -34,6 +34,7 @@ SCHEMA_OUTDATED = "ฐานข้อมูลยังเป็นโครง�
 MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 10_000
 MAX_ERRORS = 200  # ส่งกลับไม่เกินนี้ ที่เหลือบอกแค่จำนวน
+INVALID_PREVIEW = 20  # แถวที่ไม่ผ่านที่ส่งค่าทั้งแถวกลับไปให้หน้าเว็บแสดงเป็นตาราง
 THB_PER_USD = business_rules.THB_PER_USD
 MAX_UNZIPPED = 60 * 1024 * 1024  # .xlsx คือ zip: 10,000 แถวจริงแตกออกมาไม่ถึง 20 MB เกินนี้ = zip bomb
 
@@ -147,6 +148,13 @@ class RowError(BaseModel):
     message: str
 
 
+class InvalidRow(BaseModel):
+    """แถวที่ไม่ผ่าน แสดงแบบเดียวกับตัวอย่างแถวที่ผ่าน: values = ค่าตามที่กรอก, errors = {หัวคอลัมน์: ปัญหา}"""
+    row: int  # เลขแถวตามที่เห็นใน Excel
+    values: dict
+    errors: dict[str, str]
+
+
 class ChangeToCheck(BaseModel):
     """รหัสเดิมแต่ข้อมูลเปลี่ยนแบบที่คนเดิมไม่น่าเป็น = อาจเป็นคนใหม่ที่ได้รหัสซ้ำ หรือพิมพ์รหัสผิด"""
     employee_id: int
@@ -164,6 +172,7 @@ class ValidateResponse(BaseModel):
     errors: list[RowError]
     errors_truncated: int
     preview: list[dict]
+    invalid_preview: list[InvalidRow] = []  # INVALID_PREVIEW แถวแรกที่ไม่ผ่าน พร้อมค่าที่กรอกและช่องที่ผิด
     survey_imputed: int = 0  # แถวที่ผ่านแต่ระบบเติมค่าแบบสำรวจให้อย่างน้อย 1 ช่อง (DE-17)
     warnings: list[str] = []  # เรื่องที่ไม่ทำให้ไฟล์ไม่ผ่าน แต่ผู้ใช้ควรรู้ก่อนบันทึก
     saved: bool = False
@@ -172,7 +181,7 @@ class ValidateResponse(BaseModel):
     # บอกก่อนบันทึก (ต้องต่อ DB): รหัสใหม่ / รหัสที่มีอยู่แล้ว (รวมคนที่เคยออกแล้วกลับมา) / คนที่จะถูกบันทึกว่าออกแล้ว
     n_new: Optional[int] = None
     n_update: Optional[int] = None
-    n_leaving: Optional[int] = None  # มีเมื่อเลือก "ไฟล์นี้คือพนักงานทั้งหมดตอนนี้" (full_roster)
+    n_leaving: Optional[int] = None  # มีเมื่อเลือก "ถือว่าลาออกแล้ว" (full_roster)
     # รหัสที่มีอยู่แล้วแต่ข้อมูลเปลี่ยนแปลก (ไม่เกิน MAX_ERRORS คน) บันทึกได้เมื่อยืนยัน (confirm_changes)
     changes_to_check: list[ChangeToCheck] = []
     changes_truncated: int = 0
@@ -256,6 +265,7 @@ def _check(file: UploadFile, label: bool = False):
     errors: list[RowError] = []
     seen_ids: dict = {}
     preview, valid, n_valid, n_imputed = [], [], 0, 0
+    invalid_rows: list = []  # (เลขแถว, ค่าที่กรอก, {หัวคอลัมน์: ปัญหา}) สร้าง InvalidRow หลังรู้คอลัมน์ที่ผิดทั้งหมด
     for i, raw in enumerate(df.to_dict("records")):
         excel_row = i + 2
         row = {mapped[h]: _clean(v) for h, v in raw.items() if h in mapped}
@@ -316,6 +326,11 @@ def _check(file: UploadFile, label: bool = False):
 
         if row_errors:
             errors.extend(row_errors)
+            if len(invalid_rows) < INVALID_PREVIEW:
+                problems: dict[str, str] = {}
+                for e in row_errors:  # ช่องเดียวผิดหลายข้อ = รวมเป็นข้อความเดียว
+                    problems[e.column] = f"{problems[e.column]} · {e.message}" if e.column in problems else e.message
+                invalid_rows.append((excel_row, shown, problems))
         else:
             n_valid += 1
             n_imputed += imputed
@@ -334,6 +349,12 @@ def _check(file: UploadFile, label: bool = False):
                     | {THAI[f]: row.get(f) if shown.get(f) is None else shown.get(f) for f, _, _ in COLUMNS[1:9]}  # กลุ่มที่เติมเอง = โชว์ชื่อกลุ่ม
                 )
 
+    # คอลัมน์เดียวกับตัวอย่างแถวที่ผ่าน + ทุกคอลัมน์ที่ผิดในแถวที่แสดง ทุกแถวมีค่าครบทุกคอลัมน์ (ค่าตามที่ผู้ใช้กรอก)
+    fields = ["EmployeeNumber", *(f for f, _, _ in DISPLAY if f in mapped.values()), *(f for f, _, _ in COLUMNS[1:9])]
+    bad_columns = {c for _, _, problems in invalid_rows for c in problems}
+    fields += [f for f in THAI if THAI[f] in bad_columns and f not in fields]
+    invalid_preview = [InvalidRow(row=r, values={THAI[f]: shown.get(f) for f in fields}, errors=p) for r, shown, p in invalid_rows]
+
     n_rows = n_valid + len({e.row for e in errors})
     return valid, ValidateResponse(
         filename=file.filename or "",
@@ -345,6 +366,7 @@ def _check(file: UploadFile, label: bool = False):
         errors=errors[:MAX_ERRORS],
         errors_truncated=max(0, len(errors) - MAX_ERRORS),
         preview=preview,
+        invalid_preview=invalid_preview,
         survey_imputed=n_imputed,
         warnings=[SURVEY_WARNING.format(n=n_imputed)] if n_imputed else [],
     )
@@ -353,7 +375,7 @@ def _check(file: UploadFile, label: bool = False):
 # full_roster: เลือกเกินครึ่งของพนักงานปัจจุบันจะถูกบันทึกว่าออก = น่าจะเลือกไฟล์ผิด (เช่น ไฟล์แผนกเดียว) เตือนก่อนบันทึก
 LEAVING_WARN = (
     "พนักงาน {n:,} จาก {total:,} คนไม่อยู่ในไฟล์นี้ จะถูกบันทึกว่าออกแล้ว"
-    " ถ้าไฟล์นี้มีแค่บางแผนก ให้เอาเครื่องหมาย \"ไฟล์นี้คือพนักงานทั้งหมดตอนนี้\" ออก"
+    " ถ้าไฟล์นี้มีแค่บางคนหรือบางแผนก ให้เลือก \"เก็บไว้เหมือนเดิม\" แทน"
 )
 
 
@@ -419,7 +441,7 @@ def validate_upload(
 def import_employees(
     background: BackgroundTasks,
     file: UploadFile = File(...),
-    full_roster: bool = Form(False),  # ไฟล์นี้คือพนักงานทั้งหมดตอนนี้: คนที่ไม่อยู่ในไฟล์ = บันทึกว่าออกแล้ว (ไม่ลบ)
+    full_roster: bool = Form(False),  # "ถือว่าลาออกแล้ว": คนที่ไม่อยู่ในไฟล์ = บันทึกว่าออกแล้ว (ไม่ลบ)
     confirm_changes: bool = Form(False),  # ผู้ใช้ยืนยันแล้วว่ารหัสที่ข้อมูลเปลี่ยนแปลก (changes_to_check) เป็นคนเดิมจริง
     user: dict = Depends(auth.require_admin),
     _=Depends(auth.LIMITS["import"].per_user),

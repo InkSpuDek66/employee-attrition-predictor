@@ -132,7 +132,7 @@ def test_new_company_sees_only_its_own_employees_with_real_departments(real_db, 
 
 
 def test_full_roster_import_marks_missing_as_left_and_they_can_come_back(real_db, monkeypatch):
-    """ไม่ออกรหัสให้เอง (รหัส = รหัสพนักงานของบริษัท) และ "ไฟล์นี้คือพนักงานทั้งหมดตอนนี้" = คนที่ไม่อยู่ในไฟล์ถูกบันทึกว่าออก ไม่ลบ"""
+    """ไม่ออกรหัสให้เอง (รหัส = รหัสพนักงานของบริษัท) และ "ถือว่าลาออกแล้ว" = คนที่ไม่อยู่ในไฟล์ถูกบันทึกว่าออก ไม่ลบ"""
     template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 4}).content), sheet_name="พนักงาน")
     monkeypatch.setitem(conftest.TEST_USER, "tenant_id", "newco_demo")
 

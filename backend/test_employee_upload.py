@@ -44,6 +44,11 @@ def test_bad_values_reported_in_thai_with_excel_row_numbers():
     assert (2, "ทำงานล่วงเวลา (OT)") in got and (3, "พอใจในงานที่ทำ") in got and (4, "รหัสพนักงาน") in got
     assert body["n_valid"] == 0 and body["n_invalid"] == 3
     assert any("ไม่เกิน 4" in e["message"] for e in body["errors"])
+    # แถวที่ไม่ผ่านแสดงค่าทั้งแถวแบบเดียวกับแถวที่ผ่าน พร้อมบอกช่องที่ผิด
+    bad = {r["row"]: r for r in body["invalid_preview"]}
+    assert set(bad) == {2, 3, 4} and bad[2]["values"]["ทำงานล่วงเวลา (OT)"] == "บางวัน" and "ทำงานล่วงเวลา (OT)" in bad[2]["errors"]
+    assert bad[3]["values"]["พอใจในงานที่ทำ"] == 9  # คอลัมน์ที่ผิดถูกเพิ่มเข้ามาแม้ไม่อยู่ในชุดตัวอย่าง
+    assert bad[3]["values"]["ทำงานล่วงเวลา (OT)"] in ("ทำ", "ไม่ทำ")  # คอลัมน์ที่แถวอื่นผิด ก็มีค่าจริงของแถวนี้ด้วย
     assert any("ทำ / ไม่ทำ" in e["message"] for e in body["errors"])  # ตัวเลือกเป็นภาษาไทยตามไฟล์ตัวอย่าง
 
 

@@ -39,11 +39,11 @@
   /* กราฟที่มีหลายชุดข้อมูล (ช่อง 1 ฟ้า, ช่อง 2 ส้ม ตามลำดับชุดสีที่ตรวจตาบอดสีแล้ว) */
   --color-chart-1: #2a78d6;
   --color-chart-2: #eb6834;
-  /* ชุดตัวการ์ตูนใน sidebar (mascot/ChibiCharacter.jsx) */
-  --color-suit: #2f3b58;
-  --color-suit-line: #45527a;
-  --color-pants: #252f47;
-  --color-blazer: #26262d;
+  /* ชุด HR ทั้งสองคน (mascot/HrCharacter.jsx): โหมดสว่าง = สูทดำ */
+  --color-suit: #23232a;
+  --color-suit-line: #4a4a55;
+  --color-pants: #1b1b20;
+  --color-blazer: #23232a;
   --color-blazer-line: #4a4a55;
 }
 
@@ -77,12 +77,12 @@
   --color-down: #7ab4f5;
   --color-chart-1: #3987e5;
   --color-chart-2: #d95926;
-  /* ชุดตัวการ์ตูนเป็นโทนครีม/ขาว ให้ตัดกับพื้นมืด */
-  --color-suit: #efe6d2;
-  --color-suit-line: #c8b995;
-  --color-pants: #ddd2b9;
-  --color-blazer: #f7f3ea;
-  --color-blazer-line: #cfc6b2;
+  /* ชุด HR ทั้งสองคนเป็นสูทขาว ให้ตัดกับพื้นมืด */
+  --color-suit: #f4f4f5;
+  --color-suit-line: #c4c4cc;
+  --color-pants: #e4e4e7;
+  --color-blazer: #f4f4f5;
+  --color-blazer-line: #c4c4cc;
 }
 
 /* สีโลโก้ (logo/Logo.jsx) โหมดสว่าง = สีเดียวกับ logo/logo.svg, โหมดมืด = กรอบกรมท่า ตัวอักษร/ประตูสว่างขึ้น */

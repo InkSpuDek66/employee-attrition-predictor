@@ -48,11 +48,13 @@ export const toastKind = (from, to) =>
   from === to ? null : BAND_RANK[to] < BAND_RANK[from] ? (to === 'Low' ? 'low' : 'midDown') : to === 'High' ? 'high' : 'midUp'
 
 // ผู้ช่วยในหน้า (mascot/Mascot.jsx) ลำดับนี้ใช้ทั้งปุ่มเลือกและหน้าขอโทษ ตัวที่เลือกจำใน localStorage
-export const MASCOTS = ['chibiGirl', 'chibiBoy', 'cat', 'dog']
+export const MASCOTS = ['joy', 'kit', 'cat', 'dog']
+const OLD_MASCOT_KEYS = { chibiGirl: 'joy', chibiBoy: 'kit' } // ชื่อรุ่นก่อนที่อาจจำไว้ในเบราว์เซอร์
 
 export function loadMascot() {
   try {
-    const v = localStorage.getItem('mascot')
+    const saved = localStorage.getItem('mascot')
+    const v = OLD_MASCOT_KEYS[saved] ?? saved
     return MASCOTS.includes(v) ? v : MASCOTS[0]
   } catch {
     return MASCOTS[0]
