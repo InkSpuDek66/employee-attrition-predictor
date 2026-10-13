@@ -159,3 +159,24 @@ def test_same_person_twice_with_different_ids_is_flagged():
     assert [c["employee_id"] for c in flagged] == [999] and "แถว 2 ในไฟล์นี้" in flagged[0]["reasons"][0]
     twin.loc[0, "อายุ"] = int(twin.loc[0, "อายุ"]) + 1  # ชื่อซ้ำแต่ข้อมูลอื่นต่าง = น่าจะคนละคน
     assert _upload(pd.concat([df, twin], ignore_index=True)).json()["changes_to_check"] == []
+
+
+def test_demo_employee_file_is_valid_with_thai_departments_and_names():
+    """ไฟล์พนักงานจำลองสำหรับลองนำเข้า: ผ่านการตรวจทุกแถว มีชื่อ แผนก/ตำแหน่งภาษาไทย ไม่มีคอลัมน์ผลลาออก"""
+    r = client.get("/employees/template", params={"demo": True})
+    assert r.status_code == 200
+    df = pd.read_excel(io.BytesIO(r.content), sheet_name="พนักงาน")
+    assert len(df) == 200 and list(df["รหัสพนักงาน"]) == list(range(1, 201))
+    assert df["แผนก"].nunique() >= 6 and df["ชื่อ-นามสกุล"].notna().all() and "ลาออกแล้วหรือยัง" not in df
+    body = _upload(df).json()
+    assert body["n_valid"] == 200 and body["n_invalid"] == 0 and body["unknown_columns"] == []
+    again = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"demo": True}).content), sheet_name="พนักงาน")
+    pd.testing.assert_frame_equal(df, again)  # เหมือนเดิมทุกครั้ง (เทียบข้อมูล ไฟล์ xlsx มีเวลาที่สร้างฝังอยู่)
+
+
+def test_template_lists_example_department_names():
+    """ชีต "ตัวเลือก" มีตัวอย่างชื่อแผนก/ตำแหน่งภาษาไทย HR จะได้พิมพ์ชื่อเดียวกันทุกแถว (ภาพรวมแยกแผนกตามชื่อที่พิมพ์)"""
+    r = client.get("/employees/template")
+    choices = pd.read_excel(io.BytesIO(r.content), sheet_name="ตัวเลือก")
+    assert {"ฝ่ายขาย", "ฝ่ายไอที", "ฝ่ายการเงินและบัญชี"} <= set(choices["ตัวอย่างชื่อแผนก"].dropna())
+    assert choices["ตัวอย่างชื่อตำแหน่ง"].notna().sum() >= 10

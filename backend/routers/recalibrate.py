@@ -19,6 +19,7 @@ from sklearn.metrics import brier_score_loss
 import auth
 import batch_score
 import calibration
+import db
 import model_store as ms
 from routers import employee_upload as eu
 
@@ -168,6 +169,7 @@ def demo_employees(n: int = DEMO_ROWS, seed: int = DEMO_SEED) -> pd.DataFrame:
     for col, (lo, hi) in {"DailyRate": (102, 1499), "HourlyRate": (30, 100), "MonthlyRate": (2094, 26999)}.items():
         df[col] = rng.integers(lo, hi + 1, n)
     df["EmployeeNumber"] = range(1, n + 1)
+    df = db.demo_labels(df)  # แผนก/ตำแหน่งภาษาไทยชุดเดียวกับข้อมูลทดลองในภาพรวม (8 ฝ่าย)
     df[eu.NAME[0]] = [f"{rng.choice(DEMO_FIRST_NAMES[g])} {rng.choice(DEMO_LAST_NAMES)}" for g in df["Gender"]]
     score = np.clip(ms.risk_scores(ms.to_features(df)), 1e-6, 1 - 1e-6)
     true_p = 1 / (1 + np.exp(-(np.log(score / (1 - score)) - DEMO_SHIFT)))
@@ -178,12 +180,15 @@ def demo_employees(n: int = DEMO_ROWS, seed: int = DEMO_SEED) -> pd.DataFrame:
 @router.get("/recalibrate/template")
 def recalibrate_template(demo: bool = False, _: dict = Depends(auth.require_admin)):
     """demo=false: หัวคอลัมน์ + 2 แถวตัวอย่าง, demo=true: พนักงานจำลอง 300 คนพร้อมผลลาออก ไว้ทดลองปรับเทียบ"""
-    people = demo_employees() if demo else None
-    rows = eu.template_rows(people, label=True) if demo else eu._example_rows(2, label=True)
+    rows = demo_rows(demo_employees(), label=True) if demo else eu._example_rows(2, label=True)
     name = "recalibrate_demo.xlsx" if demo else "recalibrate_template.xlsx"
-    if demo:  # template_rows ไม่รู้จักช่องชื่อ (ไม่ใช่ฟีเจอร์) ใส่ชื่อจำลองตามลำดับแถว
-        rows = [r | {eu.NAME[1]: n} for r, n in zip(rows, people[eu.NAME[0]])]
-    return eu.template_response(rows, [eu.COLUMNS[0], eu.NAME, *eu.COLUMNS[1:], eu.LABEL], name)
+    return eu.template_response(rows, [*eu.TEMPLATE_COLUMNS, eu.LABEL], name)
+
+
+def demo_rows(people: pd.DataFrame, label: bool) -> list[dict]:
+    """พนักงานจำลอง -> แถวในไฟล์ Excel (template_rows ไม่รู้จักช่องที่ใช้แสดงผล ใส่ชื่อ/แผนก/ตำแหน่งเพิ่มตามลำดับแถว)"""
+    shown = people[[f for f, _, _ in eu.DISPLAY]].to_dict("records")
+    return [r | {th: s[f] for f, th, _ in eu.DISPLAY} for r, s in zip(eu.template_rows(people, label), shown)]
 
 
 @router.post("/recalibrate/upload", response_model=UploadResult)

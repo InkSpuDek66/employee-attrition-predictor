@@ -387,6 +387,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
           <div hidden={tab !== 'import'} className="fade-up">
             <Upload
               who={who}
+              ibmDemo={tenant === 'ibm_demo'}
               canSave={user.role === 'admin'}
               onSaved={() => (refreshData(), speak('บันทึกพนักงานเรียบร้อย!', 'กดชื่อด้านล่างเพื่อดูความเสี่ยงได้เลย'))}
               onPick={pick}

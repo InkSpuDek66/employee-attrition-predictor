@@ -79,7 +79,7 @@ NAME = (db.FULL_NAME, "ชื่อ-นามสกุล", "ไม่บัง�
 NAME_MAX = 100  # ตรงกับ CHECK ของคอลัมน์ full_name / department_name / job_title
 # แผนก/ตำแหน่งจริงของบริษัท: แสดงผลและแยกแผนกในหน้าภาพรวม ส่วนการคำนวณใช้ "กลุ่ม" ของโมเดล (3 แผนก/9 ตำแหน่งของ IBM)
 # ชื่อจริงตรงกับกลุ่มอยู่แล้ว (เช่น "Sales" หรือ "ฝ่ายขาย") = ไม่ต้องกรอกช่องกลุ่ม ไฟล์รุ่นก่อนที่มีแค่ "แผนก" แบบ IBM จึงยังใช้ได้
-DEPT_NAME = (db.DEPARTMENT_NAME, "แผนก", "ชื่อแผนกจริงของบริษัท ใช้แสดงผลและแยกแผนกในหน้าภาพรวม")
+DEPT_NAME = (db.DEPARTMENT_NAME, "แผนก", "ชื่อแผนกจริงของบริษัท ใช้แสดงผลและแยกแผนกในหน้าภาพรวม ต้องสะกดเหมือนกันทุกแถว ระบบเทียบชื่อตรงตัวอักษร (\"ฝ่ายขาย\" กับ \"ฝ่าย ขาย\" = คนละแผนก) ดูตัวอย่างในชีต \"ตัวเลือก\"")
 JOB_TITLE = (db.JOB_TITLE, "ตำแหน่งงาน", "ชื่อตำแหน่งจริงของบริษัท ใช้แสดงผล")
 DISPLAY = [NAME, DEPT_NAME, JOB_TITLE]  # ช่องที่ใช้แสดงผลเท่านั้น ไม่ส่งเข้าโมเดล
 GROUP_OF = {db.DEPARTMENT_NAME: "Department", db.JOB_TITLE: "JobRole"}  # ชื่อจริง -> ช่องกลุ่มของโมเดลที่คู่กัน
@@ -88,6 +88,7 @@ TEMPLATE_COLUMNS = []
 for _col in COLUMNS:
     TEMPLATE_COLUMNS += [_col, NAME] if _col[0] == "EmployeeNumber" else [_BEFORE[_col[0]], _col] if _col[0] in _BEFORE else [_col]
 EXAMPLE_NAMES = ["สมชาย (ตัวอย่าง)", "สมหญิง (ตัวอย่าง)"]
+DEMO_EMPLOYEES, DEMO_EMPLOYEES_SEED = 200, 7  # ไฟล์พนักงานจำลองสำหรับลองนำเข้า เหมือนเดิมทุกครั้งที่ดาวน์โหลด
 # ชื่อแผนก/ตำแหน่งภาษาไทยในแถวตัวอย่างของ template (บริษัทจริงใช้ชื่อของตัวเอง)
 EXAMPLE_DEPARTMENTS = {"Sales": "ฝ่ายขาย", "Research & Development": "ฝ่ายวิจัยและพัฒนา", "Human Resources": "ฝ่ายบุคคล"}
 EXAMPLE_TITLES = {
@@ -572,8 +573,15 @@ def template_rows(raw: pd.DataFrame, label: bool = False) -> list[dict]:
 
 
 @router.get("/employees/template")
-def download_template(n_examples: Optional[int] = 2):
-    """ไฟล์ Excel ตัวอย่าง: ชีต "พนักงาน" (หัวคอลัมน์ + แถวตัวอย่าง) และชีต "คำอธิบาย" """
+def download_template(n_examples: Optional[int] = 2, demo: bool = False):
+    """ไฟล์ Excel ตัวอย่าง: ชีต "พนักงาน" (หัวคอลัมน์ + แถวตัวอย่าง) และชีต "คำอธิบาย"
+    demo=true: พนักงานปัจจุบันจำลอง DEMO_EMPLOYEES คน (ชื่อ แผนก ตำแหน่งภาษาไทย) ไว้ลองนำเข้าแล้วดูในภาพรวม
+    คนละชุดกับไฟล์ทดลองปรับเทียบ (seed ต่างกัน) รหัสเริ่มที่ 1"""
+    if demo:
+        from routers.recalibrate import demo_employees, demo_rows  # import ตอนเรียก: recalibrate import โมดูลนี้อยู่แล้ว
+
+        rows = demo_rows(demo_employees(DEMO_EMPLOYEES, DEMO_EMPLOYEES_SEED), label=False)
+        return template_response(rows, TEMPLATE_COLUMNS, "employee_demo.xlsx")
     rows = [
         r
         | {NAME[1]: EXAMPLE_NAMES[i % len(EXAMPLE_NAMES)]}
@@ -609,6 +617,9 @@ def template_response(rows: list[dict], columns: list, filename: str) -> Streami
             {
                 "กลุ่มตำแหน่ง (ให้โมเดล)": pd.Series(roles),
                 "กลุ่มแผนก (ให้โมเดล)": pd.Series([f"{th} ({en})" for en, th in EXAMPLE_DEPARTMENTS.items()]),
+                # ชื่อจริงพิมพ์อะไรก็ได้ แต่แผนกเดียวกันต้องสะกดเหมือนกัน (ฝ่ายไอที กับ แผนก IT = คนละแผนกในภาพรวม)
+                "ตัวอย่างชื่อแผนก": pd.Series(sorted({d for opts in db.DEMO_LABELS.values() for _, d, _ in opts})),
+                "ตัวอย่างชื่อตำแหน่ง": pd.Series(sorted({t for opts in db.DEMO_LABELS.values() for _, _, t in opts})),
             }
         ).to_excel(xw, sheet_name="ตัวเลือก", index=False)
         for ws in xw.book.worksheets:

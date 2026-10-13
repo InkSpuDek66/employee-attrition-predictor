@@ -261,7 +261,8 @@ function ChangesToCheck({ result }) {
   )
 }
 
-export default function Upload({ who, canSave, onSaved, onPick }) {
+// ibmDemo = บริษัททดลอง IBM (มีพนักงานรหัส 1–1,470 อยู่แล้ว นำเข้าไฟล์ทดลองจะทับคนเดิม)
+export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
@@ -327,9 +328,14 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Card icon="list" title="1. ดาวน์โหลดไฟล์ตัวอย่าง" subtitle="Excel ที่มีหัวคอลัมน์ครบ + แถวตัวอย่าง + ชีตคำอธิบายค่าที่รับ">
-          <DownloadButton path="/employees/template" filename="employee_template.xlsx" onError={setError}>
-            ดาวน์โหลดไฟล์ตัวอย่าง (.xlsx)
-          </DownloadButton>
+          <div className="flex flex-wrap gap-2">
+            <DownloadButton path="/employees/template" filename="employee_template.xlsx" onError={setError}>
+              ไฟล์ตัวอย่าง (.xlsx)
+            </DownloadButton>
+            <DownloadButton path="/employees/template?demo=true" filename="employee_demo.xlsx" onError={setError}>
+              ข้อมูลทดลอง 200 คน
+            </DownloadButton>
+          </div>
           <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-muted-fg">
             <li>กรอกหนึ่งแถวต่อพนักงานหนึ่งคน รหัสพนักงานห้ามซ้ำ</li>
             <li>เงินเดือนกรอกเป็นบาท ระยะทางเป็นกิโลเมตร</li>
@@ -339,6 +345,14 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
             <li>
               “แผนก” / “ตำแหน่งงาน” ใช้ชื่อจริงของบริษัทได้ (เช่น ฝ่ายการเงิน) แล้วเลือก “กลุ่มแผนก / กลุ่มตำแหน่ง (ให้โมเดล)” ที่ใกล้ที่สุด
               ถ้าชื่อจริงตรงกับกลุ่มอยู่แล้วเว้นช่องกลุ่มได้ ภาพรวมจะแยกแผนกตามชื่อจริง
+            </li>
+            <li>
+              <b className="text-fg">ชื่อแผนกต้องสะกดเหมือนกันทุกแถว</b> ระบบเทียบชื่อตรงตัวอักษร เช่น “ฝ่ายไอที” กับ “แผนก IT” หรือ “ฝ่ายขาย” กับ “ฝ่าย ขาย”
+              จะกลายเป็นคนละแผนกในภาพรวม ดูตัวอย่างชื่อแผนก/ตำแหน่งในชีต “ตัวเลือก”
+            </li>
+            <li>
+              “ข้อมูลทดลอง” เป็นพนักงานจำลอง มีชื่อ แผนก ตำแหน่งภาษาไทย ไว้ลองนำเข้าแล้วดูผลในภาพรวม
+              {ibmDemo && <b className="text-risk-high"> บริษัทนี้มีพนักงาน IBM รหัส 1–1,470 อยู่แล้ว นำเข้าไฟล์ทดลองจะทับคนเดิม ลองในบริษัทที่สร้างเองดีกว่า</b>}
             </li>
             <li>ช่องความพึงพอใจ/สมดุลงานกับชีวิต (จากแบบสำรวจพนักงาน) และความทุ่มเท (จากการประเมินของหัวหน้า) ไม่มีข้อมูลก็เว้นว่างได้</li>
             <li>“เข้าออฟฟิศ (วัน/สัปดาห์)” ใส่ 0–5 ตามนโยบาย WFH หรือระบบลงเวลา เว้นว่าง = เข้าทุกวัน</li>

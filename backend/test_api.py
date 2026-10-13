@@ -93,6 +93,7 @@ def test_recalibrate_from_excel_then_history_and_reset(tmp_path, monkeypatch):
     assert demo.status_code == 200
     df = pd.read_excel(io.BytesIO(demo.content), sheet_name="พนักงาน")
     assert len(df) == 300 and set(df["ลาออกแล้วหรือยัง"]) == {"ลาออก", "ยังอยู่"}
+    assert df["แผนก"].nunique() >= 6 and df["ตำแหน่งงาน"].notna().all()  # แผนก 8 ฝ่ายชุดเดียวกับภาพรวม
 
     xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     r = client.post("/recalibrate/upload", files={"file": ("d.xlsx", demo.content, xlsx)}, data={"method": "platt"}).json()
