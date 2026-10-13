@@ -36,7 +36,7 @@ function Bubble({ tail = 'top', className = '', live = false, children }) {
   }[tail]
   return (
     <div className={`relative rounded-2xl border border-line bg-card px-4 py-3 ${className}`} aria-live={live ? 'polite' : undefined}>
-      <span className={`absolute size-3 rotate-45 border-line bg-card ${pos}`} />
+      {pos && <span className={`absolute size-3 rotate-45 border-line bg-card ${pos}`} />}
       {children}
     </div>
   )
@@ -60,23 +60,27 @@ export function MascotLoader() {
 // ผู้ช่วยตัวเล็กยกมือชี้ขึ้นไปที่ช่อง/จุดที่อยู่ด้านบน + กล่องคำพูดบอกว่าต้องแก้อะไร (ช่องกรอกที่ผิด ตัวเลือกที่ยังไม่เลือก ฯลฯ)
 // วางไว้ใต้สิ่งที่ชี้ align = 'left' (ตัวการ์ตูนซ้าย) | 'right' (ตัวการ์ตูนขวา ชี้ของที่อยู่ชิดขวา)
 // ข้อความอยู่ในกล่องคำพูด (role alert/status) โปรแกรมอ่านหน้าจออ่านได้ ตัวการ์ตูนเป็นของตกแต่ง
+// ตัวที่ชี้ + สัตว์เลี้ยงตัวจิ๋วยืนข้างๆ (ด้านนอก) ซ้ายหรือขวาของกล่องคำพูด
+function Pointer({ who, pet, right }) {
+  return (
+    <div className={`flex shrink-0 items-end ${right ? 'flex-row-reverse' : ''}`} aria-hidden="true">
+      {pet && <div className={`${right ? '-ml-2' : '-mr-2'} [&_svg]:h-12 [&_svg]:w-auto`}>{CHARACTERS[pet]({ mood: 'none' })}</div>}
+      <div className="-mt-2 [&_svg]:h-24 [&_svg]:w-auto">{CHARACTERS[who]({ mood: 'Point' })}</div>
+    </div>
+  )
+}
+
 // who = ตัวที่ชี้ (ไม่ส่ง = ตัวที่ผู้ใช้เลือกไว้) pet = สัตว์เลี้ยงตัวจิ๋วยืนข้างๆ (หน้า login: จอย+ปุกปุย ซ้าย, กิต+ส้มฉุน ขวา)
-export function PointHint({ children, align = 'left', who, pet, role = 'alert', className = '' }) {
-  const Character = CHARACTERS[who ?? loadMascot()]
-  const right = align === 'right'
+// partner = { who, pet } อีกคู่ยืนอีกฝั่ง ชี้ช่องที่กว้างเต็มแถว (กล่องคำพูดอยู่ตรงกลาง)
+export function PointHint({ children, align = 'left', who, pet, partner, role = 'alert', className = '' }) {
+  const right = align === 'right' && !partner
   return (
     <div role={role} className={`fade-up flex items-end gap-1.5 ${right ? 'flex-row-reverse' : ''} ${className}`}>
-      {pet && (
-        <div className="-mr-2 shrink-0 [&_svg]:h-12 [&_svg]:w-auto" aria-hidden="true">
-          {CHARACTERS[pet]({ mood: 'none' })}
-        </div>
-      )}
-      <div className="-mt-2 shrink-0 [&_svg]:h-24 [&_svg]:w-auto" aria-hidden="true">
-        {Character({ mood: 'Point' })}
-      </div>
-      <Bubble tail={right ? 'right' : 'left'} className="mb-4 px-3 py-2 text-sm font-medium text-risk-high">
+      <Pointer who={who ?? loadMascot()} pet={pet} right={right} />
+      <Bubble tail={partner ? 'none' : right ? 'right' : 'left'} className={`mb-4 px-3 py-2 text-sm font-medium text-risk-high ${partner ? 'flex-1 text-center' : ''}`}>
         {children}
       </Bubble>
+      {partner && <Pointer {...partner} right />}
     </div>
   )
 }
@@ -120,7 +124,8 @@ export function SorryState({ message }) {
 // หน้า login: ผู้ช่วยยืนโบกมือต้อนรับ พร้อมป้ายชื่อ (keys = ตัวที่จะแสดง เรียงซ้ายไปขวา)
 // enter = 'left' | 'right' กระโดดเข้ามาจากขอบจอฝั่งนั้น ตัวที่อยู่ด้านนอกมาก่อน
 // โบก/ขยับไม่พร้อมกัน ดูมีชีวิต เป็นของตกแต่ง ซ่อนจากโปรแกรมอ่านหน้าจอ
-export function WelcomeMascots({ keys = MASCOTS, enter, className = '' }) {
+// away = ตัวที่ออกไปชี้ช่องในฟอร์มอยู่ (PointHint) ค่อยๆ จางหายจากข้างฟอร์ม แล้วกลับมาเมื่อแก้แล้ว (ที่ว่างคงไว้ หน้าไม่ขยับ)
+export function WelcomeMascots({ keys = MASCOTS, enter, away = [], className = '' }) {
   return (
     <div className={`flex items-end ${className}`} aria-hidden="true">
       {keys.map((k, i) => (
@@ -135,8 +140,11 @@ export function WelcomeMascots({ keys = MASCOTS, enter, className = '' }) {
             enter ? `hop-in-${enter}` : ''
           }`}
         >
-          {CHARACTERS[k]({ mood: 'none' })}
-          <span className="-mt-1 rounded-full border border-line bg-card/80 px-2.5 py-0.5 text-xs font-medium text-fg">{LABELS[k]}</span>
+          {/* ห่ออีกชั้น: ตัวนอกมีแอนิเมชันกระโดดเข้า (ค้าง opacity) จางที่ชั้นในแทน */}
+          <div className={`flex flex-col items-center transition duration-300 ${away.includes(k) ? 'translate-y-2 scale-90 opacity-0' : ''}`}>
+            {CHARACTERS[k]({ mood: 'none' })}
+            <span className="-mt-1 rounded-full border border-line bg-card/80 px-2.5 py-0.5 text-xs font-medium text-fg">{LABELS[k]}</span>
+          </div>
         </div>
       ))}
     </div>

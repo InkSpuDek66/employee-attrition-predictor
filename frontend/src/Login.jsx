@@ -34,6 +34,10 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
   // ยังไม่ได้เลือกผู้ช่วย: ช่องฝั่งซ้ายให้จอย+ปุกปุยชี้ ฝั่งขวาให้กิต+ส้มฉุน ตามที่ยืนอยู่ข้างฟอร์ม
   const LEFT = { who: 'joy', pet: 'dog' }
   const RIGHT = { who: 'kit', pet: 'cat' }
+  const BOTH = { ...LEFT, partner: RIGHT } // ช่องชื่อบริษัทกว้างเต็มแถว มาทั้งสองคู่
+  // ตัวที่ออกมาชี้หายจากข้างฟอร์ม (ช่องซ้าย = จอย+ปุกปุย, ช่องขวา = กิต+ส้มฉุน, ชื่อบริษัท = ทั้งหมด)
+  const pointing = { company_name: ['joy', 'dog', 'kit', 'cat'], name: ['joy', 'dog'], password: ['joy', 'dog'], username: ['kit', 'cat'], confirm: ['kit', 'cat'] }
+  const away = (mode === 'register' && pointing[problem?.field]) || []
 
   async function createCompany(e) {
     e.preventDefault()
@@ -80,7 +84,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
       <ThemeToggle dark={dark} onToggle={onToggleTheme} className="absolute right-4 top-4" />
       {/* จอใหญ่: ปุกปุย + จอย ทางซ้าย, กิต + ส้มฉุน ทางขวา (สัตว์ยืนด้านนอก) ยืนเสมอขอบล่างของฟอร์ม เห็นครบในจอเดียว */}
       <div className="flex w-full items-end justify-center gap-6 xl:gap-10">
-        <WelcomeMascots keys={['dog', 'joy']} enter="left" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
+        <WelcomeMascots keys={['dog', 'joy']} enter="left" away={away} className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
         <div className="w-full max-w-md space-y-6">
         <div className="login-enter flex flex-col items-center text-center">
           <Logo className="size-24 sm:size-28" />
@@ -97,7 +101,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
               <h1 className="text-xl font-semibold text-fg">สร้างบริษัทใหม่</h1>
               <p className="text-sm text-muted-fg">ได้บริษัทว่างพร้อมบัญชีผู้ดูแลระบบ แล้วนำเข้าพนักงานของบริษัทเองได้ ไม่เห็นข้อมูลบริษัทอื่น</p>
             </div>
-            <CheckedField mascot={LEFT} label="ชื่อบริษัท" name="company_name" problem={problem} value={company.company_name} onChange={setField('company_name')} maxLength={100} />
+            <CheckedField mascot={BOTH} label="ชื่อบริษัท" name="company_name" problem={problem} value={company.company_name} onChange={setField('company_name')} maxLength={100} />
             <div className="grid grid-flow-dense items-start gap-3 sm:grid-cols-2">
               <CheckedField mascot={LEFT} label="ชื่อของคุณ" name="name" problem={problem} value={company.name} onChange={setField('name')} maxLength={100} />
               <CheckedField side="right" mascot={RIGHT} label="ชื่อผู้ใช้ (a-z ตัวเลข)" name="username" problem={problem} value={company.username} onChange={setField('username')} autoComplete="username" spellCheck={false} />
@@ -173,7 +177,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
           )}
         </div>
         </div>
-        <WelcomeMascots keys={['kit', 'cat']} enter="right" className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
+        <WelcomeMascots keys={['kit', 'cat']} enter="right" away={away} className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
       </div>
 
       {/* บัญชีทดลอง: พับเก็บไว้มุมซ้ายล่าง กดเพื่อเปิด แล้วกดบัญชีเพื่อกรอกให้ */}
