@@ -20,6 +20,10 @@ EXTRA_COLUMNS = ["OfficeDaysPerWeek"]  # ไม่มีใน CSV ของ IBM
 # ชื่อพนักงาน (คอลัมน์ full_name) ตั้งใจไม่อยู่ใน EXTRA_COLUMNS: read_employees จึงไม่คืนชื่อ
 # ข้อมูลที่ส่งเข้าโมเดล/predict/whatif ไม่มีชื่อปนแน่นอน อ่านชื่อแยกด้วย employee_names() ตอนจะแสดงผล
 FULL_NAME = "FullName"  # ชื่อแบบ IBM ของคอลัมน์ full_name (ใช้ตอนบันทึกผ่าน upsert_employees)
+# แผนก/ตำแหน่งจริงของบริษัท (คอลัมน์ department_name / job_title) แสดงผลเท่านั้น ไม่อยู่ใน read_employees เช่นเดียวกับชื่อ
+DEPARTMENT_NAME = "DepartmentName"
+JOB_TITLE = "JobTitle"
+LABEL_COLUMNS = {"full_name": FULL_NAME, "department_name": DEPARTMENT_NAME, "job_title": JOB_TITLE}
 
 
 def url():
@@ -51,10 +55,26 @@ def read_employees(tenant_id: str = DEMO_TENANT) -> pd.DataFrame:
     with connect() as conn, conn.cursor() as cur:
         cur.execute("SELECT * FROM employees WHERE tenant_id = %s ORDER BY employee_id", (tenant_id,))
         df = pd.DataFrame(cur.fetchall(), columns=[d.name for d in cur.description])
-    if df.empty:
-        raise LookupError(f"ไม่มีพนักงานของ tenant '{tenant_id}' ในฐานข้อมูล (โหลด IBM dataset: python src/db.py)")
     ibm = {db_column(c): c for c in [*load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME)).columns, *EXTRA_COLUMNS]}
+    # บริษัทที่ยังไม่มีพนักงาน (เช่น บริษัทใหม่ก่อนนำเข้า) = ตารางว่างที่มีคอลัมน์ครบ ไม่ใช่ error
     return df[[c for c in df.columns if c in ibm]].rename(columns=ibm)
+
+
+def employee_labels(tenant_id: str) -> pd.DataFrame:
+    """ชื่อ / แผนกจริง / ตำแหน่งจริง ของพนักงานทั้งบริษัท index = รหัสพนักงาน (ค่าว่าง = None)
+    ไม่ตั้ง DATABASE_URL หรือ DB เก่ายังไม่มีคอลัมน์ = ตารางว่าง (หน้าเว็บแสดงชื่อกลุ่มของโมเดลแทน)"""
+    empty = pd.DataFrame(columns=list(LABEL_COLUMNS.values()), index=pd.Index([], name="EmployeeNumber"))
+    if not url():
+        return empty
+    import psycopg
+
+    try:
+        with connect() as conn, conn.cursor() as cur:
+            cur.execute(f"SELECT employee_id, {', '.join(LABEL_COLUMNS)} FROM employees WHERE tenant_id = %s", (tenant_id,))
+            rows = cur.fetchall()
+    except psycopg.errors.UndefinedColumn:  # QA-06
+        return empty
+    return pd.DataFrame(rows, columns=["EmployeeNumber", *LABEL_COLUMNS.values()]).set_index("EmployeeNumber")
 
 
 def employee_names(tenant_id: str, ids) -> dict[int, str]:

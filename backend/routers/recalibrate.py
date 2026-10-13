@@ -129,7 +129,7 @@ def recalibrate(req: RecalibrateRequest, background: BackgroundTasks, user: dict
     if not raw["Attrition"].isin(["Yes", "No"]).all():
         raise HTTPException(422, 'Attrition ต้องเป็น "Yes" หรือ "No" เท่านั้น')
     result = _fit(raw, req.method, user["tenant_id"])
-    background.add_task(batch_score.refresh_in_background)  # คะแนนปรับเทียบในตารางผลทำนายเปลี่ยน
+    background.add_task(batch_score.refresh_in_background, user["tenant_id"])  # คะแนนปรับเทียบในตารางผลทำนายเปลี่ยน
     return result
 
 
@@ -138,7 +138,7 @@ def demo_employees(n: int = DEMO_ROWS, seed: int = DEMO_SEED) -> pd.DataFrame:
     แต่ละคนตั้งต้นจากคนใน IBM แบบสุ่ม แล้วสุ่มปรับอายุ เงินเดือน ระยะทาง ความพึงพอใจ OT ฯลฯ
     แผนก/ตำแหน่ง/ระดับยังคู่กันแบบสมเหตุสมผล และคุมให้ผ่านกฎของ schemas.EmployeeInput (อายุงาน <= อายุ ฯลฯ)"""
     rng = np.random.default_rng(seed)
-    ibm = ms.raw_employees()
+    ibm = ms.reference_employees()  # ตั้งต้นจากคนใน IBM เสมอ ไม่ใช่พนักงานของบริษัทผู้ใช้
     df = ibm.iloc[rng.integers(0, len(ibm), n)].reset_index(drop=True).copy()
     jitter = lambda col, lo, hi: df[col] + rng.integers(lo, hi + 1, n)  # noqa: E731
     df["Age"] = jitter("Age", -4, 4).clip(18, 60)
@@ -184,7 +184,7 @@ def recalibrate_upload(  # def ไม่ใช่ async: ตรวจไฟล�
     if check.missing_columns or check.n_invalid or not valid:
         return UploadResult(check=check, message="ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด แก้แล้วอัปโหลดใหม่")
     result = _fit(eu.to_model_units(pd.DataFrame(valid)), method, user["tenant_id"])
-    background.add_task(batch_score.refresh_in_background)
+    background.add_task(batch_score.refresh_in_background, user["tenant_id"])
     return UploadResult(check=check, result=result)
 
 
@@ -196,5 +196,5 @@ def recalibrate_history(user: dict = Depends(auth.current_user)):
 @router.delete("/recalibrate")
 def recalibrate_reset(background: BackgroundTasks, user: dict = Depends(auth.require_admin)):
     removed = calibration.reset(user["tenant_id"])
-    background.add_task(batch_score.refresh_in_background)
+    background.add_task(batch_score.refresh_in_background, user["tenant_id"])
     return {"tenant_id": user["tenant_id"], "removed": removed}

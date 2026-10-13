@@ -1,7 +1,8 @@
 """โหลดโมเดล + ข้อมูลพนักงาน + SHAP explainer ครั้งเดียว ใช้ร่วมทุก router
 
-ข้อมูลพนักงานอ่านจาก PostgreSQL (ตาราง employees, tenant ibm_demo) เมื่อตั้ง DATABASE_URL ไม่ตั้ง = อ่าน CSV ดิบของ IBM
-ponytail: อ่านบริษัทเดียว (ibm_demo) ทั้ง backend แยกตาม tenant เมื่อมี login (SEC-02)
+ข้อมูลพนักงานแยกตามบริษัท (tenant ของผู้ใช้ที่ login) อ่านจาก PostgreSQL ตาราง employees เมื่อตั้ง DATABASE_URL
+ไม่ตั้ง = บริษัทเดโม (ibm_demo) อ่าน CSV ดิบของ IBM ส่วนบริษัทอื่นว่าง
+ข้อมูลอ้างอิงตอนแปลงฟีเจอร์ (one-hot ให้ครบหมวด) ใช้ CSV ของ IBM เสมอ ไม่ขึ้นกับบริษัท
 โมเดลตั้งค่าด้วย env MLFLOW_TRACKING_URI / MODEL_URI (อ่านจาก .env ผ่าน src/mlflow_setup.py
 ค่าเริ่มต้น = โมเดลตัวทดลองใน mlflow.db ในเครื่อง)
 """
@@ -40,53 +41,87 @@ OFFICE_DAYS = "OfficeDaysPerWeek"
 FULL_WEEK = 5
 
 
-# DE-15: ข้อมูลพนักงานใน DB เปลี่ยนได้จากทางอื่น (src/db.py, SQL, worker อื่น) cache จึงเช็ก "เวอร์ชันข้อมูล"
+# DE-15: ข้อมูลพนักงานใน DB เปลี่ยนได้จากทางอื่น (src/db.py, SQL, worker อื่น) cache จึงเช็ก "เวอร์ชันข้อมูล" ต่อบริษัท
 # (จำนวนแถว + updated_at ล่าสุด query เร็วมาก) ไม่เกินทุก DATA_CHECK_SECONDS วินาที ถ้าเปลี่ยนก็โหลดใหม่
 # ponytail: UPDATE ด้วย SQL ตรงที่ไม่แก้ updated_at จะไม่ถูกจับ ถ้าต้องแก้มือให้ SET updated_at = now() ด้วย
+# ponytail: ข้อมูลบริษัทไหนเปลี่ยน ล้าง cache ทุกบริษัท (ง่าย ถูกเสมอ) แยกล้างรายบริษัทเมื่อมีหลายบริษัทจริงจนช้า
 DATA_CHECK_SECONDS = 5
-_seen = {"version": None, "checked": float("-inf")}
+TENANT_CACHE = 32  # จำนวนบริษัทที่เก็บ cache ไว้พร้อมกัน
+_seen: dict = {}  # tenant -> {"version", "checked"}
 _seen_lock = threading.Lock()
 
 
-def _data_version():
+def _data_version(tenant: str):
     with db.connect() as conn:
-        return conn.execute(
-            "SELECT count(*), max(updated_at) FROM employees WHERE tenant_id = %s", (db.DEMO_TENANT,)
-        ).fetchone()
+        return conn.execute("SELECT count(*), max(updated_at) FROM employees WHERE tenant_id = %s", (tenant,)).fetchone()
 
 
-def _refresh_if_changed():
+def _clear():
+    _load_employees.cache_clear()
+    _load_labels.cache_clear()
+    _employee_features.cache_clear()
+
+
+def _refresh_if_changed(tenant: str):
     if not db.url():
         return
     with _seen_lock:
+        seen = _seen.setdefault(tenant, {"version": None, "checked": float("-inf")})
         now = time.monotonic()
-        if now - _seen["checked"] < DATA_CHECK_SECONDS:
+        if now - seen["checked"] < DATA_CHECK_SECONDS:
             return
-        _seen["checked"] = now
-        version = _data_version()
-        if version != _seen["version"]:
-            _load_employees.cache_clear()
-            _employee_features.cache_clear()
-            _seen["version"] = version
+        seen["checked"] = now
+        version = _data_version(tenant)
+        if version != seen["version"]:
+            if seen["version"] is not None:
+                _clear()
+            seen["version"] = version
 
 
 def clear_cache():
     """ล้าง cache ข้อมูลพนักงานทันที (หลังนำเข้าใน process นี้) คำขอถัดไปจะเช็กเวอร์ชันแล้วโหลดใหม่"""
     with _seen_lock:
-        _load_employees.cache_clear()
-        _employee_features.cache_clear()
-        _seen.update(version=None, checked=float("-inf"))
+        _clear()
+        _seen.clear()
 
 
 @lru_cache
-def _load_employees() -> pd.DataFrame:
-    df = db.read_employees() if db.url() else load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
+def reference_employees() -> pd.DataFrame:
+    """พนักงาน IBM จาก CSV (ไม่ขึ้นกับบริษัท) ใช้เป็นข้อมูลอ้างอิงตอนแปลงฟีเจอร์ แถวตัวอย่างใน template และไฟล์ทดลอง"""
+    df = load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
+    return df.assign(**{OFFICE_DAYS: FULL_WEEK})
+
+
+@lru_cache(maxsize=TENANT_CACHE)
+def _load_employees(tenant: str) -> pd.DataFrame:
+    if db.url():
+        df = db.read_employees(tenant)
+    else:
+        df = reference_employees() if tenant == db.DEMO_TENANT else reference_employees().iloc[:0]
     return df if OFFICE_DAYS in df else df.assign(**{OFFICE_DAYS: FULL_WEEK})
 
 
-def raw_employees() -> pd.DataFrame:
-    _refresh_if_changed()
-    return _load_employees()
+def raw_employees(tenant: str = db.DEMO_TENANT) -> pd.DataFrame:
+    """พนักงานของบริษัท (ชื่อคอลัมน์แบบ IBM) บริษัทที่ยังไม่มีพนักงาน = ตารางว่าง"""
+    _refresh_if_changed(tenant)
+    return _load_employees(tenant)
+
+
+@lru_cache(maxsize=TENANT_CACHE)
+def _load_labels(tenant: str) -> pd.DataFrame:
+    return db.employee_labels(tenant)
+
+
+def display_employees(tenant: str = db.DEMO_TENANT) -> pd.DataFrame:
+    """พนักงานของบริษัทสำหรับแสดงผล/จัดกลุ่ม: Department / JobRole = ชื่อจริงของบริษัทถ้ากรอกไว้ ไม่งั้นชื่อกลุ่มของโมเดล
+    + คอลัมน์ FullName ห้ามส่งตารางนี้เข้าโมเดล (ใช้ raw_employees / employee_features)"""
+    raw = raw_employees(tenant)
+    labels = _load_labels(tenant).reindex(raw["EmployeeNumber"])
+    return raw.assign(
+        Department=labels[db.DEPARTMENT_NAME].fillna(raw["Department"].set_axis(labels.index)).to_numpy(),
+        JobRole=labels[db.JOB_TITLE].fillna(raw["JobRole"].set_axis(labels.index)).to_numpy(),
+        **{db.FULL_NAME: labels[db.FULL_NAME].to_numpy()},
+    )
 
 
 def commute_adjusted(raw: pd.DataFrame) -> pd.DataFrame:
@@ -102,12 +137,12 @@ def commute_adjusted(raw: pd.DataFrame) -> pd.DataFrame:
 
 def input_columns() -> set:
     """คอลัมน์ที่ข้อมูลพนักงานต้องมี (ไม่รวม noise และ Attrition)"""
-    return set(raw_employees().columns) - set(NOISE_COLUMNS) - {TARGET_COLUMN}
+    return set(reference_employees().columns) - set(NOISE_COLUMNS) - {TARGET_COLUMN}
 
 
-def employee_record(employee_id: int):
-    """ข้อมูลดิบของพนักงาน 1 คน (เฉพาะ input_columns) เป็น dict หรือ None ถ้าไม่พบ"""
-    raw = raw_employees()
+def employee_record(employee_id: int, tenant: str = db.DEMO_TENANT):
+    """ข้อมูลดิบของพนักงาน 1 คนในบริษัท (เฉพาะ input_columns) เป็น dict หรือ None ถ้าไม่พบ"""
+    raw = raw_employees(tenant)
     match = raw.loc[raw["EmployeeNumber"] == employee_id, sorted(input_columns())]
     # ผ่าน JSON เพื่อแปลงชนิด numpy เป็น int/str ของ Python
     return None if match.empty else json.loads(match.head(1).to_json(orient="records"))[0]
@@ -119,20 +154,20 @@ def to_features(raw: pd.DataFrame) -> pd.DataFrame:
     ต่อข้อมูลอ้างอิงเข้าไปก่อน clean เพื่อให้ one-hot ได้คอลัมน์ครบเหมือนตอนเทรน แม้ข้อมูลใหม่จะมีหมวดไม่ครบ
     """
     # Attrition ไม่ใช้ทำนาย (ตัดทิ้งก่อนเข้าโมเดล) แต่ clean_data ต้องมีครบ พนักงานที่ import มายังไม่มีผลจริง จึงใส่ค่าแทน
-    both = pd.concat([commute_adjusted(raw), raw_employees()], ignore_index=True).assign(**{TARGET_COLUMN: "No"})
+    both = pd.concat([commute_adjusted(raw), reference_employees()], ignore_index=True).assign(**{TARGET_COLUMN: "No"})
     X = add_features(clean_data(both), only=SELECTED_FEATURES).drop(columns=TARGET_COLUMN)
     return X.iloc[: len(raw)][model().feature_names_in_]
 
 
-def employee_features() -> pd.DataFrame:
-    """ฟีเจอร์ของพนักงานทุกคน index = EmployeeNumber"""
-    _refresh_if_changed()
-    return _employee_features()
+def employee_features(tenant: str = db.DEMO_TENANT) -> pd.DataFrame:
+    """ฟีเจอร์ของพนักงานทุกคนในบริษัท index = EmployeeNumber"""
+    _refresh_if_changed(tenant)
+    return _employee_features(tenant)
 
 
-@lru_cache
-def _employee_features() -> pd.DataFrame:
-    raw = raw_employees()
+@lru_cache(maxsize=TENANT_CACHE)
+def _employee_features(tenant: str) -> pd.DataFrame:
+    raw = _load_employees(tenant)
     return to_features(raw).set_index(raw["EmployeeNumber"])  # to_features ปรับระยะทางตามวันเข้าออฟฟิศให้แล้ว
 
 

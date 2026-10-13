@@ -129,3 +129,19 @@ def test_gender_optional_not_used_by_model():
     assert body["n_valid"] == 3 and body["errors"] == []
     no_col = _upload(df.drop(columns=["เพศ"])).json()  # ไม่มีทั้งคอลัมน์
     assert no_col["n_valid"] == 3 and no_col["missing_columns"] == []
+
+
+def test_real_department_and_title_with_model_groups():
+    df = _template()
+    assert {"แผนก", "กลุ่มแผนก (ให้โมเดล)", "ตำแหน่งงาน", "กลุ่มตำแหน่ง (ให้โมเดล)"} <= set(df.columns)
+    assert _upload(df).json()["n_valid"] == 3  # แถวตัวอย่าง: ชื่อไทย + กลุ่มของโมเดล
+    no_group = df.drop(columns=["กลุ่มแผนก (ให้โมเดล)", "กลุ่มตำแหน่ง (ให้โมเดล)"])
+    no_group["แผนก"] = "ฝ่ายขาย"  # ชื่อไทยของกลุ่ม Sales = เติมกลุ่มให้เอง
+    no_group["ตำแหน่งงาน"] = "Manager"
+    body = _upload(no_group).json()
+    assert body["n_valid"] == 3 and body["missing_columns"] == []
+    no_group.loc[0, "แผนก"] = "ฝ่ายการเงิน"  # ไม่ใช่กลุ่มที่โมเดลรู้จัก และไม่ได้กรอกกลุ่ม = ต้องแจ้ง
+    errors = _upload(no_group).json()["errors"]
+    assert len(errors) == 1 and errors[0]["column"] == "กลุ่มแผนก (ให้โมเดล)" and "ฝ่ายการเงิน" in errors[0]["message"]
+    old = df.drop(columns=["แผนก", "ตำแหน่งงาน"]).rename(columns={"กลุ่มแผนก (ให้โมเดล)": "Department", "กลุ่มตำแหน่ง (ให้โมเดล)": "JobRole"})
+    assert _upload(old).json()["n_valid"] == 3  # ไฟล์ที่ใช้หัวคอลัมน์แบบ IBM ยังใช้ได้

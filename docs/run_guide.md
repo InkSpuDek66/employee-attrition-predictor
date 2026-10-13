@@ -207,7 +207,7 @@ python backend/batch_score.py  # ให้คะแนนทุกคน บั�
 
 - คะแนน ต้นทุน และสรุปเก็บทุกรอบ ส่วน SHAP เก็บครบทุกฟีเจอร์เฉพาะรอบล่าสุด รอบเก่าเหลือ 5 ปัจจัยที่มีผลมากสุดต่อคน (DE-16) DB จึงไม่โตรอบละราว 6 MB
 
-- หลังตั้ง `DATABASE_URL` แล้ว backend อ่านพนักงานจากตาราง `employees` (tenant `ibm_demo`) แทน CSV ต้อง restart backend
+- หลังตั้ง `DATABASE_URL` แล้ว backend อ่านพนักงานจากตาราง `employees` แยกตามบริษัทของผู้ login (`ibm_demo` = IBM, `newco_demo` = บริษัทที่เริ่มจากว่าง) แทน CSV ต้อง restart backend
 - `batch_score.py` รันซ้ำได้ ทุกรอบเพิ่มผลชุดใหม่ ผลล่าสุดคือ `scored_at` มากสุด (Superset อ่านจากตารางพวกนี้)
 - ถ้าตั้ง `DATABASE_URL` แล้วแต่ยังไม่ได้รัน `src/db.py` backend จะแจ้งว่าไม่มีพนักงานในฐานข้อมูล
 - ปิด: `docker compose down` (ข้อมูลยังอยู่ใน volume) ถ้าจะล้างทิ้งทั้งหมด: `docker compose down -v`

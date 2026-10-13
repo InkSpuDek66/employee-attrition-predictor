@@ -14,8 +14,9 @@ os.environ["DATABASE_URL"] = ""
 import auth  # noqa: E402
 from main import app  # noqa: E402
 
-# ทุก test เรียก API ในนาม admin ของบริษัท "co" (test ของ login/สิทธิ์อยู่ใน test_auth.py ซึ่งปิด override นี้เอง)
-TEST_USER = {"username": "pytest", "name": "pytest", "role": "admin", "tenant_id": "co"}
+# ทุก test เรียก API ในนาม admin ของบริษัทเดโม (ข้อมูล IBM; ไม่มี DB = อ่าน CSV) บริษัทอื่นไม่มีพนักงาน
+# (test ของ login/สิทธิ์อยู่ใน test_auth.py ซึ่งปิด override นี้เอง, บริษัทว่างดู test_tenants.py)
+TEST_USER = {"username": "pytest", "name": "pytest", "role": "admin", "tenant_id": "ibm_demo"}
 app.dependency_overrides[auth.current_user] = lambda: TEST_USER
 
 

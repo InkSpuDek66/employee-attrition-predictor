@@ -221,6 +221,11 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
             <div className="mb-4">
               <div className="text-xs font-medium text-muted-fg">ผลวิเคราะห์</div>
               <div className="font-semibold text-fg">{employeeLabel(query.id, data.name)}</div>
+              {data.job_role && (
+                <div className="text-xs text-muted-fg">
+                  {data.job_role} · {data.department}
+                </div>
+              )}
             </div>
             <RiskGauge title="ความเสี่ยงที่จะลาออก" score={score} avg={company?.mean_risk_score} />
             <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-fg">

@@ -31,6 +31,9 @@ router = APIRouter(tags=["auth"])
 DEMO_USERS = {
     "hr_demo": {"password": "hr-demo-1234", "role": "hr", "tenant_id": "ibm_demo", "name": "ฝ่ายบุคคล (ทดลอง)"},
     "admin_demo": {"password": "admin-demo-1234", "role": "admin", "tenant_id": "ibm_demo", "name": "ผู้ดูแลระบบ (ทดลอง)"},
+    # บริษัทที่เริ่มจากว่าง: ลองนำเข้าพนักงานของบริษัทเอง ไม่เห็นข้อมูล IBM (ข้อมูลแยกตาม tenant_id)
+    "newco_hr": {"password": "newco-hr-1234", "role": "hr", "tenant_id": "newco_demo", "name": "ฝ่ายบุคคล (บริษัทใหม่)"},
+    "newco_admin": {"password": "newco-admin-1234", "role": "admin", "tenant_id": "newco_demo", "name": "ผู้ดูแลระบบ (บริษัทใหม่)"},
 }
 SECRET = (os.getenv("AUTH_SECRET") or secrets.token_hex(32)).encode()
 TOKEN_TTL = 8 * 3600  # 1 วันทำงาน
@@ -64,7 +67,7 @@ def read_token(token: str):
     return data["sub"] if data.get("exp", 0) > time.time() and data.get("sub") in DEMO_USERS else None
 
 
-TENANT_NAMES = {"ibm_demo": "IBM HR Analytics (ข้อมูลตัวอย่าง)"}  # ชื่อเดียวกับตาราง tenants ใน DB
+TENANT_NAMES = {"ibm_demo": "IBM HR Analytics (ข้อมูลตัวอย่าง)", "newco_demo": "บริษัทตัวอย่าง (เริ่มจากว่าง)"}  # ชื่อเดียวกับตาราง tenants ใน DB
 
 
 def public(username: str) -> dict:

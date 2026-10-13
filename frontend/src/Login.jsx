@@ -9,6 +9,9 @@ import { Alert, Field, Icon, PrimaryButton, ThemeToggle } from './ui'
 const DEMO_ACCOUNTS = [
   { username: 'hr_demo', password: 'hr-demo-1234', role: 'ฝ่ายบุคคล', can: 'ดูภาพรวม, SHAP, What-if, ตรวจไฟล์นำเข้า' },
   { username: 'admin_demo', password: 'admin-demo-1234', role: 'ผู้ดูแลระบบ', can: 'ทุกอย่างของ HR + บันทึกไฟล์นำเข้า + ปรับเทียบโมเดล' },
+  // บริษัทที่เริ่มจากว่าง: ไม่เห็นข้อมูล IBM ลองนำเข้าพนักงานของบริษัทเองได้
+  { username: 'newco_admin', password: 'newco-admin-1234', role: 'ผู้ดูแลระบบ · บริษัทใหม่', can: 'เริ่มจากว่าง ลองนำเข้าพนักงานของบริษัทเอง (ไม่เห็นข้อมูล IBM)' },
+  { username: 'newco_hr', password: 'newco-hr-1234', role: 'ฝ่ายบุคคล · บริษัทใหม่', can: 'ดูพนักงานที่ผู้ดูแลของบริษัทใหม่นำเข้า' },
 ]
 
 // expired = ถูกพากลับมาเพราะ token หมดอายุ/backend restart (บอกเหตุผล ไม่ให้งงว่าทำไมหลุด)

@@ -79,12 +79,20 @@ class DepartmentsResponse(BaseModel):
     note: str = cs.NOTE
 
 
-def _inputs(record):
-    """(SHAP, ชื่อฟีเจอร์, คะแนนที่แสดง, ข้อมูลพนักงาน) record = ค่าปรับเทียบของบริษัทหรือ None"""
-    X = ms.employee_features()
+def _inputs(record, tenant: str):
+    """(SHAP, ชื่อฟีเจอร์, คะแนนที่แสดง, ข้อมูลพนักงาน) record = ค่าปรับเทียบของบริษัทหรือ None
+    ข้อมูลพนักงานใช้ชื่อแผนก/ตำแหน่งจริงของบริษัท (display_employees) แยกแผนกตามที่บริษัทใช้จริง"""
+    X = ms.employee_features(tenant)
     raw = ms.risk_scores(X)
     shown = calibration.apply(record, raw) if record else raw
-    return ms.explainer()(X).values, list(X.columns), shown, ms.raw_employees()
+    return ms.explainer()(X).values, list(X.columns), shown, ms.display_employees(tenant)
+
+
+def _empty(department):
+    """บริษัทที่ยังไม่มีพนักงาน (ก่อนนำเข้า) หน้าเว็บแสดงข้อความให้ไปนำเข้าข้อมูล"""
+    bands = {band: 0 for band in business_rules.RISK_BANDS}
+    return dict(department=department, n_employees=0, mean_risk_score=0.0, risk_bands=bands,
+                expected_loss_total=0.0, high_risk_replacement_cost=0.0, top_factors=[])
 
 
 CACHE_SQL = """
@@ -98,11 +106,11 @@ WHERE tenant_id = %(t)s AND model_version = %(v)s
 CACHE_KEYS = ("n_employees", "mean_risk_score", "risk_bands", "expected_loss_total", "high_risk_replacement_cost", "top_factors")
 
 
-def _cached(top_n: int, record):
+def _cached(top_n: int, record, tenant: str):
     """{department หรือ None (ทั้งบริษัท): สรุป} จากรอบ batch ล่าสุด หรือ None ถ้าต้องคำนวณสด"""
     if not db.url():
         return None
-    params = {"t": db.DEMO_TENANT, "v": ms.MODEL_VERSION, "c": record["calibrated_at"] if record else None}
+    params = {"t": tenant, "v": ms.MODEL_VERSION, "c": record["calibrated_at"] if record else None}
     try:
         with db.connect() as conn:
             rows = conn.execute(CACHE_SQL, params).fetchall()
@@ -119,15 +127,20 @@ def _cached(top_n: int, record):
 def company_summary(
     department: Optional[str] = None, top_n: int = Query(5, ge=1, le=50), user: dict = Depends(auth.current_user)
 ):
-    record = calibration.load(user["tenant_id"])
+    tenant = user["tenant_id"]
+    record = calibration.load(tenant)
     notes = {
         "warning": None if record else UNCALIBRATED_WARNING,
         "data_note": IN_SAMPLE_NOTE if user["tenant_id"] == db.DEMO_TENANT else None,
     }
-    cache = _cached(top_n, record)
+    cache = _cached(top_n, record, tenant)
     if cache and department in cache:
         return CompanySummary(department=department, **cache[department], **notes)
-    shap_values, names, risk, employees = _inputs(record)
+    if ms.raw_employees(tenant).empty:
+        if department:
+            raise HTTPException(404, f"ไม่พบแผนก '{department}' (บริษัทยังไม่มีพนักงาน)")
+        return CompanySummary(**_empty(None), **notes)
+    shap_values, names, risk, employees = _inputs(record, tenant)
     if department:
         departments = employees["Department"]
         if department not in set(departments):
@@ -140,12 +153,15 @@ def company_summary(
 @router.get("/company-summary/departments", response_model=DepartmentsResponse)
 def departments_summary(top_n: int = Query(3, ge=1, le=50), user: dict = Depends(auth.current_user)):
     """ทุกแผนกในครั้งเดียว เรียงตามมูลค่าความเสี่ยงรวม สำหรับหน้า Company Summary / Superset"""
-    record = calibration.load(user["tenant_id"])
-    cache = _cached(top_n, record)
+    tenant = user["tenant_id"]
+    record = calibration.load(tenant)
+    cache = _cached(top_n, record, tenant)
     if cache:
         rows = [{"department": d, **s} for d, s in cache.items() if d is not None]
         return DepartmentsResponse(departments=sorted(rows, key=lambda r: r["expected_loss_total"], reverse=True))
-    return DepartmentsResponse(departments=cs.by_department(*_inputs(record), top_n=top_n))
+    if ms.raw_employees(tenant).empty:
+        return DepartmentsResponse(departments=[])
+    return DepartmentsResponse(departments=cs.by_department(*_inputs(record, tenant), top_n=top_n))
 
 
 @router.get("/company-summary/top-employees", response_model=TopEmployeesResponse)
@@ -156,9 +172,12 @@ def top_employees(
 ):
     """พนักงานที่คะแนนความเสี่ยงสูงสุด n คน (ทั้งบริษัทหรือแผนกเดียว) ให้หน้าเว็บกดเลือกได้โดยไม่ต้องรู้รหัส
     บริษัทที่ recalibrate แล้ว (ของผู้ใช้ที่ login) จัดลำดับ/แบ่งระดับด้วยคะแนนที่ปรับเทียบ ให้ตรงกับหน้า SHAP/What-if"""
-    record = calibration.load(user["tenant_id"])
-    X = ms.employee_features()
-    employees = ms.raw_employees().set_index("EmployeeNumber").loc[X.index]
+    tenant = user["tenant_id"]
+    record = calibration.load(tenant)
+    X = ms.employee_features(tenant)
+    if X.empty:  # บริษัทที่ยังไม่มีพนักงาน
+        return TopEmployeesResponse(employees=[])
+    employees = ms.display_employees(tenant).set_index("EmployeeNumber").loc[X.index]  # แผนก/ตำแหน่ง/ชื่อจริง
     raw = ms.risk_scores(X)
     rows = employees.assign(risk_score=raw, shown=calibration.apply(record, raw) if record else raw)
     if department:
@@ -166,12 +185,11 @@ def top_employees(
             raise HTTPException(404, f"ไม่พบแผนก '{department}' (มี: {sorted(rows['Department'].unique())})")
         rows = rows[rows["Department"] == department]
     top = rows.nlargest(n, "shown")
-    names = db.employee_names(user["tenant_id"], top.index)
     return TopEmployeesResponse(
         employees=[
             TopEmployee(
                 employee_id=int(emp_id),
-                name=names.get(int(emp_id)),
+                name=r[db.FULL_NAME] if isinstance(r[db.FULL_NAME], str) else None,
                 risk_score=float(r.risk_score),
                 calibrated_risk_score=float(r.shown) if record else None,
                 risk_band=(band := business_rules.risk_band(r.shown)),

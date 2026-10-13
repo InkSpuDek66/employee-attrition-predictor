@@ -39,6 +39,8 @@ class Commute(BaseModel):
 class ShapResponse(BaseModel):
     employee_id: int
     name: Optional[str] = None  # ชื่อ-นามสกุล (ถ้าบริษัทกรอกตอนนำเข้า) ใช้แสดงผลเท่านั้น
+    department: Optional[str] = None  # แผนก/ตำแหน่งจริงของบริษัท (ไม่มี = ชื่อกลุ่มของโมเดล) แสดงผลเท่านั้น
+    job_role: Optional[str] = None
     risk_score: float
     calibrated_risk_score: Optional[float] = None
     warning: Optional[str] = None
@@ -50,7 +52,8 @@ class ShapResponse(BaseModel):
 @router.get("/shap/{employee_id}", response_model=ShapResponse)
 def get_shap(employee_id: int, top_n: int = Query(10, ge=1, le=100), user: dict = Depends(auth.current_user)):
     """คะแนนปรับเทียบใช้ของบริษัทผู้ใช้ที่ login (SEC-02)"""
-    X = ms.employee_features()
+    tenant = user["tenant_id"]  # เห็นได้แค่พนักงานของบริษัทตัวเอง
+    X = ms.employee_features(tenant)
     if employee_id not in X.index:
         raise HTTPException(404, f"ไม่พบพนักงาน employee_id={employee_id}")
     record = calibration.load(user["tenant_id"])
@@ -59,7 +62,8 @@ def get_shap(employee_id: int, top_n: int = Query(10, ge=1, le=100), user: dict 
     exp = ms.explainer()(row)
     score = ms.risk_scores(row)
     order = abs(exp.values[0]).argsort()[::-1][:top_n]
-    raw = ms.employee_record(employee_id)
+    raw = ms.employee_record(employee_id, tenant)
+    shown = ms.display_employees(tenant).set_index("EmployeeNumber").loc[employee_id]
     office_days = raw.get(ms.OFFICE_DAYS, ms.FULL_WEEK)
     commute = None
     if office_days < ms.FULL_WEEK:
@@ -67,7 +71,9 @@ def get_shap(employee_id: int, top_n: int = Query(10, ge=1, le=100), user: dict 
         commute = Commute(distance_km=raw["DistanceFromHome"], office_days=office_days, used_km=used)
     return ShapResponse(
         employee_id=employee_id,
-        name=db.employee_names(user["tenant_id"], [employee_id]).get(employee_id),
+        name=shown[db.FULL_NAME] if isinstance(shown[db.FULL_NAME], str) else None,
+        department=shown["Department"],
+        job_role=shown["JobRole"],
         risk_score=float(score[0]),
         calibrated_risk_score=float(calibration.apply(record, score)[0]) if record else None,
         warning=None if record else UNCALIBRATED_WARNING,

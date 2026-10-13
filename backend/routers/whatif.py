@@ -45,7 +45,7 @@ def whatif(req: WhatIfRequest, user: dict = Depends(auth.current_user)):
     if unknown:
         raise HTTPException(422, f"ไม่รู้จักฟีเจอร์: {unknown}")
     record = calibration.load(user["tenant_id"])  # บริษัทจาก token (DE-11)
-    base = resolve_employee(req)
+    base = resolve_employee(req, user["tenant_id"])
     try:
         changed = EmployeeInput(**{**base, **req.changes}).model_dump()
     except ValidationError as e:

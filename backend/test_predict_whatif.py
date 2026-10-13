@@ -61,8 +61,8 @@ def test_whatif_rejects_impossible_combinations():
 def test_calibrated_band_used(tmp_path, monkeypatch):
     monkeypatch.setattr(calibration, "STORE", str(tmp_path))
     records = ms.raw_employees().sample(300, random_state=0).to_dict("records")
-    assert client.post("/recalibrate", json={"tenant_id": "co", "method": "platt", "records": records}).status_code == 200
-    r = client.post("/whatif", json={"employee_id": 1, "tenant_id": "co", "changes": {"OverTime": "No"}}).json()
+    assert client.post("/recalibrate", json={"tenant_id": "ibm_demo", "method": "platt", "records": records}).status_code == 200
+    r = client.post("/whatif", json={"employee_id": 1, "tenant_id": "ibm_demo", "changes": {"OverTime": "No"}}).json()
     assert r["warning"] is None and r["before"]["calibrated_risk_score"] is not None
     assert r["delta"] == pytest.approx(r["after"]["calibrated_risk_score"] - r["before"]["calibrated_risk_score"])
 
@@ -96,11 +96,11 @@ def test_company_summary_uses_calibrated_scores(tmp_path, monkeypatch):
     """DE-11 ข้อ 2: หลังปรับเทียบ จำนวนเสี่ยงสูงบนการ์ด = จำนวนคนที่ risk_band เป็น High ด้วยคะแนนชุดเดียวกัน"""
     monkeypatch.setattr(calibration, "STORE", str(tmp_path))
     before = client.get("/company-summary").json()
-    assert before["warning"] and before["data_note"] is None  # บริษัท "co" ไม่ใช่ข้อมูลตัวอย่าง IBM
+    assert before["warning"] and before["data_note"]  # บริษัทเดโม = ข้อมูล IBM ที่โมเดลเคยเห็น
     records = ms.raw_employees().sample(300, random_state=0).to_dict("records")
     assert client.post("/recalibrate", json={"records": records}).status_code == 200
     X = ms.employee_features()
-    shown = calibration.apply(calibration.load("co"), ms.risk_scores(X))
+    shown = calibration.apply(calibration.load("ibm_demo"), ms.risk_scores(X))
     after = client.get("/company-summary").json()
     assert after["warning"] is None
     assert after["risk_bands"]["High"] == int((shown >= business_rules.HIGH_RISK).sum()) != before["risk_bands"]["High"]

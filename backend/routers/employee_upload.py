@@ -45,8 +45,8 @@ COLUMNS = [
     ("MaritalStatus", "สถานภาพสมรส", "โสด / สมรส / หย่า"),
     ("Education", "ระดับการศึกษา", "1 ต่ำกว่า ป.ตรี, 2 อนุปริญญา, 3 ป.ตรี, 4 ป.โท, 5 ป.เอก"),
     ("EducationField", "สาขาที่เรียน", "Life Sciences / Medical / Marketing / Technical Degree / Human Resources / Other"),
-    ("Department", "แผนก", "Sales / Research & Development / Human Resources"),
-    ("JobRole", "ตำแหน่งงาน", "ดูชีต \"ตัวเลือก\""),
+    ("Department", "กลุ่มแผนก (ให้โมเดล)", "ฝ่ายขาย / ฝ่ายวิจัยและพัฒนา / ฝ่ายบุคคล (หรือ Sales / Research & Development / Human Resources) · เว้นว่างได้ถ้าช่อง \"แผนก\" เป็นชื่อเดียวกับกลุ่ม"),
+    ("JobRole", "กลุ่มตำแหน่ง (ให้โมเดล)", "ดูชีต \"ตัวเลือก\" · เว้นว่างได้ถ้าช่อง \"ตำแหน่งงาน\" เป็นชื่อเดียวกับกลุ่ม"),
     ("JobLevel", "ระดับตำแหน่ง", "จูเนียร์ / พนักงานระดับกลาง / ซีเนียร์ / ผู้จัดการแผนก / ผู้จัดการใหญ่ (หรือ 1–5)"),
     ("MonthlyIncome", "เงินเดือน (บาท)", "บาทต่อเดือน"),
     ("PercentSalaryHike", "เงินเดือนขึ้นล่าสุด (%)", "0–100"),
@@ -75,9 +75,31 @@ COLUMNS = [
 # ชื่อ-นามสกุล: ไม่บังคับ ใช้แสดงผลในหน้าเว็บเท่านั้น ไม่ส่งเข้าโมเดล (ตัดออกก่อนตรวจด้วย EmployeeInput)
 # ไม่อยู่ใน COLUMNS เพราะ COLUMNS = ฟิลด์ของโมเดล (ไฟล์ปรับเทียบ / แถวตัวอย่างจาก IBM ใช้ร่วมกัน) ไฟล์นำเข้าใช้ TEMPLATE_COLUMNS
 NAME = (db.FULL_NAME, "ชื่อ-นามสกุล", "ไม่บังคับ · ใช้แสดงผลเท่านั้น ระบบไม่นำไปคำนวณความเสี่ยง")
-NAME_MAX = 100  # ตรงกับ CHECK ของคอลัมน์ full_name
-TEMPLATE_COLUMNS = [COLUMNS[0], NAME, *COLUMNS[1:]]
+NAME_MAX = 100  # ตรงกับ CHECK ของคอลัมน์ full_name / department_name / job_title
+# แผนก/ตำแหน่งจริงของบริษัท: แสดงผลและแยกแผนกในหน้าภาพรวม ส่วนการคำนวณใช้ "กลุ่ม" ของโมเดล (3 แผนก/9 ตำแหน่งของ IBM)
+# ชื่อจริงตรงกับกลุ่มอยู่แล้ว (เช่น "Sales" หรือ "ฝ่ายขาย") = ไม่ต้องกรอกช่องกลุ่ม ไฟล์รุ่นก่อนที่มีแค่ "แผนก" แบบ IBM จึงยังใช้ได้
+DEPT_NAME = (db.DEPARTMENT_NAME, "แผนก", "ชื่อแผนกจริงของบริษัท ใช้แสดงผลและแยกแผนกในหน้าภาพรวม")
+JOB_TITLE = (db.JOB_TITLE, "ตำแหน่งงาน", "ชื่อตำแหน่งจริงของบริษัท ใช้แสดงผล")
+DISPLAY = [NAME, DEPT_NAME, JOB_TITLE]  # ช่องที่ใช้แสดงผลเท่านั้น ไม่ส่งเข้าโมเดล
+GROUP_OF = {db.DEPARTMENT_NAME: "Department", db.JOB_TITLE: "JobRole"}  # ชื่อจริง -> ช่องกลุ่มของโมเดลที่คู่กัน
+_BEFORE = {"Department": DEPT_NAME, "JobRole": JOB_TITLE}  # ใน template ชื่อจริงอยู่หน้าช่องกลุ่ม
+TEMPLATE_COLUMNS = []
+for _col in COLUMNS:
+    TEMPLATE_COLUMNS += [_col, NAME] if _col[0] == "EmployeeNumber" else [_BEFORE[_col[0]], _col] if _col[0] in _BEFORE else [_col]
 EXAMPLE_NAMES = ["สมชาย (ตัวอย่าง)", "สมหญิง (ตัวอย่าง)"]
+# ชื่อแผนก/ตำแหน่งภาษาไทยในแถวตัวอย่างของ template (บริษัทจริงใช้ชื่อของตัวเอง)
+EXAMPLE_DEPARTMENTS = {"Sales": "ฝ่ายขาย", "Research & Development": "ฝ่ายวิจัยและพัฒนา", "Human Resources": "ฝ่ายบุคคล"}
+EXAMPLE_TITLES = {
+    "Sales Executive": "เจ้าหน้าที่ขาย",
+    "Research Scientist": "นักวิจัย",
+    "Laboratory Technician": "นักเทคนิคห้องปฏิบัติการ",
+    "Manufacturing Director": "ผู้อำนวยการฝ่ายผลิต",
+    "Healthcare Representative": "ผู้แทนฝ่ายสุขภาพ",
+    "Manager": "ผู้จัดการ",
+    "Sales Representative": "พนักงานขาย",
+    "Research Director": "ผู้อำนวยการฝ่ายวิจัย",
+    "Human Resources": "เจ้าหน้าที่ฝ่ายบุคคล",
+}
 # ผลจริงว่าลาออกหรือยัง ใช้เฉพาะไฟล์ปรับเทียบ (/recalibrate/upload) ไฟล์นำเข้าปกติมีก็ได้ไม่มีก็ได้ (ไม่ได้บันทึก)
 LABEL = ("Attrition", "ลาออกแล้วหรือยัง", "ลาออก / ยังอยู่")
 # ช่องจากแบบสำรวจความผูกพัน/ความพึงพอใจ (engagement survey, pulse survey) และการประเมินของหัวหน้า
@@ -96,12 +118,12 @@ OPTIONAL_DEFAULTS = {**{f: SURVEY_DEFAULT for f in SURVEY_FIELDS}, "OfficeDaysPe
 NULLABLE = {"Gender"}
 # ระดับตำแหน่งเป็นคำ (ตรงกับ JOB_LEVELS ใน frontend/src/featureLabels.js) ค่าที่ส่งเข้าโมเดลยังเป็น 1–5
 JOB_LEVELS = {1: "จูเนียร์", 2: "พนักงานระดับกลาง", 3: "ซีเนียร์", 4: "ผู้จัดการแผนก", 5: "ผู้จัดการใหญ่"}
-THAI = {f: th for f, th, _ in COLUMNS + [LABEL, NAME]}
-HINT = {f: hint for f, _, hint in COLUMNS + [LABEL, NAME]}
+THAI = {f: th for f, th, _ in COLUMNS + [LABEL, *DISPLAY]}
+HINT = {f: hint for f, _, hint in COLUMNS + [LABEL, *DISPLAY]}
 # รับได้ทั้งหัวคอลัมน์ไทยและชื่อคอลัมน์ IBM (ไฟล์ที่ export จากระบบเดิม)
 HEADER_TO_FIELD = (
-    {th: f for f, th, _ in COLUMNS + [LABEL, NAME]}
-    | {f: f for f, _, _ in COLUMNS + [LABEL, NAME]}
+    {th: f for f, th, _ in COLUMNS + [LABEL, *DISPLAY]}
+    | {f: f for f, _, _ in COLUMNS + [LABEL, *DISPLAY]}
     | {"การเดินทางไปทำงาน": "BusinessTravel"}  # หัวคอลัมน์ชื่อเดิม ไฟล์ที่กรอกไว้ก่อนเปลี่ยนชื่อยังใช้ได้
 )
 
@@ -113,7 +135,10 @@ THAI_VALUES = {
     "BusinessTravel": {"ไม่ต้องไป": "Non-Travel", "ไม่เดินทาง": "Non-Travel", "นานๆ ครั้ง": "Travel_Rarely", "นานๆครั้ง": "Travel_Rarely", "บ่อย": "Travel_Frequently"},
     "Attrition": {"ลาออก": "Yes", "ลาออกแล้ว": "Yes", "ยังอยู่": "No", "ยังทำงานอยู่": "No"},
     "JobLevel": {name: level for level, name in JOB_LEVELS.items()},
+    "Department": {th: en for en, th in EXAMPLE_DEPARTMENTS.items()} | {"วิจัยและพัฒนา": "Research & Development", "ทรัพยากรบุคคล": "Human Resources"},
 }
+DEPARTMENTS = set(EmployeeInput.model_fields["Department"].annotation.__args__)
+JOB_ROLES = set(EmployeeInput.model_fields["JobRole"].annotation.__args__)
 
 
 class RowError(BaseModel):
@@ -210,6 +235,7 @@ def _check(file: UploadFile, label: bool = False):
     df.columns = headers
     mapped = {h: HEADER_TO_FIELD[h] for h in headers if h in HEADER_TO_FIELD}
     present = set(mapped.values())
+    present |= {group for real, group in GROUP_OF.items() if real in present}  # มีชื่อจริง = เติมกลุ่มจากชื่อได้ (ทีละแถว)
     missing = [THAI[f] for f, _, _ in COLUMNS + ([LABEL] if label else []) if f not in present and f not in OPTIONAL_DEFAULTS and f not in NULLABLE]
     unknown = [h for h in headers if h not in HEADER_TO_FIELD and not h.startswith("Unnamed")]
 
@@ -232,10 +258,23 @@ def _check(file: UploadFile, label: bool = False):
         row_errors = []
 
         attrition = row.pop("Attrition", None)  # ไม่ใช่ฟีเจอร์ของโมเดล แยกออกก่อนตรวจ
-        name = row.pop(NAME[0], None)  # ชื่อก็ไม่ใช่ฟีเจอร์ แยกออกก่อนตรวจ (ไฟล์ปรับเทียบมีคอลัมน์นี้ได้ ไม่ใช้)
-        name = None if name is None else str(name)
-        if name is not None and len(name) > NAME_MAX:
-            row_errors.append(RowError(row=excel_row, column=NAME[1], message=f"ยาวเกิน {NAME_MAX} ตัวอักษร"))
+        # ชื่อ / แผนกจริง / ตำแหน่งจริง ไม่ใช่ฟีเจอร์ แยกออกก่อนตรวจ (ไฟล์ปรับเทียบมีคอลัมน์เหล่านี้ได้ ไม่บันทึก)
+        shown_as = {f: None if row.get(f) is None else str(row[f]) for f, _, _ in DISPLAY}
+        row = {k: v for k, v in row.items() if k not in shown_as}
+        for f, th, _ in DISPLAY:
+            if shown_as[f] is not None and len(shown_as[f]) > NAME_MAX:
+                row_errors.append(RowError(row=excel_row, column=th, message=f"ยาวเกิน {NAME_MAX} ตัวอักษร"))
+        reported = set()  # ช่องที่แจ้งเองแล้ว ไม่ให้ pydantic แจ้งซ้ำ
+        for real, group in GROUP_OF.items():  # ไม่กรอกกลุ่ม = ใช้ชื่อจริงถ้าตรงกับกลุ่มของโมเดล
+            if row.get(group) is None and shown_as[real] is not None:
+                guess = THAI_VALUES.get(group, {}).get(shown_as[real], shown_as[real])
+                if guess in (DEPARTMENTS if group == "Department" else JOB_ROLES):
+                    row[group] = guess
+                else:
+                    reported.add(group)
+                    options = HINT[group].split(" · ")[0]
+                    row_errors.append(RowError(row=excel_row, column=THAI[group], message=(
+                        f"{THAI[real]} “{shown_as[real]}” ไม่ใช่กลุ่มที่โมเดลรู้จัก กรอกช่อง “{THAI[group]}” ด้วย: {options}")))
         if label and "Attrition" in present and attrition not in ("Yes", "No"):
             row_errors.append(RowError(row=excel_row, column=LABEL[1], message="ว่างอยู่ ต้องกรอก" if attrition is None else f"ค่าไม่ถูกต้อง ต้องเป็น: {LABEL[2]}"))
 
@@ -256,6 +295,8 @@ def _check(file: UploadFile, label: bool = False):
         except ValidationError as e:
             for err in e.errors():
                 field = str(err["loc"][0]) if err["loc"] else ""
+                if field in reported:
+                    continue
                 if field in present or err["type"] != "missing":  # คอลัมน์ที่ขาดทั้งคอลัมน์ บอกครั้งเดียวด้านบน
                     row_errors.append(RowError(row=excel_row, column=THAI.get(field, field), message=_message(err, field)))
 
@@ -269,14 +310,14 @@ def _check(file: UploadFile, label: bool = False):
                     checked.model_dump()  # ค่าที่แปลงชนิดแล้ว ("41" -> 41)
                     | {"EmployeeNumber": emp_id}
                     | ({"Attrition": attrition} if label else {})
-                    # มีคอลัมน์ชื่อเท่านั้นถึงบันทึกชื่อ: ไฟล์ที่ไม่มีคอลัมน์นี้ อัปเดตแล้วชื่อเดิมใน DB ไม่หาย
-                    | ({NAME[0]: name} if NAME[0] in present and not label else {})
+                    # มีคอลัมน์นั้นเท่านั้นถึงบันทึก: ไฟล์ที่ไม่มีคอลัมน์ชื่อ/แผนกจริง อัปเดตแล้วค่าเดิมใน DB ไม่หาย
+                    | ({f: shown_as[f] for f, _, _ in DISPLAY if f in mapped.values()} if not label else {})
                 )
             if len(preview) < 5:
                 preview.append(
                     {THAI["EmployeeNumber"]: str(emp_id)}
-                    | ({NAME[1]: name} if NAME[0] in present else {})  # ไม่มีคอลัมน์ชื่อ = ไม่โชว์คอลัมน์ว่าง
-                    | {THAI[f]: shown.get(f) for f, _, _ in COLUMNS[1:9]}
+                    | {th: shown_as[f] for f, th, _ in DISPLAY if f in mapped.values()}  # ไม่มีคอลัมน์ = ไม่โชว์คอลัมน์ว่าง
+                    | {THAI[f]: row.get(f) if shown.get(f) is None else shown.get(f) for f, _, _ in COLUMNS[1:9]}  # กลุ่มที่เติมเอง = โชว์ชื่อกลุ่ม
                 )
 
     n_rows = n_valid + len({e.row for e in errors})
@@ -325,7 +366,7 @@ def import_employees(
         log.error("employees/import: schema ของฐานข้อมูลเก่ากว่าโค้ด (%s) ให้รัน docker/postgres/init/02-app-schema.sql ซ้ำ", e)
         raise HTTPException(503, SCHEMA_OUTDATED)
     ms.clear_cache()  # ให้ทุกหน้าเห็นพนักงานที่เพิ่ง import ทันที (ไม่ต้องรอรอบตรวจของ model_store)
-    background.add_task(batch_score.refresh_in_background)  # คำนวณสรุปใหม่หลังตอบกลับ ให้ /company-summary กลับมาใช้ cache
+    background.add_task(batch_score.refresh_in_background, user["tenant_id"])  # คำนวณสรุปใหม่หลังตอบกลับ ให้ /company-summary กลับมาใช้ cache
     n_updated = len(existing & set(rows["EmployeeNumber"]))
     first = rows.head(20)
     names = dict(zip(first["EmployeeNumber"], first[NAME[0]])) if NAME[0] in rows else {}
@@ -342,7 +383,7 @@ def import_employees(
 def _example_rows(n: int = 2, label: bool = False) -> list[dict]:
     """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือน × 35 เป็นบาท ให้ดูเป็นตัวอย่างเท่านั้น)
     label=True (ไฟล์ปรับเทียบ): เอาเฉพาะคนที่รู้ผลจริงแล้ว พนักงานที่นำเข้าเองยังไม่มีผลลาออก ใส่ไปจะทำให้ไฟล์ไม่ผ่าน"""
-    raw = ms.raw_employees()
+    raw = ms.reference_employees()  # แถวตัวอย่างจาก IBM เสมอ ไม่ใช่พนักงานของบริษัทผู้ใช้
     return template_rows((raw[raw["Attrition"].isin(["Yes", "No"])] if label else raw).head(n), label)
 
 
@@ -369,7 +410,12 @@ def template_rows(raw: pd.DataFrame, label: bool = False) -> list[dict]:
 @router.get("/employees/template")
 def download_template(n_examples: Optional[int] = 2):
     """ไฟล์ Excel ตัวอย่าง: ชีต "พนักงาน" (หัวคอลัมน์ + แถวตัวอย่าง) และชีต "คำอธิบาย" """
-    rows = [r | {NAME[1]: EXAMPLE_NAMES[i % len(EXAMPLE_NAMES)]} for i, r in enumerate(_example_rows(max(0, min(n_examples or 0, 5))))]
+    rows = [
+        r
+        | {NAME[1]: EXAMPLE_NAMES[i % len(EXAMPLE_NAMES)]}
+        | {DEPT_NAME[1]: EXAMPLE_DEPARTMENTS[r[THAI["Department"]]], JOB_TITLE[1]: EXAMPLE_TITLES[r[THAI["JobRole"]]]}
+        for i, r in enumerate(_example_rows(max(0, min(n_examples or 0, 5))))
+    ]
     return template_response(rows, TEMPLATE_COLUMNS, "employee_template.xlsx")
 
 
@@ -378,6 +424,10 @@ def _required(field: str) -> str:
         return "ไม่บังคับ (ว่าง = พอใจ/ดี)"
     if field in OPTIONAL_DEFAULTS:
         return "ไม่บังคับ (ว่าง = 5 วัน)"
+    if field in GROUP_OF.values():
+        return "ไม่บังคับ ถ้าชื่อจริงตรงกับกลุ่ม"
+    if field in GROUP_OF:
+        return "ไม่บังคับ (ว่าง = ใช้ชื่อกลุ่ม)"
     return "ไม่บังคับ" if field == NAME[0] or field in NULLABLE else "ต้อง"
 
 
@@ -391,7 +441,12 @@ def template_response(rows: list[dict], columns: list, filename: str) -> Streami
             xw, sheet_name="คำอธิบาย", index=False
         )
         roles = EmployeeInput.model_fields["JobRole"].annotation.__args__
-        pd.DataFrame({"ตำแหน่งงาน (JobRole)": list(roles)}).to_excel(xw, sheet_name="ตัวเลือก", index=False)
+        pd.DataFrame(
+            {
+                "กลุ่มตำแหน่ง (ให้โมเดล)": pd.Series(roles),
+                "กลุ่มแผนก (ให้โมเดล)": pd.Series([f"{th} ({en})" for en, th in EXAMPLE_DEPARTMENTS.items()]),
+            }
+        ).to_excel(xw, sheet_name="ตัวเลือก", index=False)
         for ws in xw.book.worksheets:
             for col in ws.columns:
                 ws.column_dimensions[col[0].column_letter].width = max(12, min(40, max(len(str(c.value or "")) for c in col) + 2))

@@ -32,7 +32,7 @@ def test_recalibrate_then_shap_uses_it(tmp_path, monkeypatch):
     monkeypatch.setattr(calibration, "STORE", str(tmp_path))
     records = ms.raw_employees().sample(300, random_state=0).to_dict("records")
     for method in ("platt", "isotonic"):
-        r = client.post("/recalibrate", json={"method": method, "records": records})  # บริษัทมาจากผู้ login ("co")
+        r = client.post("/recalibrate", json={"method": method, "records": records})  # บริษัทมาจากผู้ login (ibm_demo)
         assert r.status_code == 200, r.text
         assert r.json()["n_samples"] == 300
         s = client.get("/shap/1").json()
@@ -155,8 +155,8 @@ def test_shap_shows_real_distance_for_wfh_employee(monkeypatch):
     raw = ms.raw_employees().copy()
     emp_id = int(raw.loc[raw["DistanceFromHome"] == 24, "EmployeeNumber"].iloc[0])
     raw.loc[raw["EmployeeNumber"] == emp_id, "OfficeDaysPerWeek"] = 1
-    monkeypatch.setattr(ms, "_load_employees", lambda: raw)
-    monkeypatch.setattr(ms, "_employee_features", lambda: ms.to_features(raw).set_index(raw["EmployeeNumber"]))
+    monkeypatch.setattr(ms, "_load_employees", lambda tenant: raw)
+    monkeypatch.setattr(ms, "_employee_features", lambda tenant: ms.to_features(raw).set_index(raw["EmployeeNumber"]))
     r = client.get(f"/shap/{emp_id}", params={"top_n": 100}).json()
     assert r["commute"] == {"distance_km": 24, "office_days": 1, "used_km": 5}
     distance = next(c for c in r["contributions"] if c["feature"] == "DistanceFromHome")

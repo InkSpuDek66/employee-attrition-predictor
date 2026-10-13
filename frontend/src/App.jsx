@@ -357,7 +357,13 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
         )}
 
         <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`} className="fade-up">
-          <Overview rate={rate} onPick={pick} onCsv={() => speak('ดาวน์โหลดรายชื่อให้แล้ว', 'เปิดใน Excel ได้เลย')} />
+          <Overview
+            rate={rate}
+            who={who}
+            onPick={pick}
+            onImport={() => setTab('import')}
+            onCsv={() => speak('ดาวน์โหลดรายชื่อให้แล้ว', 'เปิดใน Excel ได้เลย')}
+          />
         </div>
         <Suspense fallback={tab === 'import' || tab === 'calibrate' ? <Skeleton className="h-96" /> : null}>
           <div hidden={tab !== 'import'} className="fade-up">

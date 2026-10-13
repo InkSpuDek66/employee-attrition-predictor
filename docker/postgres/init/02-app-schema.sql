@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS tenants (
 );
 INSERT INTO tenants (tenant_id, name) VALUES ('ibm_demo', 'IBM HR Analytics (ข้อมูลตัวอย่าง)')
 ON CONFLICT (tenant_id) DO NOTHING;
+-- บริษัททดลองที่เริ่มจากว่าง (บัญชี newco_admin / newco_hr ใน backend/auth.py) ไว้เดโมการนำเข้าพนักงานของบริษัทเอง
+INSERT INTO tenants (tenant_id, name) VALUES ('newco_demo', 'บริษัทตัวอย่าง (เริ่มจากว่าง)')
+ON CONFLICT (tenant_id) DO NOTHING;
 
 -- ข้อมูลพนักงาน (snapshot ล่าสุดต่อคน) จาก IBM dataset หรือไฟล์ Excel/CSV ที่บริษัทอัปโหลด
 -- CHECK ใช้ช่วงค่าเดียวกับ IBM dataset/schemas.py เป็นด่านสุดท้ายกันข้อมูลผิดตอนอัปโหลด
@@ -59,6 +62,10 @@ CREATE TABLE IF NOT EXISTS employees (
     office_days_per_week        smallint NOT NULL DEFAULT 5 CHECK (office_days_per_week BETWEEN 0 AND 5),
     -- ชื่อ-นามสกุล (ไม่บังคับ) ใช้แสดงผลในหน้าเว็บเท่านั้น ไม่เข้าโมเดล ไม่ลง log/MLflow (ข้อมูลส่วนบุคคล)
     full_name                   text CHECK (char_length(full_name) <= 100),
+    -- ชื่อแผนก/ตำแหน่งจริงของบริษัท (ไม่บังคับ) ใช้แสดงผลและจัดกลุ่มในภาพรวม ส่วน department/job_role ด้านบน
+    -- = กลุ่มของโมเดล (3 แผนก/9 ตำแหน่งของ IBM) ที่ใช้คำนวณคะแนน ว่าง = แสดงชื่อกลุ่มของโมเดลแทน
+    department_name             text CHECK (char_length(department_name) <= 100),
+    job_title                   text CHECK (char_length(job_title) <= 100),
     -- ผลจริง: ใช้กับ /recalibrate และการวัดผล (Measure) ว่างได้สำหรับคนที่ยังทำงานอยู่
     attrition                   text CHECK (attrition IN ('Yes', 'No')),
     left_at                     date,
@@ -72,6 +79,8 @@ ALTER TABLE employees ADD COLUMN IF NOT EXISTS office_days_per_week smallint NOT
     CHECK (office_days_per_week BETWEEN 0 AND 5);
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS full_name text CHECK (char_length(full_name) <= 100);
 ALTER TABLE employees ALTER COLUMN gender DROP NOT NULL;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS department_name text CHECK (char_length(department_name) <= 100);
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS job_title text CHECK (char_length(job_title) <= 100);
 
 -- โมเดลที่เคยใช้ให้คะแนน (อ้างอิง MLflow Model Registry) เช่น 'attrition-xgboost-P/1'
 CREATE TABLE IF NOT EXISTS model_runs (

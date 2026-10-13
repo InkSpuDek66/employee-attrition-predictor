@@ -24,13 +24,13 @@ class PredictResponse(Score):
     warning: Optional[str] = None
 
 
-def resolve_employee(ref: EmployeeRef) -> dict:
+def resolve_employee(ref: EmployeeRef, tenant: str) -> dict:
     """คืนข้อมูลดิบของพนักงานจาก employee_id หรือ employee (ต้องระบุอย่างใดอย่างหนึ่ง)"""
     if (ref.employee_id is None) == (ref.employee is None):
         raise HTTPException(422, "ระบุ employee_id หรือ employee อย่างใดอย่างหนึ่ง")
     if ref.employee is not None:
         return ref.employee.model_dump()
-    record = ms.employee_record(ref.employee_id)
+    record = ms.employee_record(ref.employee_id, tenant)  # หาเฉพาะในบริษัทของผู้ใช้
     if record is None:
         raise HTTPException(404, f"ไม่พบพนักงาน employee_id={ref.employee_id}")
     return record
@@ -58,7 +58,7 @@ def score(records: list, calibration_record) -> list:
 @router.post("/predict", response_model=PredictResponse)
 def predict(req: EmployeeRef, user: dict = Depends(auth.current_user)):
     record = calibration.load(user["tenant_id"])  # บริษัทจาก token เหมือน /shap (DE-11) ไม่ใช่ tenant_id ใน request
-    (result,) = score([resolve_employee(req)], record)
+    (result,) = score([resolve_employee(req, user["tenant_id"])], record)
     return PredictResponse(
         **result.model_dump(),
         employee_id=req.employee_id,

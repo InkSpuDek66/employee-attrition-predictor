@@ -42,7 +42,7 @@ def real_db(monkeypatch):
     except Exception:  # noqa: BLE001
         pytest.skip("ต่อ PostgreSQL ไม่ได้ (docker compose up -d postgres)")
     monkeypatch.setitem(conftest.TEST_USER, "tenant_id", db.DEMO_TENANT)
-    monkeypatch.setattr(batch_score, "_score_once", lambda: None)  # ไม่ให้ test รัน batch เต็ม (ช้า + เพิ่มแถวใน DB จริง)
+    monkeypatch.setattr(batch_score, "_score_once", lambda tenant: None)  # ไม่ให้ test รัน batch เต็ม (ช้า + เพิ่มแถวใน DB จริง)
     ms.clear_cache()
     yield
     ms.clear_cache()
@@ -101,6 +101,34 @@ def test_import_name_is_shown_but_never_reaches_the_model(real_db):
     finally:
         with db.connect() as conn:
             conn.execute("DELETE FROM employees WHERE tenant_id = %s AND employee_id = %s", (db.DEMO_TENANT, NEW_ID))
+
+
+def test_new_company_sees_only_its_own_employees_with_real_departments(real_db, monkeypatch):
+    """บริษัทใหม่นำเข้าพนักงานของตัวเอง: ไม่เห็น IBM และภาพรวมแยกแผนกตามชื่อจริงของบริษัท ไม่ใช่กลุ่มของโมเดล"""
+    template = pd.read_excel(io.BytesIO(client.get("/employees/template", params={"n_examples": 3}).content), sheet_name="พนักงาน")
+    template["รหัสพนักงาน"] = [1, 2, 3]  # รหัสเดียวกับ IBM ได้ เพราะคนละบริษัท
+    template["แผนก"] = ["ฝ่ายการเงิน", "ฝ่ายการเงิน", "ฝ่ายไอที"]
+    template["กลุ่มแผนก (ให้โมเดล)"] = ["Sales", "Sales", "Research & Development"]
+    template["ตำแหน่งงาน"] = "นักบัญชี"
+    template["กลุ่มตำแหน่ง (ให้โมเดล)"] = ["Sales Executive", "Sales Executive", "Research Scientist"]
+    buf = io.BytesIO()
+    template.to_excel(buf, index=False)
+    monkeypatch.setitem(conftest.TEST_USER, "tenant_id", "newco_demo")
+    ibm_first = ms.employee_record(1, db.DEMO_TENANT)
+    try:
+        r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
+        assert r.status_code == 200, r.text
+        assert client.get("/company-summary").json()["n_employees"] == 3
+        assert {d["department"] for d in client.get("/company-summary/departments").json()["departments"]} == {"ฝ่ายการเงิน", "ฝ่ายไอที"}
+        assert client.get("/company-summary", params={"department": "ฝ่ายการเงิน"}).json()["n_employees"] == 2
+        top = client.get("/company-summary/top-employees").json()["employees"]
+        assert {e["department"] for e in top} == {"ฝ่ายการเงิน", "ฝ่ายไอที"} and {e["job_role"] for e in top} == {"นักบัญชี"}
+        shap = client.get("/shap/3").json()
+        assert shap["department"] == "ฝ่ายไอที" and shap["job_role"] == "นักบัญชี"
+        assert ms.employee_record(1, db.DEMO_TENANT) == ibm_first  # พนักงาน #1 ของ IBM ไม่ถูกเขียนทับ
+    finally:
+        with db.connect() as conn:
+            conn.execute("DELETE FROM employees WHERE tenant_id = 'newco_demo'")
 
 
 def test_import_needs_db(monkeypatch):
@@ -202,8 +230,8 @@ def test_calibration_history_and_reset_in_db(real_db):
 def test_background_refresh_runs_again_instead_of_overlapping(monkeypatch):
     calls = []
 
-    def fake_score():
-        calls.append(1)
+    def fake_score(tenant):
+        calls.append(tenant)
         if len(calls) == 1:  # มี request ใหม่เข้ามาระหว่างรอบแรก: ไม่รันซ้อน แต่ต้องรันต่ออีกรอบ
             batch_score.refresh_in_background()
 

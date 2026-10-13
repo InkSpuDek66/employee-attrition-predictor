@@ -60,6 +60,7 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
   const { loading, data, error } = useApi([`/company-summary/top-employees?${q}`])
   if (error) return <p className="text-sm text-risk-high">{error}</p>
   if (loading) return <Skeleton className={compact ? 'h-40' : 'h-80'} />
+  if (data[0].employees.length === 0) return <p className="px-2 py-6 text-center text-sm text-muted-fg">ยังไม่มีพนักงาน นำเข้าข้อมูลก่อน</p>
   return (
     <ul className="divide-y divide-line">
       {data[0].employees.map((e, i) => {
@@ -192,7 +193,29 @@ function BandDonut({ bands, total }) {
   )
 }
 
-export default function Overview({ rate, onPick, onCsv }) {
+// บริษัทที่ยังไม่มีพนักงาน (บริษัทใหม่ก่อนนำเข้า): ผู้ช่วยบอกให้ไปนำเข้าข้อมูล
+function NoEmployees({ who, onImport }) {
+  return (
+    <div className="space-y-3">
+      <AssistantHint who={who} title="ยังไม่มีพนักงานของบริษัทนี้">
+        ไปที่แท็บ “นำเข้าข้อมูล” ดาวน์โหลดไฟล์ตัวอย่าง กรอกพนักงาน (ใช้ชื่อแผนก/ตำแหน่งจริงของบริษัทได้) แล้วอัปโหลด
+        จากนั้นภาพรวมจะแสดงที่นี่
+      </AssistantHint>
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={onImport}
+          className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30"
+        >
+          <Icon name="upload" className="size-4" />
+          ไปนำเข้าข้อมูล
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function Overview({ rate, who, onPick, onImport, onCsv }) {
   const [department, setDepartment] = useState('')
   const [fullBaht, setFullBaht] = useState(false) // false = ย่อเป็นล้านบาท, true = จำนวนเต็มทุกหลัก
   const money = fullBaht ? baht : bahtShort
@@ -213,6 +236,7 @@ export default function Overview({ rate, onPick, onCsv }) {
   }
 
   const [s, { departments }] = data
+  if (s.n_employees === 0 && !department) return <NoEmployees who={who} onImport={onImport} />
   const highPct = Math.round((s.risk_bands.High / s.n_employees) * 100)
   const deptOptions = [['', 'ทั้งบริษัท'], ...departments.map((d) => [d.department, d.department])]
   const maxShare = Math.max(...s.top_factors.map((f) => f.share), 1e-9)

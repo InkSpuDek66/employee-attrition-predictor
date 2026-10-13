@@ -56,7 +56,7 @@ def financial_impact(
     user: dict = Depends(auth.current_user),
 ):
     record = calibration.load(user["tenant_id"])
-    employee = resolve_employee(EmployeeRef(employee_id=employee_id))
+    employee = resolve_employee(EmployeeRef(employee_id=employee_id), user["tenant_id"])
     (s,) = score([employee], record)
     shown = s.risk_score if s.calibrated_risk_score is None else s.calibrated_risk_score
     after = None if risk_after is None else [risk_after]
