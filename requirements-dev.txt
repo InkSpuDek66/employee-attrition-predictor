@@ -10,6 +10,8 @@ lightgbm==4.7.0
 catboost==1.2.10
 imbalanced-learn==0.14.2
 kagglehub==1.0.2
+statsmodels==0.15.0  # Survival Analysis (notebooks/08) ใช้แทน lifelines ที่ยังไม่รองรับ pandas 3
+fairlearn==0.14.0  # Fairness check (notebooks/09)
 
 # หน้าทดสอบ Streamlit (src/test_app.py)
 streamlit==1.64.0

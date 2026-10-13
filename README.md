@@ -327,7 +327,7 @@ ROI = replacement_cost_estimate - retain_cost_estimate
   ระหว่างกลุ่มตาม protected attribute (เพศ, ช่วงอายุ) ด้วย Fairlearn
   -> threshold ที่ยอมรับได้จะกำหนดใน Backend & Analysis phase (wk6–7)
 ```
-> ยังไม่ได้ทำ ตัวเลขตั้งต้นจากคะแนน out-of-fold อยู่ใน DS-04 ของ [review Data Engineering](docs/review_data_engineering_S.md) (โมเดลจับคนลาออกอายุ 40 ปีขึ้นไปได้ไม่ถึงครึ่ง ขณะที่กลุ่มอายุ 18–29 จับได้ 79%)
+> ที่ทำแล้ว (รอทีมตรวจ): [notebooks/09_fairness_check_Y.ipynb](notebooks/09_fairness_check_Y.ipynb) ทำต่อจาก DS-04 ของ [review Data Engineering](docs/review_data_engineering_S.md) ด้วย Fairlearn `MetricFrame` ใช้ equal opportunity (TPR) เป็นเกณฑ์หลัก ผล: อายุและสถานภาพสมรสไม่เท่าเทียม (คนอายุ 40 ปีขึ้นไปที่จะลาออกจับได้ไม่ถึงครึ่ง ขณะที่อายุ 18–29 จับได้ 79%) ส่วนเพศใกล้เคียงกันแต่โมเดลใช้เพศโดยตรง ตัดเพศและสถานภาพออกแล้ว AUC ไม่ลด เสนอเกณฑ์อัตราส่วน TPR ≥ 0.8 ให้ทีมตัดสินใจ
 
 ### 6.5 Model Localization (เพื่อให้ใช้ในไทยได้จริง)
 ```
