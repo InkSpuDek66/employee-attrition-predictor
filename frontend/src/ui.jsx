@@ -1,6 +1,6 @@
 // ชิ้นส่วน UI ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
 import { MascotLoader, PointHint } from './mascot/Mascot'
-import { BAND, bandOf, HIGH, inputClass, invalidClass, LOW, useCountUp } from './theme'
+import { BAND, bandOf, HIGH, inputClass, invalidClass, LOW, THEME_NEXT, useCountUp } from './theme'
 
 // ไอคอนเส้น (path จาก Heroicons outline, MIT) ไม่ต้องลง library เพิ่ม
 const ICONS = {
@@ -26,6 +26,7 @@ const ICONS = {
   down: 'M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3',
   user: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z',
   sun: 'M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z',
+  sunMoon: 'M6.82 13.18A4.5 4.5 0 0 1 13.18 6.82ZM2 10h1.5M10 2v1.5M4.34 4.34l1.06 1.06M16.9 12.32A4.2 4.2 0 1 1 12.32 16.9A3.6 3.6 0 0 0 16.9 12.32ZM20 5L5 20',
   moon: 'M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z',
   upload: 'M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5',
   download: 'M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3',
@@ -54,17 +55,20 @@ export function Icon({ name, className = 'size-5' }) {
   )
 }
 
-// ปุ่มสลับโหมดมืด/สว่าง ใช้ทั้งหน้า login และ sidebar
-export function ThemeToggle({ dark, onToggle, className = '' }) {
+// ปุ่มธีม ใช้ทั้งหน้า login และ sidebar: ไอคอน = โหมดที่ใช้อยู่ (พระอาทิตย์ครึ่งดวงซ้ายบน + พระจันทร์เสี้ยวขวาล่าง = ตามเบราว์เซอร์) กดวน ตามเบราว์เซอร์ → สว่าง → มืด
+const THEME_LABEL = { system: 'ตามเบราว์เซอร์', light: 'โหมดสว่าง', dark: 'โหมดมืด' }
+const THEME_ICON = { system: 'sunMoon', light: 'sun', dark: 'moon' }
+export function ThemeToggle({ mode, onToggle, className = '' }) {
+  const label = `ธีม: ${THEME_LABEL[mode]} (กดเพื่อเปลี่ยนเป็น${THEME_LABEL[THEME_NEXT[mode]]})`
   return (
     <button
       type="button"
       onClick={onToggle}
-      aria-label={dark ? 'เปลี่ยนเป็นโหมดสว่าง' : 'เปลี่ยนเป็นโหมดมืด'}
-      title={dark ? 'โหมดสว่าง' : 'โหมดมืด'}
+      aria-label={label}
+      title={label}
       className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className}`}
     >
-      <Icon name={dark ? 'sun' : 'moon'} className="size-5" />
+      <Icon name={THEME_ICON[mode]} className="size-5" />
     </button>
   )
 }

@@ -72,6 +72,9 @@ export function focusField(form, field) {
   form?.querySelector(`[name="${field}"]`)?.focus()
 }
 
+// ปุ่มธีมกดวน: ตามเบราว์เซอร์ (ค่าเริ่มต้น) → สว่าง → มืด → ตามเบราว์เซอร์
+export const THEME_NEXT = { system: 'light', light: 'dark', dark: 'system' }
+
 export function loadMascot() {
   try {
     const saved = localStorage.getItem('mascot')

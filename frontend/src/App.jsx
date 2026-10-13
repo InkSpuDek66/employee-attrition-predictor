@@ -3,7 +3,7 @@ import Logo from '../logo/Logo'
 import Login from './Login'
 import Mascot, { MascotLoader } from './mascot/Mascot'
 import Overview from './Overview'
-import { employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD } from './theme'
+import { employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD, THEME_NEXT } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
@@ -42,16 +42,32 @@ export default function App() {
   const [session, setSession] = useState(loadSession)
   const [expired, setExpired] = useState(false)
   // ธีมอยู่ระดับบนสุด หน้า login กับหน้าหลักใช้ค่าเดียวกัน (index.html ตั้ง class ไว้ก่อน render แล้ว)
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
-  function toggleTheme() {
-    const next = !dark
-    document.documentElement.classList.toggle('dark', next)
+  // mode: system = ตามเบราว์เซอร์ (ค่าเริ่มต้น เปลี่ยนตามทันทีเมื่อเครื่องสลับธีม) | light | dark
+  const [mode, setMode] = useState(() => {
     try {
-      localStorage.setItem('theme', next ? 'dark' : 'light')
+      return localStorage.getItem('themeMode') || 'system'
+    } catch {
+      return 'system'
+    }
+  })
+  const [systemDark, setSystemDark] = useState(() => matchMedia('(prefers-color-scheme: dark)').matches)
+  useEffect(() => {
+    const media = matchMedia('(prefers-color-scheme: dark)')
+    const follow = (e) => setSystemDark(e.matches)
+    media.addEventListener('change', follow)
+    return () => media.removeEventListener('change', follow)
+  }, [])
+  const dark = mode === 'system' ? systemDark : mode === 'dark'
+  useEffect(() => void document.documentElement.classList.toggle('dark', dark), [dark])
+  function toggleTheme() {
+    const next = THEME_NEXT[mode]
+    try {
+      if (next === 'system') localStorage.removeItem('themeMode')
+      else localStorage.setItem('themeMode', next)
     } catch {
       // private mode / storage ปิด: สลับได้แต่ไม่จำ
     }
-    setDark(next)
+    setMode(next)
   }
   // backend ตอบ 401 (token หมดอายุ / backend restart) = กลับไปหน้า login
   useEffect(() => {
@@ -59,7 +75,7 @@ export default function App() {
     addEventListener('session-expired', expire)
     return () => removeEventListener('session-expired', expire)
   }, [])
-  const theme = { dark, onToggleTheme: toggleTheme }
+  const theme = { dark, themeMode: mode, onToggleTheme: toggleTheme }
   if (!session) return <Login onLogin={(s) => (saveSession(s), setSession(s), setExpired(false))} expired={expired} {...theme} />
   return <Workspace user={session.user} settings={session.settings} onLogout={() => (saveSession(null), setSession(null), setExpired(false))} {...theme} />
 }
@@ -71,7 +87,7 @@ function greeting(name) {
   return `${part} ${name}`
 }
 
-function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
+function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme }) {
   const tenant = user.tenant_id
   const tabs = TABS.filter((t) => !t.admin || user.role === 'admin') // แท็บ admin ไม่โชว์ให้ HR
   const [initial] = useState(fromUrl) // อ่าน URL ครั้งเดียวตอนเปิดหน้า
@@ -201,7 +217,7 @@ function Workspace({ user, settings, onLogout, dark, onToggleTheme }) {
             </div>
             <div className="text-xs text-muted-fg">HR Analytics</div>
           </div>
-          <ThemeToggle dark={dark} onToggle={onToggleTheme} className="ml-auto" />
+          <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="ml-auto" />
         </div>
 
         {/* มือถือ: 4 ช่องเท่ากัน ไอคอนบนชื่อสั้น เห็นครบทุกแท็บไม่ต้องเลื่อน / จอใหญ่: รายการแนวตั้งใน sidebar */}

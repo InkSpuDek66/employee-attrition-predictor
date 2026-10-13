@@ -11,9 +11,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>Attrition Predictor</title>
     <script>
-      // ตั้งธีมก่อน React render กันหน้าขาวแวบ: ใช้ค่าที่เคยเลือก ไม่มีก็ตามเครื่อง
+      // ตั้งธีมก่อน React render กันหน้าขาวแวบ: ใช้ค่าที่เคยเลือก ไม่มี = ตามเบราว์เซอร์ (ค่าเริ่มต้น)
+      // คีย์ใหม่ themeMode: ทุกคนเริ่มที่ตามเบราว์เซอร์ (คีย์เก่า theme ไม่มีทางกลับไปตามเบราว์เซอร์)
       try {
-        const t = localStorage.getItem('theme')
+        const t = localStorage.getItem('themeMode')
         if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark')
       } catch {}
     </script>

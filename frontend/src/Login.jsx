@@ -15,7 +15,7 @@ const DEMO_ACCOUNTS = [
 ]
 
 // expired = ถูกพากลับมาเพราะ token หมดอายุ/backend restart (บอกเหตุผล ไม่ให้งงว่าทำไมหลุด)
-export default function Login({ onLogin, dark, onToggleTheme, expired }) {
+export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -34,7 +34,10 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
   // หน้าเข้าสู่ระบบ: credentials = ชื่อผู้ใช้/รหัสผ่านไม่ตรง (backend ไม่บอกว่าช่องไหน) แดงทั้งสองช่อง โฟกัสรหัสผ่าน
   const pointLogin = (p) => (setProblem(p), p.field && focusField(loginForm.current, p.field === 'credentials' ? 'password' : p.field))
   const typed = (set, k) => (e) => (set(e.target.value), [k, 'credentials'].includes(problem?.field) && setProblem(null))
-  const loginBad = (k) => [k, 'credentials'].includes(problem?.field)
+  const loginBad = (k) => [k, 'credentials'].includes(loginProblem?.field)
+  // ฟอร์มที่ซ่อนอยู่ไม่แสดงผู้ช่วยชี้ (ช่องชื่อ username/password ซ้ำกัน ไม่งั้นฟอร์มที่ซ่อนจะยืดตามจนการ์ดสูงขึ้น)
+  const regProblem = mode === 'register' ? problem : null
+  const loginProblem = mode === 'login' ? problem : null
   // ยังไม่ได้เลือกผู้ช่วย: ช่องฝั่งซ้ายให้จอย+ปุกปุยชี้ ฝั่งขวาให้กิต+ส้มฉุน ตามที่ยืนอยู่ข้างฟอร์ม
   const LEFT = { who: 'joy', pet: 'dog' }
   const RIGHT = { who: 'kit', pet: 'cat' }
@@ -89,50 +92,50 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
   }
 
   return (
-    <main className="relative isolate grid min-h-dvh place-items-center overflow-hidden bg-canvas px-4 py-8">
+    <main className="relative isolate grid min-h-dvh place-items-center overflow-hidden bg-canvas px-4 py-8 [@media(max-height:820px)]:py-2">
       <div className="login-glow pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
-      <ThemeToggle dark={dark} onToggle={onToggleTheme} className="absolute right-4 top-4" />
+      <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="absolute right-4 top-4" />
+      {/* จอเตี้ย (โน้ตบุ๊ก 768/720) ย่อโลโก้/ระยะห่าง ฟอร์ม + ผู้ช่วยที่ออกมาชี้จะได้พอดีจอ ไม่ต้องเลื่อน */}
       {/* จอใหญ่: ปุกปุย + จอย ทางซ้าย, กิต + ส้มฉุน ทางขวา (สัตว์ยืนด้านนอก) ยืนเสมอขอบล่างของฟอร์ม เห็นครบในจอเดียว */}
       <div className="flex w-full items-end justify-center gap-6 xl:gap-10">
         <WelcomeMascots keys={['dog', 'joy']} enter="left" away={away} className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
-        <div className="w-full max-w-md space-y-6">
+        <div className="w-full max-w-md space-y-6 [@media(max-height:820px)]:space-y-3">
         <div className="login-enter flex flex-col items-center text-center">
-          <Logo className="size-24 sm:size-28" />
+          <Logo className="size-24 sm:size-28 [@media(max-height:820px)]:size-20" />
           <div className="mt-3 text-2xl font-semibold tracking-tight text-fg" translate="no">
             Attrition Predictor
           </div>
           <div className="text-sm text-muted-fg">HR Analytics · ทำนายความเสี่ยงพนักงานลาออก</div>
         </div>
 
-        <div>
-          {mode === 'register' ? (
-          <form ref={registerForm} onSubmit={createCompany} noValidate className="space-y-3 rounded-xl border border-line bg-card p-6">
+        {/* สองฟอร์มซ้อนในช่องเดียวกัน (ฟอร์มที่ไม่ได้ใช้ซ่อนไว้) การ์ดสูงเท่ากัน ลิงก์สลับหน้าอยู่ล่างสุดตำแหน่งเดิม กดสลับไปมาไม่กระโดด */}
+        <div className="grid">
+          <form ref={registerForm} onSubmit={createCompany} noValidate inert={mode !== 'register'} className={`flex flex-col [grid-area:1/1] ${mode === 'register' ? '' : 'invisible'} space-y-3 rounded-xl border border-line bg-card p-6`}>
             <div>
               <h1 className="text-xl font-semibold text-fg">สร้างบริษัทใหม่</h1>
               <p className="text-sm text-muted-fg">ได้บริษัทว่างพร้อมบัญชีผู้ดูแลระบบ แล้วนำเข้าพนักงานของบริษัทเองได้ ไม่เห็นข้อมูลบริษัทอื่น</p>
             </div>
-            <CheckedField mascot={BOTH} label="ชื่อบริษัท" name="company_name" problem={problem} value={company.company_name} onChange={setField('company_name')} maxLength={100} />
+            <CheckedField mascot={BOTH} label="ชื่อบริษัท" name="company_name" problem={regProblem} value={company.company_name} onChange={setField('company_name')} maxLength={100} />
             <div className="grid grid-flow-dense items-start gap-3 sm:grid-cols-2">
-              <CheckedField mascot={LEFT} label="ชื่อของคุณ" name="name" problem={problem} value={company.name} onChange={setField('name')} maxLength={100} />
-              <CheckedField side="right" mascot={RIGHT} label="ชื่อผู้ใช้ (a-z ตัวเลข)" name="username" problem={problem} value={company.username} onChange={setField('username')} autoComplete="username" spellCheck={false} />
-              <CheckedField mascot={LEFT} label="รหัสผ่าน (8 ตัวขึ้นไป)" name="password" problem={problem} type="password" value={company.password} onChange={setField('password')} autoComplete="new-password" />
-              <CheckedField side="right" mascot={RIGHT} label="ยืนยันรหัสผ่าน" name="confirm" problem={problem} type="password" value={company.confirm} onChange={setField('confirm')} autoComplete="new-password" />
+              <CheckedField mascot={LEFT} label="ชื่อของคุณ" name="name" problem={regProblem} value={company.name} onChange={setField('name')} maxLength={100} />
+              <CheckedField side="right" mascot={RIGHT} label="ชื่อผู้ใช้ (a-z ตัวเลข)" name="username" problem={regProblem} value={company.username} onChange={setField('username')} autoComplete="username" spellCheck={false} />
+              <CheckedField mascot={LEFT} label="รหัสผ่าน (8 ตัวขึ้นไป)" name="password" problem={regProblem} type="password" value={company.password} onChange={setField('password')} autoComplete="new-password" />
+              <CheckedField side="right" mascot={RIGHT} label="ยืนยันรหัสผ่าน" name="confirm" problem={regProblem} type="password" value={company.confirm} onChange={setField('confirm')} autoComplete="new-password" />
             </div>
-            {problem && !problem.field && <Alert>{problem.text}</Alert>}
+            {regProblem && !regProblem.field && <Alert>{regProblem.text}</Alert>}
             <div className="grid">
               <PrimaryButton loading={busy} loadingText="กำลังสร้าง…">
                 สร้างบริษัทและเข้าสู่ระบบ <Icon name="right" className="size-4" />
               </PrimaryButton>
             </div>
-            <p className="text-center text-sm text-muted-fg">
+            <p className="mt-auto text-center text-sm text-muted-fg">
               มีบัญชีแล้ว?{' '}
               <button type="button" onClick={() => switchTo('login')} className="cursor-pointer font-medium text-accent hover:underline">
                 เข้าสู่ระบบ
               </button>
             </p>
           </form>
-          ) : (
-          <form ref={loginForm} onSubmit={submit} noValidate style={{ '--enter': '120ms' }} className="login-enter space-y-4 rounded-xl border border-line bg-card p-6">
+          <form ref={loginForm} onSubmit={submit} noValidate style={{ '--enter': '120ms' }} inert={mode !== 'login'} className={`login-enter flex flex-col [grid-area:1/1] ${mode === 'login' ? '' : 'invisible'} space-y-4 rounded-xl border border-line bg-card p-6`}>
           <div>
             <h1 className="text-xl font-semibold text-fg">เข้าสู่ระบบ</h1>
             <p className="text-sm text-muted-fg">ข้อมูลพนักงานเป็นข้อมูลส่วนบุคคล ต้องเข้าสู่ระบบก่อนใช้งาน</p>
@@ -148,9 +151,9 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
               onChange={typed(setUsername, 'username')}
             />
           </Field>
-          {problem?.field === 'username' && (
-            <PointHint key={problem.text} {...LEFT} className="-mt-2">
-              {problem.text}
+          {loginProblem?.field === 'username' && (
+            <PointHint key={loginProblem.text} {...LEFT} className="-mt-2">
+              {loginProblem.text}
             </PointHint>
           )}
           <Field label="รหัสผ่าน">
@@ -175,26 +178,25 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
               </button>
             </span>
           </Field>
-          {['password', 'credentials'].includes(problem?.field) && (
-            <PointHint key={problem.text} {...(problem.field === 'password' ? { ...RIGHT, align: 'right' } : BOTH)} className="-mt-2">
-              {problem.text}
+          {['password', 'credentials'].includes(loginProblem?.field) && (
+            <PointHint key={loginProblem.text} {...(loginProblem.field === 'password' ? { ...RIGHT, align: 'right' } : BOTH)} className="-mt-2">
+              {loginProblem.text}
             </PointHint>
           )}
-          {expired && !problem && <Alert tone="warning">หมดเวลาการใช้งาน หรือระบบเพิ่งเริ่มใหม่ กรุณาเข้าสู่ระบบอีกครั้ง</Alert>}
-          {problem && !problem.field && <Alert>{problem.text}</Alert>}
+          {expired && !loginProblem && <Alert tone="warning">หมดเวลาการใช้งาน หรือระบบเพิ่งเริ่มใหม่ กรุณาเข้าสู่ระบบอีกครั้ง</Alert>}
+          {loginProblem && !loginProblem.field && <Alert>{loginProblem.text}</Alert>}
           <div className="grid">
             <PrimaryButton loading={busy} loadingText="กำลังเข้าสู่ระบบ…">
               เข้าสู่ระบบ <Icon name="right" className="size-4" />
             </PrimaryButton>
           </div>
-          <p className="text-center text-sm text-muted-fg">
+          <p className="mt-auto text-center text-sm text-muted-fg">
             ยังไม่มีบัญชี?{' '}
             <button type="button" onClick={() => switchTo('register')} className="cursor-pointer font-medium text-accent hover:underline">
               สร้างบริษัทใหม่
             </button>
           </p>
           </form>
-          )}
         </div>
         </div>
         <WelcomeMascots keys={['kit', 'cat']} enter="right" away={away} className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
