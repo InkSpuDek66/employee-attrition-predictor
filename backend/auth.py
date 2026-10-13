@@ -180,6 +180,10 @@ class RateLimit:
 
 login_limit = RateLimit(10)  # กันเดารหัสผ่าน
 register_limit = RateLimit(5, per=3600)  # สร้างบริษัทใหม่ได้ไม่เกิน 5 ครั้ง/ชั่วโมง/IP กันสร้างบริษัทขยะรัวๆ
+# เพิ่มบัญชี: ตอบ 409 เมื่อชื่อซ้ำ (หน้าสมัครทุกเว็บต้องบอก) จึงจำกัดจำนวนครั้งไว้ ไม่ให้ใช้ไล่เดาว่าชื่อไหนมีอยู่
+add_user_limit = RateLimit(20, per=3600)
+# บริษัทเดโมใช้บัญชีทดลองร่วมกัน (รหัสแสดงบนหน้า login) ถ้าให้เพิ่มบัญชีได้ ใครก็ใส่ admin ถาวรของตัวเองได้
+DEMO_TENANTS = {u["tenant_id"] for u in DEMO_USERS.values()}
 LIMITS = {  # ใช้ใน main.py
     "whatif": RateLimit(240),  # หน้า What-if เรียกทุกครั้งที่ปรับค่า
     "recalibrate": RateLimit(30),  # รวมดูประวัติ/ดาวน์โหลดไฟล์ตัวอย่างในแท็บปรับเทียบ
@@ -282,7 +286,10 @@ def list_users(user: dict = Depends(require_admin)):
 
 @router.post("/auth/users", status_code=201)
 def add_user(req: NewUser, user: dict = Depends(require_admin)):
-    """admin เพิ่มบัญชี (HR หรือ admin) ให้บริษัทตัวเองเท่านั้น"""
+    """admin เพิ่มบัญชี (HR หรือ admin) ให้บริษัทตัวเองเท่านั้น (ไม่รวมบริษัทเดโม)"""
+    if user["tenant_id"] in DEMO_TENANTS:
+        raise HTTPException(403, "บริษัทเดโมใช้บัญชีทดลองร่วมกัน เพิ่มบัญชีไม่ได้ ถ้าอยากลองให้สร้างบริษัทใหม่จากหน้าเข้าสู่ระบบ")
+    add_user_limit.check(user["username"])
     _need_db()
     with db.connect() as conn:
         if _taken(conn, req.username):

@@ -1,6 +1,6 @@
 // ชิ้นส่วน UI ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
-import { MascotLoader } from './mascot/Mascot'
-import { BAND, bandOf, HIGH, LOW, useCountUp } from './theme'
+import { MascotLoader, PointHint } from './mascot/Mascot'
+import { BAND, bandOf, HIGH, inputClass, invalidClass, LOW, useCountUp } from './theme'
 
 // ไอคอนเส้น (path จาก Heroicons outline, MIT) ไม่ต้องลง library เพิ่ม
 const ICONS = {
@@ -78,6 +78,26 @@ export function Field({ label, icon, children, className = '' }) {
       </span>
       {children}
     </label>
+  )
+}
+
+// ช่องกรอกที่ผู้ช่วยชี้ได้: problem = { field, text } (theme.js accountProblem / serverProblem)
+// ช่องที่ผิด = กรอบแดง + ผู้ช่วยยกมือชี้จากด้านล่างพร้อมบอกว่าต้องแก้อะไร
+// ในกริด 2 คอลัมน์ (ใส่ grid-flow-dense ที่กริด) กล่องคำพูดกว้างเต็มแถว side="right" = ช่องอยู่คอลัมน์ขวา ผู้ช่วยยืนขวา
+// mascot = { who, pet } เลือกตัวที่ชี้เอง (หน้า login) ไม่ส่ง = ตัวที่ผู้ใช้เลือกไว้
+export function CheckedField({ label, name, problem, side = 'left', mascot, ...input }) {
+  const bad = problem?.field === name
+  return (
+    <>
+      <Field label={label}>
+        <input name={name} className={`${inputClass} ${bad ? invalidClass : ''}`} aria-invalid={bad || undefined} {...input} />
+      </Field>
+      {bad && (
+        <PointHint key={problem.text} align={side} {...mascot} className="-mt-1 sm:col-span-2">
+          {problem.text}
+        </PointHint>
+      )}
+    </>
   )
 }
 

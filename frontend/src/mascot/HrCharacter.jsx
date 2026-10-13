@@ -270,6 +270,23 @@ function Pose({ mood, suit }) {
       </>
     )
   }
+  if (mood === 'Point') {
+    // ชี้ขึ้น: ยกแขนขวาชูนิ้วชี้ไปที่ช่อง/จุดที่อยู่ด้านบน (ใช้ใน PointHint)
+    return (
+      <>
+        {folder}
+        <g className="mascot-point">
+          {/* แขนกางออกนอกหัว (สูทสีเข้มไม่กลืนกับผม) นิ้วชี้ตั้งขึ้น */}
+          <Arm suit={suit} d="M88 120 Q114 110 122 80" />
+          <Hand cx={123} cy={76} r={6.2} />
+          {/* นิ้วชี้วาดทับมือ ให้ต่อกันเป็นชิ้นเดียว */}
+          <path d="M123 74 L123 56" stroke={LINE} strokeWidth="6.5" strokeLinecap="round" />
+          <path d="M123 74.5 L123 56" stroke={SKIN} strokeWidth="3.6" strokeLinecap="round" />
+          <path d="M115 52 l-4 -4 M131 52 l4 -4 M123 47 v-5" stroke={LINE} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+        </g>
+      </>
+    )
+  }
   // none: โบกมือ
   return (
     <>
@@ -286,6 +303,7 @@ function Pose({ mood, suit }) {
 // mini = รูปหน้าเล็กสำหรับปุ่มเลือกผู้ช่วย: ตัดภาพเฉพาะหัว ไม่วาดแขน ไม่ขยับ
 export default function HrCharacter({ mood, girl = false, mini = false }) {
   const suit = girl ? SUIT_GIRL : SUIT_BOY
+  const look = mood === 'Point' ? 'none' : mood // ท่าชี้ใช้หน้า/เนกไทแบบปกติ
   return (
     <svg
       viewBox={mini ? '22 16 96 96' : '0 0 140 172'}
@@ -322,13 +340,13 @@ export default function HrCharacter({ mood, girl = false, mini = false }) {
             <path d="M60 110 L70 131 L80 110 Z" fill="#fff" {...o} strokeWidth="1.6" />
             <path d="M60 110 L65 121 L61 123 Z M80 110 L75 121 L79 123 Z" fill="#fff" {...o} strokeWidth="1.4" />
             <path d="M59 111 L65 124 L62 126 L70 138 M81 111 L75 124 L78 126 L70 138" fill="none" className={suit.line} strokeWidth="1.6" strokeLinejoin="round" />
-            <circle cx="57" cy="126" r="3.2" className={TIE[mood]} {...o} strokeWidth="1.2" />
+            <circle cx="57" cy="126" r="3.2" className={TIE[look]} {...o} strokeWidth="1.2" />
             <circle cx="56" cy="125" r="0.9" fill="#fff" />
           </>
         ) : (
           <>
             <path d="M61 110 L70 134 L79 110 Z" fill="#fff" {...o} strokeWidth="1.6" />
-            <path d="M67 113 L73 113 L72 117 L68 117 Z M68 117 L72 117 L74 129 L70 133 L66 129 Z" className={TIE[mood]} {...o} strokeWidth="1.4" />
+            <path d="M67 113 L73 113 L72 117 L68 117 Z M68 117 L72 117 L74 129 L70 133 L66 129 Z" className={TIE[look]} {...o} strokeWidth="1.4" />
             <path d="M60 111 L66 124 L63 126 L70 136 M80 111 L74 124 L77 126 L70 136" fill="none" className={suit.line} strokeWidth="1.6" strokeLinejoin="round" />
           </>
         )}
@@ -371,7 +389,7 @@ export default function HrCharacter({ mood, girl = false, mini = false }) {
             </g>
           </>
         )}
-        <Face mood={mood} girl={girl} />
+        <Face mood={look} girl={girl} />
         </g>
         {/* แขน/มือวาดทับหัว (หัวโต มือจะได้ไม่หายไปหลังหัว) */}
         {!mini && <Pose mood={mood} suit={suit} />}

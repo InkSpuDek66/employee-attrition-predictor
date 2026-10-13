@@ -2,7 +2,7 @@
 // บันทึกได้เฉพาะผู้ดูแลระบบ (canSave) และ backend ต้องต่อ database (ไม่งั้นได้ข้อความ 503 จาก backend)
 // ชิ้นส่วนที่ export (DownloadButton, DropZone, CheckDetails) ใช้ร่วมกับหน้าปรับเทียบโมเดล (Calibrate.jsx)
 import { useRef, useState } from 'react'
-import { AssistantHint, MascotLoader } from './mascot/Mascot'
+import { AssistantHint, MascotLoader, PointHint } from './mascot/Mascot'
 import { download, employeeLabel, friendly, postFile } from './theme'
 import { Alert, Card, Icon } from './ui'
 
@@ -146,6 +146,12 @@ export function CheckDetails({ result }) {
         <Count label="ผ่าน" value={result.n_valid} tone="text-risk-low" />
         <Count label="ต้องแก้" value={result.n_invalid} tone={result.n_invalid ? 'text-risk-high' : 'text-fg'} />
       </div>
+      {/* ผู้ช่วยชี้ขึ้นไปที่ช่อง "ต้องแก้" (ชิดขวา) แล้วบอกให้ดูช่องแดงในตาราง */}
+      {result.n_invalid > 0 && (
+        <PointHint key={result.filename + result.n_invalid} align="right" role="status" className="justify-start sm:pr-[12%]">
+          มี {result.n_invalid.toLocaleString()} แถวต้องแก้ ช่องสีแดงในตารางด้านล่างคือจุดที่ผิด แก้ในไฟล์แล้วอัปโหลดใหม่ได้เลย
+        </PointHint>
+      )}
 
       {result.missing_columns.length > 0 && (
         <div className="mt-4">
@@ -352,12 +358,7 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
               <legend className="float-left mb-2 w-full font-medium text-fg">
                 พนักงานที่ไม่อยู่ในไฟล์นี้ ให้ทำอย่างไร? <span className="font-normal text-muted-fg">(ต้องเลือกก่อนบันทึก)</span>
               </legend>
-              {rosterMissing && (
-                <p id="roster-missing" role="alert" className="clear-both mb-2 flex items-center gap-1.5 text-sm font-medium text-risk-high">
-                  <Icon name="warning" className="size-4" />
-                  เลือกก่อนว่าจะเก็บพนักงานที่ไม่อยู่ในไฟล์ไว้ หรือถือว่าลาออกแล้ว
-                </p>
-              )}
+
               {[
                 [false, 'เก็บไว้เหมือนเดิม', 'ไฟล์นี้มีแค่บางคน เช่น พนักงานใหม่ หรือแผนกเดียว'],
                 [true, 'ถือว่าลาออกแล้ว', 'ไฟล์นี้คือรายชื่อพนักงานทุกคนตอนนี้ (ไม่ลบข้อมูล แค่ไม่นับในภาพรวม ถ้ารหัสนั้นกลับมาอยู่ในไฟล์ครั้งหน้า จะกลับมาเป็นพนักงานเหมือนเดิม)'],
@@ -376,6 +377,11 @@ export default function Upload({ who, canSave, onSaved, onPick }) {
                   </span>
                 </label>
               ))}
+              {rosterMissing && (
+                <div id="roster-missing" className="clear-both">
+                  <PointHint className="mt-1">เลือกก่อนนะ ว่าจะเก็บพนักงานที่ไม่อยู่ในไฟล์ไว้ หรือถือว่าลาออกแล้ว</PointHint>
+                </div>
+              )}
             </fieldset>
           )}
         </Card>

@@ -142,10 +142,12 @@ test('มาสคอตที่เคยเลือกไว้ด้วย�
 
 test('ตรวจข้อมูลบัญชีก่อนส่ง: ชื่อผู้ใช้ตามกติกาเดียวกับ backend, รหัสผ่าน 8 ตัวขึ้นไปและตรงกัน', () => {
   const ok = { name: 'สมชาย', username: 'somchai.k', password: 'abcd1234', confirm: 'abcd1234' }
-  assert.equal(accountProblem(ok), '')
-  assert.match(accountProblem({ ...ok, username: 'Somchai' }), /a-z/)
-  assert.match(accountProblem({ ...ok, username: 'ab' }), /3–32/)
-  assert.match(accountProblem({ ...ok, password: 'short', confirm: 'short' }), /8 ตัว/)
-  assert.match(accountProblem({ ...ok, confirm: 'abcd12345' }), /ไม่ตรงกัน/)
-  assert.match(accountProblem({ ...ok, name: '  ' }), /ชื่อ/)
+  assert.equal(accountProblem(ok), null)
+  assert.equal(accountProblem({ ...ok, username: 'Somchai' }).field, 'username') // มาสคอตชี้ช่องนี้
+  assert.match(accountProblem({ ...ok, username: 'ab' }).text, /3–32/)
+  assert.equal(accountProblem({ ...ok, password: 'short', confirm: 'short' }).field, 'password')
+  assert.equal(accountProblem({ ...ok, confirm: 'abcd12345' }).field, 'confirm')
+  assert.equal(accountProblem({ ...ok, name: '  ' }).field, 'name')
+  assert.equal(accountProblem({ ...ok, company_name: '' }).field, 'company_name') // ฟอร์มสร้างบริษัท
+  assert.equal(accountProblem({ ...ok, company_name: 'บริษัท ก' }), null)
 })

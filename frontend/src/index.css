@@ -409,6 +409,14 @@ input[type='range'] {
   0%, 92%, 100% { transform: scaleY(1); }
   96% { transform: scaleY(0.1); }
 }
+/* ท่าชี้ (PointHint): มือขยับขึ้นลงเบาๆ ให้ตามองไปทางที่ชี้ */
+.mascot-point {
+  transform-box: fill-box;
+  animation: mascot-point 1s ease-in-out infinite;
+}
+@keyframes mascot-point {
+  50% { transform: translateY(-4px); }
+}
 @keyframes mascot-wave {
   0%, 100% { transform: rotate(0deg); }
   50% { transform: rotate(-18deg); }

@@ -3,8 +3,8 @@
 import { useRef, useState } from 'react'
 import Logo from '../logo/Logo'
 import { WelcomeMascots } from './mascot/Mascot'
-import { accountProblem, api, friendly, inputClass } from './theme'
-import { Alert, Field, Icon, PrimaryButton, ThemeToggle } from './ui'
+import { accountProblem, api, focusField, friendly, inputClass, serverProblem } from './theme'
+import { Alert, CheckedField, Field, Icon, PrimaryButton, ThemeToggle } from './ui'
 
 const DEMO_ACCOUNTS = [
   { username: 'hr_demo', password: 'hr-demo-1234', role: 'ฝ่ายบุคคล', can: 'ดูภาพรวม, SHAP, What-if, ตรวจไฟล์นำเข้า' },
@@ -25,15 +25,22 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
   // สร้างบริษัทใหม่: ได้บริษัทว่าง (ไม่เห็นข้อมูลบริษัทอื่น) + บัญชี admin แล้วเข้าระบบให้เลย (POST /auth/register)
   const [mode, setMode] = useState('login') // 'login' | 'register'
   const [company, setCompany] = useState({ company_name: '', name: '', username: '', password: '', confirm: '' })
-  const setField = (k) => (e) => setCompany((c) => ({ ...c, [k]: e.target.value }))
-  const switchTo = (m) => (setMode(m), setError(''))
+  // ช่องแรกที่ผิด { field, text } ผู้ช่วยชี้ช่องนั้น (field null = ข้อความรวมใต้ฟอร์ม) แก้ช่องนั้นแล้วหายเอง
+  const [problem, setProblem] = useState(null)
+  const registerForm = useRef(null)
+  const setField = (k) => (e) => (setCompany((c) => ({ ...c, [k]: e.target.value })), problem?.field === k && setProblem(null))
+  const switchTo = (m) => (setMode(m), setError(''), setProblem(null))
+  const point = (p) => (setProblem(p), p.field && focusField(registerForm.current, p.field))
+  // ยังไม่ได้เลือกผู้ช่วย: ช่องฝั่งซ้ายให้จอย+ปุกปุยชี้ ฝั่งขวาให้กิต+ส้มฉุน ตามที่ยืนอยู่ข้างฟอร์ม
+  const LEFT = { who: 'joy', pet: 'dog' }
+  const RIGHT = { who: 'kit', pet: 'cat' }
 
   async function createCompany(e) {
     e.preventDefault()
-    const problem = !company.company_name.trim() ? 'กรอกชื่อบริษัท' : accountProblem(company)
-    if (problem) return setError(problem)
+    const found = accountProblem(company)
+    if (found) return point(found)
     setBusy(true)
-    setError('')
+    setProblem(null)
     try {
       const { confirm: _, ...body } = company
       onLogin(
@@ -44,7 +51,7 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
         }),
       )
     } catch (err) {
-      setError(friendly(err))
+      point(serverProblem(err))
       setBusy(false)
     }
   }
@@ -85,29 +92,19 @@ export default function Login({ onLogin, dark, onToggleTheme, expired }) {
 
         <div>
           {mode === 'register' ? (
-          <form onSubmit={createCompany} className="space-y-3 rounded-xl border border-line bg-card p-6">
+          <form ref={registerForm} onSubmit={createCompany} noValidate className="space-y-3 rounded-xl border border-line bg-card p-6">
             <div>
               <h1 className="text-xl font-semibold text-fg">สร้างบริษัทใหม่</h1>
               <p className="text-sm text-muted-fg">ได้บริษัทว่างพร้อมบัญชีผู้ดูแลระบบ แล้วนำเข้าพนักงานของบริษัทเองได้ ไม่เห็นข้อมูลบริษัทอื่น</p>
             </div>
-            <Field label="ชื่อบริษัท">
-              <input className={inputClass} value={company.company_name} onChange={setField('company_name')} maxLength={100} required />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="ชื่อของคุณ">
-                <input className={inputClass} value={company.name} onChange={setField('name')} maxLength={100} required />
-              </Field>
-              <Field label="ชื่อผู้ใช้ (a-z ตัวเลข)">
-                <input className={inputClass} value={company.username} onChange={setField('username')} autoComplete="username" spellCheck={false} required />
-              </Field>
-              <Field label="รหัสผ่าน (8 ตัวขึ้นไป)">
-                <input className={inputClass} type="password" value={company.password} onChange={setField('password')} autoComplete="new-password" required />
-              </Field>
-              <Field label="ยืนยันรหัสผ่าน">
-                <input className={inputClass} type="password" value={company.confirm} onChange={setField('confirm')} autoComplete="new-password" required />
-              </Field>
+            <CheckedField mascot={LEFT} label="ชื่อบริษัท" name="company_name" problem={problem} value={company.company_name} onChange={setField('company_name')} maxLength={100} />
+            <div className="grid grid-flow-dense items-start gap-3 sm:grid-cols-2">
+              <CheckedField mascot={LEFT} label="ชื่อของคุณ" name="name" problem={problem} value={company.name} onChange={setField('name')} maxLength={100} />
+              <CheckedField side="right" mascot={RIGHT} label="ชื่อผู้ใช้ (a-z ตัวเลข)" name="username" problem={problem} value={company.username} onChange={setField('username')} autoComplete="username" spellCheck={false} />
+              <CheckedField mascot={LEFT} label="รหัสผ่าน (8 ตัวขึ้นไป)" name="password" problem={problem} type="password" value={company.password} onChange={setField('password')} autoComplete="new-password" />
+              <CheckedField side="right" mascot={RIGHT} label="ยืนยันรหัสผ่าน" name="confirm" problem={problem} type="password" value={company.confirm} onChange={setField('confirm')} autoComplete="new-password" />
             </div>
-            {error && <Alert>{error}</Alert>}
+            {problem && !problem.field && <Alert>{problem.text}</Alert>}
             <div className="grid">
               <PrimaryButton loading={busy} loadingText="กำลังสร้าง…">
                 สร้างบริษัทและเข้าสู่ระบบ <Icon name="right" className="size-4" />

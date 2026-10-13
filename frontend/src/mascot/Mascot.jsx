@@ -30,6 +30,7 @@ function Bubble({ tail = 'top', className = '', live = false, children }) {
   const pos = {
     top: '-top-[7px] left-1/2 -translate-x-1/2 border-l border-t',
     left: 'top-1/2 -left-[7px] -translate-y-1/2 border-l border-b',
+    right: 'top-1/2 -right-[7px] -translate-y-1/2 border-r border-t',
     // มือถือ: ตัวการ์ตูนอยู่ด้านบน / จอใหญ่: อยู่ด้านซ้าย
     side: '-top-[7px] left-1/2 -translate-x-1/2 border-l border-t sm:top-1/2 sm:-left-[7px] sm:-translate-y-1/2 sm:translate-x-0 sm:border-t-0 sm:border-b',
   }[tail]
@@ -53,6 +54,30 @@ export function MascotLoader() {
       <span className="loader-dot size-1 rounded-full bg-current" />
       <span className="loader-dot size-1 rounded-full bg-current" />
     </span>
+  )
+}
+
+// ผู้ช่วยตัวเล็กยกมือชี้ขึ้นไปที่ช่อง/จุดที่อยู่ด้านบน + กล่องคำพูดบอกว่าต้องแก้อะไร (ช่องกรอกที่ผิด ตัวเลือกที่ยังไม่เลือก ฯลฯ)
+// วางไว้ใต้สิ่งที่ชี้ align = 'left' (ตัวการ์ตูนซ้าย) | 'right' (ตัวการ์ตูนขวา ชี้ของที่อยู่ชิดขวา)
+// ข้อความอยู่ในกล่องคำพูด (role alert/status) โปรแกรมอ่านหน้าจออ่านได้ ตัวการ์ตูนเป็นของตกแต่ง
+// who = ตัวที่ชี้ (ไม่ส่ง = ตัวที่ผู้ใช้เลือกไว้) pet = สัตว์เลี้ยงตัวจิ๋วยืนข้างๆ (หน้า login: จอย+ปุกปุย ซ้าย, กิต+ส้มฉุน ขวา)
+export function PointHint({ children, align = 'left', who, pet, role = 'alert', className = '' }) {
+  const Character = CHARACTERS[who ?? loadMascot()]
+  const right = align === 'right'
+  return (
+    <div role={role} className={`fade-up flex items-end gap-1.5 ${right ? 'flex-row-reverse' : ''} ${className}`}>
+      {pet && (
+        <div className="-mr-2 shrink-0 [&_svg]:h-12 [&_svg]:w-auto" aria-hidden="true">
+          {CHARACTERS[pet]({ mood: 'none' })}
+        </div>
+      )}
+      <div className="-mt-2 shrink-0 [&_svg]:h-24 [&_svg]:w-auto" aria-hidden="true">
+        {Character({ mood: 'Point' })}
+      </div>
+      <Bubble tail={right ? 'right' : 'left'} className="mb-4 px-3 py-2 text-sm font-medium text-risk-high">
+        {children}
+      </Bubble>
+    </div>
   )
 }
 

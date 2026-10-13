@@ -212,6 +212,18 @@ function Pose({ mood, kind }) {
       </>
     )
   }
+  if (mood === 'Point') {
+    // ชี้ขึ้น: ชูอุ้งเท้าขึ้นไปที่ช่อง/จุดที่อยู่ด้านบน (ใช้ใน PointHint)
+    return (
+      <>
+        {rest}
+        <g className="mascot-point">
+          <Paw kind={kind} d="M88 118 Q112 108 120 76" end={[121, 70]} />
+          <path d="M113 56 l-4 -4 M129 56 l4 -4 M121 51 v-5" stroke={LINE} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+        </g>
+      </>
+    )
+  }
   return (
     <>
       {rest}
@@ -258,7 +270,7 @@ export default function PetCharacter({ mood, kind = 'cat', mini = false }) {
         <path d="M46 110 Q70 122 94 110" fill="none" className={COLLAR[mood]} strokeWidth="5" strokeLinecap="round" />
         <circle cx="70" cy="119" r="4.2" fill="#f2c14e" {...o} strokeWidth="1.4" />
         <path d="M67 119.5 H73" stroke={LINE} strokeWidth="1" />
-        <Face mood={mood} kind={kind} />
+        <Face mood={mood === 'Point' ? 'none' : mood} kind={kind} />
         </g>
         {/* ขาหน้าวาดทับหัว (หัวโต อุ้งเท้าจะได้ไม่หายไปหลังหัว) */}
         {!mini && <Pose mood={mood} kind={kind} />}

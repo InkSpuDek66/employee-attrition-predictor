@@ -25,6 +25,7 @@ def accounts(monkeypatch):
     saved = app.dependency_overrides.pop(auth.current_user)
     auth.login_limit.reset()
     auth.register_limit.reset()
+    auth.add_user_limit.reset()
     yield
     app.dependency_overrides[auth.current_user] = saved
     with db.connect() as conn:
@@ -98,3 +99,10 @@ def test_register_needs_database(monkeypatch):
         assert register("pytest_nodb").status_code == 503
     finally:
         app.dependency_overrides[auth.current_user] = saved
+
+
+def test_demo_company_admin_cannot_add_accounts(accounts):
+    """รหัสของบัญชีทดลองแสดงบนหน้า login ใครก็เข้าได้ จึงห้ามเพิ่มบัญชีถาวรในบริษัทเดโม"""
+    demo = bearer(client.post("/auth/login", json={"username": "admin_demo", "password": auth.DEMO_USERS["admin_demo"]["password"]}))
+    body = {"username": "pytest_backdoor", "password": PASSWORD, "name": "x", "role": "admin"}
+    assert client.post("/auth/users", json=body, headers=demo).status_code == 403

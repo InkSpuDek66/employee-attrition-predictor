@@ -53,13 +53,23 @@ const OLD_MASCOT_KEYS = { chibiGirl: 'joy', chibiBoy: 'kit' } // ชื่อร
 
 const USERNAME = /^[a-z0-9_.-]{3,32}$/ // ตรงกับ backend (auth.USERNAME)
 
-// ตรวจก่อนส่ง ให้ได้ข้อความภาษาไทยที่บอกว่าต้องแก้ช่องไหน (backend ตรวจซ้ำอีกชั้น)
-export function accountProblem({ username, password, confirm, name }) {
-  if (!name.trim()) return 'กรอกชื่อที่จะแสดง'
-  if (!USERNAME.test(username)) return 'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z ตัวเล็ก ตัวเลข _ . - ยาว 3–32 ตัว'
-  if (password.length < 8) return 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัว'
-  if (password !== confirm) return 'รหัสผ่านสองช่องไม่ตรงกัน'
-  return ''
+// ตรวจก่อนส่ง คืนช่องแรกที่ผิด { field, text } (มาสคอตชี้ช่องนั้น) หรือ null (backend ตรวจซ้ำอีกชั้น)
+// company_name มีเฉพาะฟอร์มสร้างบริษัท (undefined = ไม่ตรวจ)
+export function accountProblem({ company_name, name, username, password, confirm }) {
+  if (company_name !== undefined && !company_name.trim()) return { field: 'company_name', text: 'กรอกชื่อบริษัทก่อนนะ' }
+  if (!name.trim()) return { field: 'name', text: 'กรอกชื่อที่จะแสดงก่อนนะ' }
+  if (!USERNAME.test(username)) return { field: 'username', text: 'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z ตัวเล็ก ตัวเลข _ . - ยาว 3–32 ตัว' }
+  if (password.length < 8) return { field: 'password', text: 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัว' }
+  if (password !== confirm) return { field: 'confirm', text: 'รหัสผ่านสองช่องไม่ตรงกัน' }
+  return null
+}
+// ชื่อผู้ใช้ซ้ำ (409 จาก backend) = ชี้ช่องชื่อผู้ใช้ error อื่น = ข้อความรวมด้านล่างฟอร์ม
+export const serverProblem = (err) => (err.status === 409 ? { field: 'username', text: err.message } : { field: null, text: friendly(err) })
+// ช่องที่ผิด: กรอบแดง (ต่อท้าย inputClass)
+export const invalidClass = 'border-risk-high ring-2 ring-risk-high/20'
+// โฟกัสช่องที่ผิดในฟอร์ม (input มี name ตรงกับ field)
+export function focusField(form, field) {
+  form?.querySelector(`[name="${field}"]`)?.focus()
 }
 
 export function loadMascot() {
