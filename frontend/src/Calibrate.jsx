@@ -7,6 +7,8 @@ import { Alert, Card, Icon, Segmented, Skeleton } from './ui'
 import { AssistantHint, MascotLoader } from './mascot/Mascot'
 import { CheckDetails, Count, DownloadButton, DropZone } from './Upload'
 
+const HISTORY_SHOWN = 3
+
 const METHODS = [
   ['platt', 'แบบเส้นตรง'],
   ['isotonic', 'แบบยืดหยุ่น'],
@@ -29,7 +31,8 @@ function Status({ latest, onReset, resetting }) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-risk-low/20 bg-risk-low-soft px-4 py-3 text-sm text-risk-low">
       <Icon name="check" className="size-5 shrink-0" />
-      <span className="flex-1">
+      {/* min-w: จอแคบให้ปุ่มยกเลิกตกลงบรรทัดใหม่ ไม่บีบข้อความจนเหลือไม่กี่คำต่อบรรทัด */}
+      <span className="min-w-60 flex-1">
         ปรับเทียบแล้วเมื่อ {when(latest.calibrated_at)} ด้วยข้อมูล {latest.n_samples.toLocaleString()} คน (ลาออกจริง {pct(latest.positive_rate)}) วิธี
         {METHOD_TH[latest.method] ?? latest.method} ทุกหน้าใช้คะแนนที่ปรับแล้ว
       </span>
@@ -147,7 +150,7 @@ function Result({ r }) {
           <div className="mt-1 text-2xl font-semibold tabular-nums text-fg">{pct(r.positive_rate)}</div>
         </div>
         <div className="rounded-lg border border-line bg-canvas p-4">
-          <div className="text-xs font-medium text-muted-fg">ความคลาดเคลื่อนของคะแนน (Brier)</div>
+          <div className="text-xs font-medium text-muted-fg" title="วัดด้วย Brier score: ค่าเฉลี่ยของ (คะแนน − ผลจริง)²">ความคลาดเคลื่อนของคะแนน</div>
           <div className="mt-1 text-2xl font-semibold tabular-nums text-fg">
             {r.brier_before.toFixed(3)} <span className="text-muted-fg">→</span> <span className="text-risk-low">{r.brier_after.toFixed(3)}</span>
           </div>
@@ -186,6 +189,7 @@ export default function Calibrate({ who, onChanged }) {
   const history = useApi([`/recalibrate/history?v=${version}`]) // v เปลี่ยน = โหลดประวัติใหม่
   const [file, setFile] = useState(null)
   const [method, setMethod] = useState('platt')
+  const [showAll, setShowAll] = useState(false) // ประวัติ: ปกติโชว์แค่ HISTORY_SHOWN ครั้งล่าสุด
   const [busy, setBusy] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [res, setRes] = useState(null)
@@ -310,24 +314,42 @@ export default function Calibrate({ who, onChanged }) {
                   <th className="px-3 py-2">วิธี</th>
                   <th className="px-3 py-2 text-right">พนักงาน</th>
                   <th className="px-3 py-2 text-right">ลาออกจริง</th>
-                  <th className="px-5 py-2 text-right sm:px-6">Brier ก่อน → หลัง</th>
+                  <th className="px-5 py-2 text-right sm:px-6" title="Brier score: ยิ่งน้อย คะแนนยิ่งตรงกับผลลาออกจริง">ความคลาดเคลื่อน ก่อน → หลัง</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line tabular-nums">
-                {items.map((h, i) => (
+                {(showAll ? items : items.slice(0, HISTORY_SHOWN)).map((h, i) => (
                   <tr key={h.calibrated_at} className={i === 0 ? 'font-medium text-fg' : 'text-muted-fg'}>
                     <td className="px-5 py-2 sm:px-6">{when(h.calibrated_at)}</td>
                     <td className="px-3 py-2">{METHOD_TH[h.method] ?? h.method}</td>
                     <td className="px-3 py-2 text-right">{h.n_samples.toLocaleString()}</td>
                     <td className="px-3 py-2 text-right">{pct(h.positive_rate)}</td>
                     <td className="px-5 py-2 text-right sm:px-6">
-                      {h.metrics?.brier_before != null ? `${h.metrics.brier_before.toFixed(3)} → ${h.metrics.brier_after.toFixed(3)}` : '–'}
+                      {h.metrics?.brier_before != null ? (
+                        <>
+                          {h.metrics.brier_before.toFixed(3)} → {h.metrics.brier_after.toFixed(3)}
+                          {h.metrics.brier_before > 0 && (
+                            <span className="ml-1.5 text-risk-low">(ตรงขึ้น {pct(1 - h.metrics.brier_after / h.metrics.brier_before)})</span>
+                          )}
+                        </>
+                      ) : (
+                        '–'
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {items.length > HISTORY_SHOWN && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="mt-3 h-9 w-full cursor-pointer rounded-lg border border-line text-sm font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              {showAll ? 'ย่อเหลือล่าสุด' : `ดูทั้งหมด (${items.length.toLocaleString()} ครั้ง)`}
+            </button>
+          )}
         </Card>
       )}
     </div>

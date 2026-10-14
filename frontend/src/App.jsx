@@ -87,6 +87,13 @@ function greeting(name) {
   return `${part} ${name}`
 }
 
+// ผู้ช่วยใน sidebar ตอนยังไม่มีอะไรให้ดู: หน้าที่ไม่ใช่รายคนพูดเรื่องของหน้านั้น (ไม่ชวนเลือกพนักงาน)
+const IDLE = {
+  calibrate: { text: 'มาปรับคะแนนให้ตรงกับบริษัทกัน', sub: 'ใช้ไฟล์พนักงานที่รู้ผลแล้วว่าใครลาออก' },
+  import: { text: 'นำเข้ารายชื่อพนักงานกัน!', sub: 'ดาวน์โหลดไฟล์ตัวอย่างแล้วกรอกได้เลย' },
+  users: { text: 'ชวนเพื่อนในทีมมาใช้ได้นะ', sub: 'เพิ่มบัญชีแล้วส่งชื่อผู้ใช้กับรหัสผ่านให้' },
+}
+
 function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme }) {
   const tenant = user.tenant_id
   const tabs = TABS.filter((t) => !t.admin || user.role === 'admin') // แท็บ admin ไม่โชว์ให้ HR
@@ -218,6 +225,8 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
             <div className="text-xs text-muted-fg">HR Analytics</div>
           </div>
           <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="ml-auto" />
+          {/* มือถือ: ปุ่มออกจากระบบอยู่แถวโลโก้ (ไม่มีแถวผู้ใช้แยก หัวจอจะได้ไม่สูงเกิน) */}
+          <LogoutButton user={user} onLogout={onLogout} className="lg:hidden" />
         </div>
 
         {/* มือถือ: 4 ช่องเท่ากัน ไอคอนบนชื่อสั้น เห็นครบทุกแท็บไม่ต้องเลื่อน / จอใหญ่: รายการแนวตั้งใน sidebar */}
@@ -250,7 +259,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
         </nav>
 
         <div className="hidden flex-1 items-center justify-center lg:flex">
-          <Mascot risk={risk[tab]} who={who} say={say} onChoose={(v) => (setWho(v), saveMascot(v))} />
+          <Mascot risk={risk[tab]} who={who} say={say} idle={IDLE[tab]} onChoose={(v) => (setWho(v), saveMascot(v))} />
         </div>
 
         <div className="hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
@@ -261,7 +270,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
           <br />
           คะแนนใช้จัดลำดับความเสี่ยง ไม่ใช่คำตัดสิน
         </div>
-        <div className="flex items-center gap-3 border-t border-line bg-card px-4 py-3 lg:sticky lg:bottom-0 lg:px-5">
+        <div className="hidden items-center gap-3 border-t border-line bg-card px-4 py-3 lg:sticky lg:bottom-0 lg:flex lg:px-5">
           <div className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-fg">
             <Icon name="user" className="size-5" />
           </div>
@@ -269,15 +278,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
             <div className="truncate text-sm font-medium text-fg">{user.name}</div>
             <div className="text-xs text-muted-fg">{user.tenant_name ?? user.tenant_id}</div>
           </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            aria-label="ออกจากระบบ"
-            title="ออกจากระบบ"
-            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-          >
-            <Icon name="logout" className="size-5" />
-          </button>
+          <LogoutButton user={user} onLogout={onLogout} />
         </div>
 
       </aside>
@@ -437,5 +438,21 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
         </button>
       )}
     </div>
+  )
+}
+
+// ชื่อผู้ใช้/บริษัทอยู่ใน title (มือถือไม่มีแถวผู้ใช้ กดค้างหรือชี้แล้วเห็นว่าเป็นใคร)
+function LogoutButton({ user, onLogout, className = '' }) {
+  const label = `ออกจากระบบ (${user.name} · ${user.tenant_name ?? user.tenant_id})`
+  return (
+    <button
+      type="button"
+      onClick={onLogout}
+      aria-label={label}
+      title={label}
+      className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className}`}
+    >
+      <Icon name="logout" className="size-5" />
+    </button>
   )
 }

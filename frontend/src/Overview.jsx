@@ -4,15 +4,16 @@
 import { useState } from 'react'
 import { featureLabel, JOB_LEVELS } from './featureLabels'
 import { AssistantHint, SorryState } from './mascot/Mascot'
-import { api, baht, BAND, bahtShort, csvCell, employeeLabel, friendly, useApi } from './theme'
+import { api, baht, BAND, bahtShort, csvCell, employeeLabel, friendly, inputClass, useApi } from './theme'
 import { Alert, Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
 // บริษัทมาจากผู้ใช้ที่ login (backend อ่านจาก token) บริษัทที่ปรับเทียบแล้วได้คะแนนปรับเทียบอัตโนมัติ
-// วงกลมตัวย่อหน้าแถวพนักงาน: ข้อมูลไม่มีชื่อคน ใช้ตัวย่อตำแหน่งแทน (Sales Executive = SE, ภาษาไทยใช้พยัญชนะตัวแรก)
-const initials = (role = '') => {
-  const words = role.match(/[A-Za-z]+/g)
-  return words ? words.slice(0, 2).map((w) => w[0].toUpperCase()).join('') : role.replace(/^[เแโใไ]/, '').charAt(0) || '?'
+// วงกลมหน้าแถวพนักงาน: ตัวย่อชื่อคน (John Smith = JS, ภาษาไทยใช้พยัญชนะตัวแรก) ไม่มีชื่อ = ไอคอนคน
+// (เดิมใช้ตัวย่อตำแหน่ง แต่ตำแหน่งภาษาไทยขึ้นต้นตัวเดียวกันเยอะ เช่น พนักงาน/ผู้จัดการ ดูไม่ออกว่าต่างกัน)
+const initials = (name) => {
+  const words = name.match(/[A-Za-z]+/g)
+  return words ? words.slice(0, 2).map((w) => w[0].toUpperCase()).join('') : name.replace(/^[เแโใไ]/, '').charAt(0)
 }
 const topQuery = (n, department) => new URLSearchParams({ n, ...(department && { department }) })
 
@@ -74,7 +75,7 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
             >
               <span className="w-5 text-right text-xs tabular-nums text-muted-fg">{i + 1}</span>
               <span className={`grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold ring-1 ${b.pill}`} title={e.job_role} aria-hidden="true">
-                {initials(e.job_role)}
+                {e.name ? initials(e.name) : <Icon name="user" className="size-4" />}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-fg">{employeeLabel(e.employee_id, e.name)}</span>
@@ -267,11 +268,24 @@ export default function Overview({ rate, who, onPick, onImport, onCsv }) {
   if (s.n_employees === 0 && !department) return <NoEmployees who={who} onImport={onImport} />
   const highPct = Math.round((s.risk_bands.High / s.n_employees) * 100)
   const deptOptions = [['', 'ทั้งบริษัท'], ...departments.map((d) => [d.department, d.department])]
+  const manyDepartments = departments.length > 8
   const maxShare = Math.max(...s.top_factors.map((f) => f.share), 1e-9)
 
   return (
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
-      <Segmented label="เลือกแผนก" options={deptOptions} value={department} onChange={setDepartment} />
+      {/* มือถือ หรือแผนกเยอะ (ปุ่มเรียงหลายแถว) = ช่องเลือกแบบเลื่อนลง */}
+      <select aria-label="เลือกแผนก" value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputClass} ${manyDepartments ? '' : 'sm:hidden'}`}>
+        {deptOptions.map(([v, text]) => (
+          <option key={v} value={v}>
+            {text}
+          </option>
+        ))}
+      </select>
+      {!manyDepartments && (
+        <div className="hidden sm:block">
+          <Segmented label="เลือกแผนก" options={deptOptions} value={department} onChange={setDepartment} />
+        </div>
+      )}
       <DataAsOf asOf={s.data_as_of} days={s.data_age_days} />
 
       {/* UX-17: หน้าแรกที่มีตัวเลขเยอะสุดต้องบอกข้อจำกัดเหมือนหน้า SHAP / What-if */}

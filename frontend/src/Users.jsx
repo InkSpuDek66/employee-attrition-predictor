@@ -1,10 +1,11 @@
 // บัญชีผู้ใช้ของบริษัท (เฉพาะ admin): GET /auth/users ดูรายชื่อ, POST /auth/users เพิ่มบัญชี HR / admin
 // บัญชีที่เพิ่มเก็บในตาราง app_users (ต้องต่อ database) รหัสผ่านเก็บเป็น hash ฝั่ง backend
 import { useRef, useState } from 'react'
-import { accountProblem, api, focusField, inputClass, serverProblem, useApi } from './theme'
-import { Alert, Card, CheckedField, Field, Icon, PrimaryButton, Skeleton } from './ui'
+import { accountProblem, api, focusField, serverProblem, useApi } from './theme'
+import { Alert, Card, CheckedField, Icon, PrimaryButton, Segmented, Skeleton } from './ui'
 
 const ROLE = { admin: 'ผู้ดูแลระบบ', hr: 'ฝ่ายบุคคล' }
+const CAN = { hr: 'ดูภาพรวม SHAP What-if และตรวจไฟล์นำเข้าได้', admin: 'ทำได้ทุกอย่าง + บันทึกไฟล์นำเข้า ปรับเทียบ เพิ่มบัญชี' }
 const EMPTY = { name: '', username: '', password: '', confirm: '', role: 'hr' }
 
 export default function Users() {
@@ -55,14 +56,15 @@ export default function Users() {
                   <Icon name="user" className="size-5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-fg">{u.name}</span>
+                  <span className="block break-words text-sm font-medium text-fg">{u.name}</span>
                   <span className="block font-mono text-xs text-muted-fg" translate="no">
                     {u.username}
                   </span>
                 </span>
-                <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-fg">
+                {/* ป้ายสิทธิ์ไม่หด ชื่อขึ้นบรรทัดใหม่แทน (เดิมชื่อถูกตัด ... ในมือถือ) */}
+                <span className="shrink-0 rounded-md bg-muted px-2 py-0.5 text-right text-xs text-muted-fg">
                   {ROLE[u.role]}
-                  {u.demo && ' · บัญชีทดลอง'}
+                  {u.demo && <span className="block sm:inline"><span className="hidden sm:inline"> · </span>บัญชีทดลอง</span>}
                 </span>
               </li>
             ))}
@@ -78,17 +80,18 @@ export default function Users() {
             <CheckedField label="รหัสผ่าน (อย่างน้อย 8 ตัว)" name="password" problem={problem} type="password" value={form.password} onChange={set('password')} autoComplete="new-password" />
             <CheckedField side="right" label="ยืนยันรหัสผ่าน" name="confirm" problem={problem} type="password" value={form.confirm} onChange={set('confirm')} autoComplete="new-password" />
           </div>
-          <Field label="สิทธิ์">
-            <select className={inputClass} value={form.role} onChange={set('role')}>
-              <option value="hr">ฝ่ายบุคคล: ดูภาพรวม SHAP What-if ตรวจไฟล์นำเข้า</option>
-              <option value="admin">ผู้ดูแลระบบ: ทุกอย่าง + บันทึกไฟล์นำเข้า ปรับเทียบ เพิ่มบัญชี</option>
-            </select>
-          </Field>
+          <div className="space-y-1.5">
+            <div className="text-sm font-medium text-muted-fg">สิทธิ์</div>
+            <Segmented label="สิทธิ์" options={Object.entries(ROLE).reverse()} value={form.role} onChange={(role) => setForm((f) => ({ ...f, role }))} />
+            <p className="text-xs text-muted-fg">{CAN[form.role]}</p>
+          </div>
           {message && <p className="text-sm font-medium text-risk-low">{message}</p>}
           {problem && !problem.field && <Alert>{problem.text}</Alert>}
-          <PrimaryButton loading={busy} loadingText="กำลังเพิ่ม…">
-            เพิ่มบัญชี
-          </PrimaryButton>
+          <div className="grid">
+            <PrimaryButton loading={busy} loadingText="กำลังเพิ่ม…">
+              เพิ่มบัญชี
+            </PrimaryButton>
+          </div>
         </form>
       </Card>
     </div>

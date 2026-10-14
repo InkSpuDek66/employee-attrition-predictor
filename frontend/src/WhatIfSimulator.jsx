@@ -433,7 +433,8 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 type="button"
                 onClick={() => setChanges({})}
                 disabled={!nChanged}
-                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+                title={nChanged ? undefined : 'ยังไม่ได้ปรับอะไร'}
+                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
               >
                 <Icon name="reset" className="size-4" />
                 กลับเป็นค่าเดิม
@@ -558,7 +559,8 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 type="button"
                 onClick={saveScenario}
                 disabled={!nChanged || alreadySaved || saved.length >= 4}
-                className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+                title={nChanged ? undefined : 'ปรับเงื่อนไขก่อน แล้วค่อยบันทึกไว้เทียบ'}
+                className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
               >
                 <Icon name="list" className="size-4" />
                 {alreadySaved ? 'บันทึกแบบนี้ไว้แล้ว' : saved.length >= 4 ? 'บันทึกได้สูงสุด 4 แบบ' : 'บันทึกผลนี้ไว้เทียบ'}

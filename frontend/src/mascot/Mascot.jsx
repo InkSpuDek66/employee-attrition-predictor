@@ -168,9 +168,10 @@ export function NotFoundState({ who, message }) {
 }
 
 // say = { n, text, sub } ข้อความชั่วคราวหลังผู้ใช้ทำอะไรสำเร็จ (บันทึก/ปรับเทียบ/ดาวน์โหลด) ทำท่าดีใจแทนท่าตามความเสี่ยง
-export default function Mascot({ risk, who, onChoose, say }) {
+// idle = { text, sub } ข้อความตอนยังไม่มีพนักงานให้ดู (หน้าที่ไม่ใช่รายคน เช่น นำเข้า/บัญชี) ไม่ส่ง = ชวนเลือกพนักงาน
+export default function Mascot({ risk, who, onChoose, say, idle }) {
   const mood = say ? 'Low' : risk?.notFound ? 'NotFound' : risk?.error ? 'Sorry' : (risk?.band ?? 'none')
-  const m = say ?? MOOD[mood]
+  const m = say ?? ((mood === 'none' && idle) || MOOD[mood])
   const Character = CHARACTERS[who]
 
   return (

@@ -305,7 +305,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
                             />
                           </div>
                         </td>
-                        <td className="px-2 py-2.5 tabular-nums text-muted-fg">{r.shown}</td>
+                        <td className="whitespace-nowrap px-2 py-2.5 tabular-nums text-muted-fg">{r.shown}</td>
                         <td className="px-5 py-2.5 text-right sm:px-6">
                           <span
                             className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ${
