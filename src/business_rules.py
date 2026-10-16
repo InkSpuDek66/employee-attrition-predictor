@@ -23,9 +23,8 @@ HIGH_RISK = 0.7
 MEDIUM_RISK = 0.4
 RISK_BANDS = {"High": "สูง", "Medium": "ปานกลาง", "Low": "ต่ำ"}
 
-# DE-01: ถือว่า MonthlyIncome ของ IBM dataset เป็น USD หน้าเว็บ/ไฟล์นำเข้าใช้บาท แปลงด้วยค่านี้ที่เดียว
-# backend ส่งให้หน้าเว็บตอน login (auth.py) ส่วน THB_PER_USD ใน frontend/src/theme.js เป็นค่าสำรอง มี test เช็กว่าตรงกัน
-THB_PER_USD = 35
+# DE-01: เงินเดือน (MonthlyIncome) ของพนักงานเป็นบาทจริง ต้นทุนทุกตัวในไฟล์นี้จึงเป็นบาท
+# แปลงเป็นหน่วยของโมเดลตอนให้คะแนนเท่านั้น (src/income_scale.py เทียบอันดับเงินเดือนในบริษัท)
 
 # UX-04/DE-10: เพดานเงินเดือนต่อเดือน (บาท) กันพิมพ์เกินหลายหลัก แต่ต้องรับฐานเงินเดือน CEO บริษัทใหญ่ได้
 # อ้างอิง: Adecco Thailand Salary Guide 2026 มัธยฐาน C-Level 350,000 บาท/เดือน, ประกาศงาน Country Manager
@@ -59,7 +58,7 @@ GROWTH_FIELDS = ("JobLevel", "YearsSinceLastPromotion", "TrainingTimesLastYear")
 
 def plan_cost(employee: dict, changes: dict) -> tuple[list[dict], list[str]]:
     """ต้นทุน 1 ปีของสิ่งที่ HR ปรับใน What-if ทั้งหมด (UX-15) คิดจากค่าที่เปลี่ยนจริง ไม่ใช่มาตรการเดียวที่เลือกไว้
-    employee = ค่าเดิม, changes = ค่าใหม่ (หน่วยของโมเดล เงินเดือนเป็นหน่วยเดียวกับ MonthlyIncome)
+    employee = ค่าเดิม, changes = ค่าใหม่ (เงินเดือนเป็นบาท ต้นทุนที่คืนจึงเป็นบาท)
     คืน ([{key, label, cost}], ฟีเจอร์ที่เปลี่ยนแต่ยังไม่มีต้นทุนใน config) อย่างหลังต้องบอกผู้ใช้ ผลที่คาดว่าจะได้จะสูงกว่าจริง"""
     opts = retention_options()
     monthly = float(employee["MonthlyIncome"])

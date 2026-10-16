@@ -36,9 +36,10 @@ def resolve_employee(ref: EmployeeRef, tenant: str) -> dict:
     return record
 
 
-def score(records: list, calibration_record) -> list:
-    """คะแนนความเสี่ยงของพนักงานหลายคนในครั้งเดียว (ข้อมูลดิบรูปแบบ CSV ของ IBM)"""
-    raw = ms.risk_scores(ms.to_features(pd.DataFrame(records)))
+def score(records: list, calibration_record, tenant: str) -> list:
+    """คะแนนความเสี่ยงของพนักงานหลายคนในครั้งเดียว (ข้อมูลดิบรูปแบบ CSV ของ IBM เงินเดือนบาท)
+    เงินเดือนเทียบอันดับกับพนักงานปัจจุบันของบริษัท tenant (DE-01)"""
+    raw = ms.risk_scores(ms.to_features(pd.DataFrame(records), ms.company_income(tenant)))
     calibrated = calibration.apply(calibration_record, raw) if calibration_record else [None] * len(raw)
     out = []
     for r, c in zip(raw, calibrated):
@@ -58,7 +59,7 @@ def score(records: list, calibration_record) -> list:
 @router.post("/predict", response_model=PredictResponse)
 def predict(req: EmployeeRef, user: dict = Depends(auth.current_user)):
     record = calibration.load(user["tenant_id"])  # บริษัทจาก token เหมือน /shap (DE-11) ไม่ใช่ tenant_id ใน request
-    (result,) = score([resolve_employee(req, user["tenant_id"])], record)
+    (result,) = score([resolve_employee(req, user["tenant_id"])], record, user["tenant_id"])
     return PredictResponse(
         **result.model_dump(),
         employee_id=req.employee_id,

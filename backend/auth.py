@@ -29,7 +29,6 @@ from pydantic import BaseModel, Field
 
 import calibration
 import db  # noqa: E402
-import business_rules  # noqa: E402  (ต้องอยู่หลัง calibration ซึ่ง import model_store ที่เพิ่ม src/ เข้า sys.path)
 
 router = APIRouter(tags=["auth"])
 
@@ -201,11 +200,11 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: dict
-    settings: dict = {}  # ค่าที่หน้าเว็บต้องใช้ตรงกับ backend เช่น อัตราบาท/ดอลลาร์ (DE-01)
+    settings: dict = {}  # ค่าที่หน้าเว็บต้องใช้ตรงกับ backend (ตอนนี้ว่าง: เงินเป็นบาทแล้ว ไม่ต้องส่งอัตราแลกเปลี่ยน DE-01)
 
 
 def _session(username: str) -> LoginResponse:
-    return LoginResponse(access_token=issue_token(username), user=public(username), settings={"thb_per_usd": business_rules.THB_PER_USD})
+    return LoginResponse(access_token=issue_token(username), user=public(username), settings={})
 
 
 @router.post("/auth/login", response_model=LoginResponse)

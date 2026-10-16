@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { featureLabel, JOB_LEVELS, SURVEY_NOTE } from './featureLabels'
-import { api, baht, BAND, employeeLabel, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
+import { api, baht, BAND, employeeLabel, friendly, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, CountUp, Field, Icon, RiskGauge, Segmented, Skeleton, UncalibratedNote } from './ui'
@@ -65,17 +65,15 @@ const scoreOf = (s) => s.calibrated_risk_score ?? s.risk_score
 const post = (body, signal) =>
   api('/whatif', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal })
 
-// เงินเดือน: แสดง/รับเป็นบาท (value, base เป็นดอลลาร์ตาม dataset) พิมพ์ตัวเลขแล้วกด Enter หรือคลิกออก หรือลากแถบก็ได้
-function MoneyControl({ field, base, value, rate, onChange }) {
-  const shown = Math.round(value * rate)
-  const changed = shown !== Math.round(base * rate)
-  const [lo, hi] = INCOME_RANGE_USD
-  const outside = value < lo || value > hi
+// เงินเดือน (บาท): พิมพ์ตัวเลขแล้วกด Enter หรือคลิกออก หรือลากแถบก็ได้
+function MoneyControl({ field, base, value, onChange }) {
+  const shown = Math.round(value)
+  const changed = shown !== Math.round(base)
   const step = 500
   // ช่องพิมพ์ใช้ขอบเขตเดียวกับแถบเลื่อน พิมพ์เกินจะถูกดันกลับมาที่ขอบ
-  const [min, max] = incomeBounds(rate)
+  const [min, max] = incomeBounds(base)
   const commit = (input) => {
-    const v = parseIncomeBaht(input.value, rate, shown)
+    const v = parseIncomeBaht(input.value, base, shown)
     input.value = v.toLocaleString() // ถ้าค่าไม่เปลี่ยน (เช่นพิมพ์ต่ำกว่าขั้นต่ำซ้ำ) ช่องจะไม่ remount ต้องเขียนกลับเอง
     if (v !== shown) onChange(v)
   }
@@ -91,7 +89,7 @@ function MoneyControl({ field, base, value, rate, onChange }) {
         </label>
         {changed && (
           <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-xs font-medium text-on-primary">
-            เดิม {baht(base * rate)}
+            เดิม {baht(base)}
           </span>
         )}
       </div>
@@ -127,11 +125,8 @@ function MoneyControl({ field, base, value, rate, onChange }) {
           </div>
         </div>
       </div>
-      <p className={`mt-2 text-xs ${outside ? 'text-risk-mid' : 'text-muted-fg'}`}>
-        {outside
-          ? `เงินเดือนนี้อยู่นอกช่วงข้อมูลที่ระบบเรียนรู้มา (${baht(lo * rate)}–${baht(hi * rate)}) ผลอาจคลาดเคลื่อน`
-          : 'พิมพ์ตัวเลขแล้วกด Enter หรือลากแถบก็ได้'}
-      </p>
+      {/* ระบบเทียบอันดับเงินเดือนกับคนอื่นในบริษัท (ไม่ใช่ตัวเลขเงินตรงๆ) จึงบอกไว้ ขึ้นเงินเดือนแล้วจะเห็นผลเท่าที่อันดับขยับ */}
+      <p className="mt-2 text-xs text-muted-fg">พิมพ์ตัวเลขแล้วกด Enter หรือลากแถบก็ได้ · ระบบดูว่าเงินเดือนนี้มากหรือน้อยเมื่อเทียบกับคนอื่นในบริษัท</p>
     </div>
   )
 }
@@ -288,7 +283,7 @@ function BandToast({ kind }) {
   )
 }
 
-// มาตรการสำเร็จรูป: กดทีเดียวปรับหลายช่อง (ค่าเป็นหน่วยของโมเดล: เงินเดือนเป็นดอลลาร์)
+// มาตรการสำเร็จรูป: กดทีเดียวปรับหลายช่อง (เงินเดือนเป็นบาท)
 // retention = มาตรการใน config/financial_impact.json ที่ใช้คิดต้นทุน กดแล้วการ์ดต้นทุนเปลี่ยนตาม (UX-15 ข้อ 2 / UX-03)
 const PRESETS = [
   { label: 'ปิด OT', retention: 'reduce_overtime', apply: () => ({ OverTime: 'No' }) },
@@ -319,17 +314,17 @@ function focusFields(contributions) {
 }
 
 // ค่าที่คนอ่านเข้าใจ เช่น "ทำงานล่วงเวลา (OT): ไม่ทำ", "รายได้ต่อเดือน: 40,000 บาท"
-function describe(changes, rate) {
+function describe(changes) {
   return Object.entries(changes)
     .map(([f, v]) => {
       const opt = CONTROL[f]?.options?.find(([o]) => String(o) === String(v))?.[1]
-      return `${featureLabel(f)}: ${f === 'MonthlyIncome' ? baht(v * rate) : (opt ?? v.toLocaleString())}`
+      return `${featureLabel(f)}: ${f === 'MonthlyIncome' ? baht(v) : (opt ?? v.toLocaleString())}`
     })
     .join(' · ')
 }
 
-export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDone, onPick }) {
-  const money = (usd) => baht(usd * rate)
+export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, onPick }) {
+  const money = baht
   const [loaded, setLoaded] = useState(null) // { n, id, tenant, base } หรือ { n, error } ของพนักงานที่โหลดล่าสุด
   const [changes, setChanges] = useState({})
   const [result, setResult] = useState(null)
@@ -386,7 +381,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
     const ctrl = new AbortController()
     const timer = setTimeout(async () => {
       try {
-        // backend รับเงินเดือนเป็นจำนวนเต็ม (ดอลลาร์) ในหน้าเก็บทศนิยมไว้ ช่องจะได้โชว์บาทตรงตามที่กรอก
+        // backend รับเงินเดือนเป็นบาทจำนวนเต็ม ในหน้าเก็บทศนิยมไว้ (ขึ้น 10% ของ 45,123 บาท) ปัดตอนส่ง
         const sent = toApiChanges(changes)
         const res = await post({ employee_id: loaded.id, changes: sent, ...(loaded.tenant && { tenant_id: loaded.tenant }) }, ctrl.signal)
         setResult(res)
@@ -424,13 +419,13 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
     return () => ctrl.abort()
   }, [loaded, retention, riskAfter, applied])
 
-  // ค่าเท่าค่าเดิมไหม (เงินเดือนเทียบเป็นบาทปัดเต็ม เพราะเก็บดอลลาร์ทศนิยม)
+  // ค่าเท่าค่าเดิมไหม (เงินเดือนเทียบเป็นบาทปัดเต็ม เพราะในหน้าเก็บทศนิยม)
   const isBase = (field, v) =>
-    field === 'MonthlyIncome' ? Math.round(v * rate) === Math.round(loaded.base[field] * rate) : v === loaded.base[field]
+    field === 'MonthlyIncome' ? Math.round(v) === Math.round(loaded.base[field]) : v === loaded.base[field]
 
   // สถานะปุ่มมาตรการ: noop = คนนี้เป็นแบบนั้นอยู่แล้ว (เช่น ปิด OT กับคนที่ไม่ทำ OT) กดไม่ได้
   // applied = ค่าที่ปรับอยู่ตรงกับมาตรการนี้ กดอีกทีเพื่อยกเลิก (คืนค่าเดิมเฉพาะช่องของมาตรการนี้)
-  // เงินเดือน: ส่ง API เป็นดอลลาร์จำนวนเต็ม (toApiChanges) ค่าที่กลับมาอาจต่างจากที่คำนวณไม่ถึง 1 ดอลลาร์ ถือว่าเท่ากัน
+  // เงินเดือน: ส่ง API เป็นบาทจำนวนเต็ม (toApiChanges) ค่าที่กลับมาอาจต่างจากที่คำนวณไม่ถึง 1 บาท ถือว่าเท่ากัน
   const sameValue = (field, a, b) => (field === 'MonthlyIncome' ? Math.abs(a - b) < 1 : a === b)
   function presetState(p) {
     const patch = p.apply(loaded.base)
@@ -457,10 +452,10 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
 
   function setValue(field, raw) {
     const base = loaded.base[field]
-    // เงินเดือนรับเป็นบาท แปลงกลับเป็นดอลลาร์ก่อนส่งเข้าโมเดล ถือว่าเท่าค่าเดิมถ้าปัดเป็นบาทแล้วตรงกัน
+    // เงินเดือนเป็นบาท ถือว่าเท่าค่าเดิมถ้าปัดเป็นบาทเต็มแล้วตรงกัน
     const money = field === 'MonthlyIncome'
-    const value = money ? Number(raw) / rate : typeof base === 'number' ? Number(raw) : raw
-    const same = money ? Math.round(Number(raw)) === Math.round(base * rate) : base === value
+    const value = money || typeof base === 'number' ? Number(raw) : raw
+    const same = money ? Math.round(value) === Math.round(base) : base === value
     setChanges((c) => {
       const next = { ...c, [field]: value }
       if (same) delete next[field]
@@ -499,7 +494,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
   const shownPresets = allPresets ? presets : presets.slice(0, PRESETS_SHOWN)
   const renderControl = (c) =>
     c.type === 'money' ? (
-      <MoneyControl key={c.field} {...c} rate={rate} base={loaded.base[c.field]} value={current(c.field)} onChange={(v) => setValue(c.field, v)} />
+      <MoneyControl key={c.field} {...c} base={loaded.base[c.field]} value={current(c.field)} onChange={(v) => setValue(c.field, v)} />
     ) : (
       <Control
         key={c.field}
@@ -732,7 +727,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                                 <span className="ml-auto rounded bg-risk-low-soft px-1.5 py-0.5 text-xs font-medium text-risk-low">ดีที่สุด</span>
                               )}
                             </span>
-                            <span className="mt-0.5 block text-xs text-muted-fg">{describe(s.changes, rate)}</span>
+                            <span className="mt-0.5 block text-xs text-muted-fg">{describe(s.changes)}</span>
                           </button>
                           <button
                             type="button"

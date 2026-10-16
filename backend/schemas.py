@@ -15,8 +15,6 @@ import business_rules  # noqa: E402  (อยู่ใน src/ ซึ่ง calib
 Likert4 = Annotated[int, Field(ge=1, le=4)]
 
 MAX_DISTANCE_KM = 100  # UX-04: IBM สูงสุด 29 เกินร้อยกิโลต่อวันแทบเป็นไปไม่ได้ (เคยรับ 5,000 กม.)
-# ไฟล์นำเข้ากรอกเงินเดือนเป็นบาท ส่วน /predict, /whatif ใช้หน่วยของโมเดล (DE-01) ส่ง context นี้ตอนตรวจไฟล์
-INCOME_IN_THB = {"income_unit": "THB"}
 
 
 def _too_high(limit: int, what: str):
@@ -77,10 +75,9 @@ class EmployeeInput(BaseModel):
     @field_validator("MonthlyIncome")
     @classmethod
     def _income_cap(cls, v: int, info: ValidationInfo) -> int:
-        thb = (info.context or {}).get("income_unit") == "THB"
-        cap = business_rules.MAX_MONTHLY_INCOME_THB if thb else business_rules.MAX_MONTHLY_INCOME_THB // business_rules.THB_PER_USD
+        cap = business_rules.MAX_MONTHLY_INCOME_THB  # เงินเดือนเป็นบาททั้งไฟล์นำเข้าและ API (DE-01)
         if v > cap:
-            raise PydanticCustomError("cross_field", "ต้องไม่เกิน {cap} {unit}ต่อเดือน", {"cap": f"{cap:,}", "unit": "บาท" if thb else "ดอลลาร์"})
+            raise PydanticCustomError("cross_field", "ต้องไม่เกิน {cap} บาทต่อเดือน", {"cap": f"{cap:,}"})
         return v
 
     @field_validator("TotalWorkingYears")

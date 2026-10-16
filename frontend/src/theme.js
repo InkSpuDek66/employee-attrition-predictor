@@ -5,29 +5,26 @@ import { useEffect, useRef, useState } from 'react'
 export const LOW = 0.4
 export const HIGH = 0.7
 
-// เงิน: ถือว่า MonthlyIncome ใน IBM dataset เป็นดอลลาร์ (แนวเดียวกับ src/app_pages/whatif_page.py)
-// หน้าเว็บรับ/แสดงเป็นบาท แล้วหารด้วยอัตรานี้ก่อนส่งเข้าโมเดล ผู้ใช้ปรับไม่ได้และไม่เห็นดอลลาร์
-// อัตราจริงอยู่ที่ src/business_rules.py (DE-01) backend ส่งมาตอน login ค่าด้านล่างเป็นค่าสำรองสำหรับ session เก่า
-export const THB_PER_USD = 35 // ค่าสำรอง: ค่าจริงมาจาก backend ตอน login (session.settings.thb_per_usd) มี test เช็กว่าตรงกัน
-export const INCOME_RANGE_USD = [1009, 19999] // ช่วง MonthlyIncome ใน data/raw (นอกช่วงนี้โมเดลไม่เคยเห็น)
-export const INCOME_MIN_BAHT = 15000 // ขั้นต่ำของช่อง/แถบเงินเดือน (ต่ำกว่าช่วง dataset ได้ แต่จะมีคำเตือน)
+// เงิน (DE-01): เงินเดือนและต้นทุนทุกตัวจาก API เป็นบาทจริงแล้ว หน้าเว็บแสดง/ส่งเป็นบาทตรงๆ ไม่ต้องแปลง
+// backend แปลงเงินเดือนเป็นหน่วยของโมเดลเองตอนให้คะแนน (เทียบอันดับเงินเดือนในบริษัท src/income_scale.py)
+export const INCOME_MIN_BAHT = 5000 // ขั้นต่ำของช่อง/แถบเงินเดือน (ต่ำกว่าค่าแรงขั้นต่ำรายเดือน กันพิมพ์ตกหลัก)
 export const baht = (v) => `${Math.round(v).toLocaleString()} บาท`
 // เงินก้อนใหญ่แบบย่อ อ่านง่ายในการ์ด: 457,969,584 -> "~458 ล้านบาท" (~ = ปัดแล้ว ประมาณ) ต่ำกว่าล้านแสดงเต็ม
 export const bahtShort = (v) =>
   Math.abs(v) < 1e6 ? baht(v) : `~${(v / 1e6).toLocaleString('en-US', { maximumFractionDigits: Math.abs(v) >= 1e8 ? 0 : 1 })} ล้านบาท`
 const INCOME_STEP = 500 // แถบเลื่อนเงินเดือนขยับทีละ 500 บาท
 
-// ขอบเขตช่อง/แถบเงินเดือนเป็นบาท: ขั้นต่ำคงที่ ขั้นสูงคิดจาก 20,000 ดอลลาร์ × อัตรา (ปัดเป็นขั้นแถบ)
-export const incomeBounds = (rate) => [INCOME_MIN_BAHT, Math.round((20000 * rate) / INCOME_STEP) * INCOME_STEP]
+// ขอบเขตช่อง/แถบเงินเดือน (บาท) ของพนักงานที่เงินเดือนเดิม base: ขั้นต่ำคงที่ ขั้นสูง 3 เท่าของเดิม อย่างน้อย 300,000
+export const incomeBounds = (base) => [INCOME_MIN_BAHT, Math.round(Math.max(300000, base * 3) / INCOME_STEP) * INCOME_STEP]
 
 // แปลงข้อความที่พิมพ์ในช่องเงินเดือน ("50,000") เป็นบาทในขอบเขต พิมพ์มั่ว/ว่าง = คืนค่าเดิม
-export function parseIncomeBaht(text, rate, fallback) {
-  const [min, max] = incomeBounds(rate)
+export function parseIncomeBaht(text, base, fallback) {
+  const [min, max] = incomeBounds(base)
   const n = Number(String(text).replace(/[^\d.]/g, ''))
   return Number.isFinite(n) && n > 0 ? Math.min(max, Math.max(min, Math.round(n))) : fallback
 }
 
-// changes ที่ส่งเข้า backend: เงินเดือนเก็บเป็นดอลลาร์ทศนิยม (ให้ช่องโชว์บาทตรงที่กรอก) แต่ API รับจำนวนเต็ม
+// changes ที่ส่งเข้า backend: เงินเดือนในหน้าอาจมีทศนิยม (ขึ้น 10% = 45,123.4) แต่ API รับบาทจำนวนเต็ม
 export const toApiChanges = (changes) =>
   'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
 

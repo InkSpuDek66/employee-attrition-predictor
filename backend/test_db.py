@@ -86,7 +86,7 @@ def test_import_saves_new_employee_in_baht(real_db):
         r = client.post("/employees/import", files={"file": ("e.xlsx", buf.getvalue(), XLSX)})
         assert r.status_code == 200, r.text
         assert r.json()["saved"] is True and "เพิ่มใหม่ 1" in r.json()["note"] and r.json()["saved_ids"] == [NEW_ID]
-        assert ms.employee_record(NEW_ID)["MonthlyIncome"] == 2000  # 70,000 บาท / 35
+        assert ms.employee_record(NEW_ID)["MonthlyIncome"] == 70_000  # เก็บเป็นบาทตามที่กรอก (DE-01)
         assert ms.employee_record(NEW_ID)["OfficeDaysPerWeek"] == 2  # เก็บและอ่านกลับจาก DB
         assert client.get(f"/shap/{NEW_ID}").status_code == 200
     finally:
@@ -228,8 +228,8 @@ def _one_new_employee() -> bytes:
 
 def test_import_db_check_rejects_whole_file_without_logging_row(real_db, caplog, monkeypatch):
     """ด่านสุดท้าย: schemas.py ตรวจช่วงเดียวกับ CHECK แล้ว (test_schemas.py) จึงจำลองค่าที่หลุดขั้นตรวจด้วยการแก้แถวหลังตรวจ"""
-    real = eu.to_model_units
-    monkeypatch.setattr(eu, "to_model_units", lambda rows: real(rows).assign(Age=90))  # ตารางรับ 15–80
+    real = eu.whole_baht
+    monkeypatch.setattr(eu, "whole_baht", lambda rows: real(rows).assign(Age=90))  # ตารางรับ 15–80
     r = client.post("/employees/import", files={"file": ("e.xlsx", _one_new_employee(), XLSX)})
     assert r.status_code == 422 and ms.employee_record(NEW_ID) is None
     assert "employees_age_check" in caplog.text and str(NEW_ID) not in caplog.text  # log แค่ชื่อ constraint

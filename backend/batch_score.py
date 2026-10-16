@@ -73,7 +73,8 @@ def run(conn, tenant: str = db.DEMO_TENANT) -> int:
         pid = dict(cur.fetchall())
         ids = [pid[int(e)] for e in X.index]
 
-        values = X.to_numpy(dtype=float)
+        # เงินเดือนเก็บเป็นบาทที่บริษัทกรอก ไม่ใช่ค่าหลังเทียบอันดับที่โมเดลเห็น (ตรงกับ /shap, DE-01)
+        values = X.assign(**{ms.INCOME: employees[ms.INCOME]}).to_numpy(dtype=float)
         with cur.copy("COPY shap_explanations (prediction_id, feature_name, feature_value, shap_value) FROM STDIN") as copy:
             for i, p in enumerate(ids):
                 for j, name in enumerate(X.columns):

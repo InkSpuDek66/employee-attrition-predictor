@@ -6,7 +6,7 @@ POST /employees/import    ตรวจแล้วบันทึกลงตา
 
 ตรวจด้วย schemas.EmployeeInput ตัวเดียวกับ /predict, /whatif จึงตรงกับที่โมเดลรับได้จริง
 ห้ามใช้กับข้อมูลพนักงานจริง: login ตอนนี้เป็นบัญชีทดลอง (auth.py) และ MLflow ของทีมเป็นสาธารณะ
-เงินเดือนรับเป็นบาท แปลงเป็นหน่วยโมเดล (USD) ตอนบันทึก ด้วย business_rules.THB_PER_USD (DE-01)
+เงินเดือนรับและเก็บเป็นบาท แปลงเป็นหน่วยของโมเดลตอนให้คะแนนเท่านั้น (model_store.to_features, DE-01)
 """
 
 import io
@@ -22,9 +22,8 @@ from pydantic import BaseModel, ValidationError
 
 import auth
 import model_store as ms
-from schemas import INCOME_IN_THB, EmployeeInput
+from schemas import EmployeeInput
 import batch_score
-import business_rules  # noqa: E402  (อยู่ใน src/ ซึ่ง model_store เพิ่มเข้า sys.path แล้ว)
 import db  # noqa: E402
 
 router = APIRouter(tags=["employees"])
@@ -35,7 +34,6 @@ MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 10_000
 MAX_ERRORS = 200  # ส่งกลับไม่เกินนี้ ที่เหลือบอกแค่จำนวน
 INVALID_PREVIEW = 20  # แถวที่ไม่ผ่านที่ส่งค่าทั้งแถวกลับไปให้หน้าเว็บแสดงเป็นตาราง
-THB_PER_USD = business_rules.THB_PER_USD
 MAX_UNZIPPED = 60 * 1024 * 1024  # .xlsx คือ zip: 10,000 แถวจริงแตกออกมาไม่ถึง 20 MB เกินนี้ = zip bomb
 
 # (ฟิลด์ของโมเดล, หัวคอลัมน์ภาษาไทยใน template, คำอธิบาย/ตัวเลือก)
@@ -236,11 +234,9 @@ def _clean(value):
     return value
 
 
-def to_model_units(rows: pd.DataFrame) -> pd.DataFrame:
-    """เงินเดือนบาท -> หน่วยของโมเดล (USD จำนวนเต็ม) ก่อนบันทึก/ให้คะแนน"""
-    rows = rows.copy()
-    rows["MonthlyIncome"] = (rows["MonthlyIncome"].astype(float) / THB_PER_USD).round().clip(lower=1).astype(int)
-    return rows
+def whole_baht(rows: pd.DataFrame) -> pd.DataFrame:
+    """เงินเดือนเป็นบาทจำนวนเต็ม (คอลัมน์ในตารางเป็น integer) ก่อนบันทึก/ให้คะแนน"""
+    return rows.assign(MonthlyIncome=rows["MonthlyIncome"].astype(float).round().clip(lower=1).astype(int))
 
 
 def _check(file: UploadFile, label: bool = False):
@@ -318,7 +314,7 @@ def _check(file: UploadFile, label: bool = False):
 
         checked = None
         try:
-            checked = EmployeeInput.model_validate({k: v for k, v in row.items() if v is not None}, context=INCOME_IN_THB)
+            checked = EmployeeInput.model_validate({k: v for k, v in row.items() if v is not None})
         except ValidationError as e:
             for err in e.errors():
                 field = str(err["loc"][0]) if err["loc"] else ""
@@ -512,7 +508,7 @@ def import_employees(
     if planned.changes_to_check and not confirm_changes:  # กันเรียก API ตรงโดยไม่ได้เห็นคำเตือน
         raise HTTPException(409, f"มี {len(planned.changes_to_check) + planned.changes_truncated:,} รหัสที่ข้อมูลเปลี่ยนแปลก ตรวจไฟล์แล้วยืนยันก่อนบันทึก")
     result = planned
-    rows = to_model_units(pd.DataFrame(valid))
+    rows = whole_baht(pd.DataFrame(valid))
     n_leaving = None
     try:
         with db.connect() as conn:  # transaction เดียว: บันทึกไม่ผ่าน = ไม่มีใครถูกบันทึกว่าออก
@@ -546,14 +542,14 @@ def import_employees(
 
 
 def _example_rows(n: int = 2, label: bool = False) -> list[dict]:
-    """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือน × 35 เป็นบาท ให้ดูเป็นตัวอย่างเท่านั้น)
+    """แถวตัวอย่างจาก IBM dataset (แปลงค่าเป็นภาษาไทย เงินเดือนเป็นบาทด้วยตัวคูณคงที่ ให้ดูเป็นตัวอย่างเท่านั้น)
     label=True (ไฟล์ปรับเทียบ): เอาเฉพาะคนที่รู้ผลจริงแล้ว พนักงานที่นำเข้าเองยังไม่มีผลลาออก ใส่ไปจะทำให้ไฟล์ไม่ผ่าน"""
     raw = ms.reference_employees()  # แถวตัวอย่างจาก IBM เสมอ ไม่ใช่พนักงานของบริษัทผู้ใช้
-    return template_rows((raw[raw["Attrition"].isin(["Yes", "No"])] if label else raw).head(n), label)
+    return template_rows(ms.ibm_in_thb((raw[raw["Attrition"].isin(["Yes", "No"])] if label else raw).head(n)), label)
 
 
 def template_rows(raw: pd.DataFrame, label: bool = False) -> list[dict]:
-    """ข้อมูลแบบ IBM (หน่วยของโมเดล) -> แถวในไฟล์ Excel (หัวคอลัมน์/ค่าภาษาไทย เงินเดือน × 35 เป็นบาท)"""
+    """ข้อมูลแบบ IBM (เงินเดือนบาท) -> แถวในไฟล์ Excel (หัวคอลัมน์/ค่าภาษาไทย เงินเดือนปัดหลักร้อย)"""
     back = {
         "Attrition": {"Yes": "ลาออก", "No": "ยังอยู่"},
         "JobLevel": JOB_LEVELS,
@@ -567,7 +563,7 @@ def template_rows(raw: pd.DataFrame, label: bool = False) -> list[dict]:
         out = {}
         for field, th, _ in COLUMNS + ([LABEL] if label else []):
             v = rec.get(field)
-            out[th] = round(v * THB_PER_USD / 100) * 100 if field == "MonthlyIncome" else back.get(field, {}).get(v, v)
+            out[th] = round(v / 100) * 100 if field == "MonthlyIncome" else back.get(field, {}).get(v, v)
         rows.append(out)
     return rows
 

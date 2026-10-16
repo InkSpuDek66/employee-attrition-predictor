@@ -3,21 +3,21 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { accountProblem, api, bahtShort, bandOf, csvCell, employeeLabel, loadMascot, pushRecent, toastKind, friendly, incomeBounds, parseIncomeBaht, postFile, saveSession, toApiChanges } from './theme.js'
 
-test('ขอบเขตเงินเดือน: ขั้นต่ำ 15,000 บาท ขั้นสูง 20,000 ดอลลาร์ × อัตรา', () => {
-  assert.deepEqual(incomeBounds(35), [15000, 700000])
-  assert.deepEqual(incomeBounds(32.5), [15000, 650000])
+test('ขอบเขตเงินเดือน (บาท): ขั้นต่ำ 5,000 ขั้นสูง 3 เท่าของเงินเดือนเดิม อย่างน้อย 300,000', () => {
+  assert.deepEqual(incomeBounds(25000), [5000, 300000])
+  assert.deepEqual(incomeBounds(150000), [5000, 450000])
 })
 
 test('พิมพ์เงินเดือนแล้วดันเข้าขอบเขต', () => {
-  assert.equal(parseIncomeBaht('50,000', 35, 1), 50000)
-  assert.equal(parseIncomeBaht('100', 35, 1), 15000) // ต่ำกว่าแถบ
-  assert.equal(parseIncomeBaht('99,999,999', 35, 1), 700000) // สูงกว่าแถบ
-  assert.equal(parseIncomeBaht('abc', 35, 42000), 42000) // พิมพ์มั่ว = ค่าเดิม
-  assert.equal(parseIncomeBaht('', 35, 42000), 42000)
+  assert.equal(parseIncomeBaht('50,000', 25000, 1), 50000)
+  assert.equal(parseIncomeBaht('100', 25000, 1), 5000) // ต่ำกว่าแถบ
+  assert.equal(parseIncomeBaht('99,999,999', 25000, 1), 300000) // สูงกว่าแถบ
+  assert.equal(parseIncomeBaht('abc', 25000, 42000), 42000) // พิมพ์มั่ว = ค่าเดิม
+  assert.equal(parseIncomeBaht('', 25000, 42000), 42000)
 })
 
-test('ส่งเงินเดือนเข้า API เป็นดอลลาร์จำนวนเต็ม (backend ปฏิเสธทศนิยม)', () => {
-  assert.deepEqual(toApiChanges({ MonthlyIncome: 50000 / 35, OverTime: 'No' }), { MonthlyIncome: 1429, OverTime: 'No' })
+test('ส่งเงินเดือนเข้า API เป็นบาทจำนวนเต็ม (backend ปฏิเสธทศนิยม)', () => {
+  assert.deepEqual(toApiChanges({ MonthlyIncome: 45123.4, OverTime: 'No' }), { MonthlyIncome: 45123, OverTime: 'No' })
   const other = { OverTime: 'No' }
   assert.equal(toApiChanges(other), other)
 })

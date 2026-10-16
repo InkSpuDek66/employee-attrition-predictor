@@ -24,7 +24,7 @@ NOTE = "ผลจำลองจากโมเดล ไม่ได้บั�
 
 
 class WhatIfRequest(EmployeeRef):
-    # ชื่อคอลัมน์เดียวกับ EmployeeInput เช่น {"OverTime": "No", "MonthlyIncome": 6000}
+    # ชื่อคอลัมน์เดียวกับ EmployeeInput เช่น {"OverTime": "No", "MonthlyIncome": 45000} (เงินเดือนเป็นบาท)
     changes: dict[str, Any] = {}
 
 
@@ -68,10 +68,10 @@ def whatif(req: WhatIfRequest, user: dict = Depends(auth.current_user)):
         detail = "; ".join(f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors(include_url=False))
         raise HTTPException(422, f"ค่าที่เปลี่ยนไม่ถูกต้อง: {detail}")
 
-    before, after = score([base, changed], record)
+    before, after = score([base, changed], record, user["tenant_id"])
     return WhatIfResponse(
         name=_name(req.employee_id, user["tenant_id"]),
-        drivers=_drivers(base, changed),
+        drivers=_drivers(base, changed, user["tenant_id"]),
         employee_id=req.employee_id,
         before=before,
         after=after,
@@ -82,12 +82,12 @@ def whatif(req: WhatIfRequest, user: dict = Depends(auth.current_user)):
     )
 
 
-def _drivers(base: dict, changed: dict) -> list[Driver]:
+def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     """SHAP หลัง - ก่อน รวม one-hot ตามกลุ่ม เรียงตามขนาด (ไม่ได้ปรับอะไร = ว่าง)
     ต้นไม้มี interaction: ปัจจัยที่ไม่ได้ปรับเองก็เปลี่ยนได้ (เช่น ขึ้นเงินเดือนแล้ว "เงินเดือนขึ้นล่าสุด" มีผลต่างไป) บอกตามจริง"""
     if base == changed:
         return []
-    X = ms.to_features(pd.DataFrame([base, changed]))
+    X = ms.to_features(pd.DataFrame([base, changed]), ms.company_income(tenant))
     sv = ms.explainer()(X).values
     diff = pd.Series(sv[1] - sv[0], index=X.columns).groupby(cs.feature_group).sum()
     top = diff[diff.abs() > 1e-4].abs().sort_values(ascending=False).index[:MAX_DRIVERS]

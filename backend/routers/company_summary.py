@@ -63,7 +63,7 @@ class DepartmentSummary(Summary):
 
 class Reason(BaseModel):
     feature: str  # ชื่อฟีเจอร์ของโมเดล (หน้าเว็บแปลงเป็นประโยค เช่น "เคยทำงานมาแล้ว 8 บริษัท")
-    value: float  # ค่าที่ส่งเข้าโมเดล (เงินเดือนเป็นหน่วยของโมเดล)
+    value: float  # ค่าของพนักงาน (เงินเดือน = บาทที่บริษัทกรอก ไม่ใช่หน่วยที่ส่งเข้าโมเดล)
 
 
 class TopEmployee(BaseModel):
@@ -102,16 +102,19 @@ def _inputs(record, tenant: str):
 MAX_REASONS = 2
 
 
-def _reasons(X) -> dict:
+def _reasons(X, income) -> dict:
     """{รหัส: [Reason]} ปัจจัยที่ดันความเสี่ยงขึ้นมากสุดของแต่ละคน ไว้เป็นเหตุผลหนึ่งบรรทัดในรายชื่อหน้าแรก
     ใช้เกณฑ์เดียวกับหน้า SHAP: ไม่ยกข้อมูลส่วนตัว (อายุ ฯลฯ) หรือฟีเจอร์ที่ตีความไม่ได้มาเป็นเหตุผล
-    ข้ามคอลัมน์ one-hot (เช่น JobRole_Sales Executive) เพราะเป็นประโยคที่ HR อ่านไม่รู้เรื่อง"""
+    ข้ามคอลัมน์ one-hot (เช่น JobRole_Sales Executive) เพราะเป็นประโยคที่ HR อ่านไม่รู้เรื่อง
+    income = เงินเดือนบาทของแต่ละคน (index = รหัส) แสดงแทนค่าที่โมเดลเห็น (เทียบอันดับแล้ว ไม่ใช่บาท)"""
     values = ms.explainer()(X).values
     usable = [i for i, c in enumerate(X.columns) if "_" not in c and cs.factor_kind(c) in ("actionable", "background")]
     out = {}
     for row, emp_id in enumerate(X.index):
         ranked = sorted((i for i in usable if values[row, i] > 0), key=lambda i: -values[row, i])[:MAX_REASONS]
-        out[emp_id] = [Reason(feature=X.columns[i], value=float(X.iat[row, i])) for i in ranked]
+        out[emp_id] = [
+            Reason(feature=(f := X.columns[i]), value=float(income[emp_id] if f == ms.INCOME else X.iat[row, i])) for i in ranked
+        ]
     return out
 
 
@@ -235,7 +238,7 @@ def top_employees(
             hit |= rows.index.astype(str).str.startswith(word)
         rows = rows[hit]
     top = rows.nlargest(n, "shown")
-    why = _reasons(X.loc[top.index]) if reasons and len(top) else {}
+    why = _reasons(X.loc[top.index], employees[ms.INCOME]) if reasons and len(top) else {}
     return TopEmployeesResponse(
         total=len(rows),
         employees=[

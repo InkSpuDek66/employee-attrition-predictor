@@ -207,6 +207,10 @@ if __name__ == "__main__":
     if not url():
         raise SystemExit("ตั้ง DATABASE_URL ใน .env ก่อน (ดู .env.example)")
     raw = load_raw_data(os.path.join(ROOT, "data", "raw", RAW_FILENAME))
+    # เงินเดือนในตาราง = บาท (DE-01) IBM ไม่มีเงินเดือนไทย จึงแปลงด้วยตัวคูณคงที่ (ให้คะแนนแล้วได้เกือบค่าเดิม)
+    import income_scale
+
+    raw["MonthlyIncome"] = (raw["MonthlyIncome"] * income_scale.THB_PER_UNIT).astype(int)
     with connect() as conn:
         n = upsert_employees(conn, demo_labels(raw), DEMO_TENANT, "ibm_dataset")
     print(f"บันทึกพนักงาน {n} คน ลง tenant '{DEMO_TENANT}' แล้ว")

@@ -58,12 +58,12 @@ export function CsvButton({ department, onDone = () => {} }) {
 
 // รายชื่อพนักงานเสี่ยงสูงสุด กดแถวแล้วไปดูรายละเอียดคนนั้น (คะแนนปรับเทียบถ้ามี ตรงกับหน้า SHAP/What-if)
 // q = คำค้น (ชื่อ รหัส แผนก ตำแหน่ง) onMore = ปุ่มแสดงเพิ่ม (ดูได้ทุกคน ไม่ใช่แค่ 10 อันดับแรก)
-// rate = บาทต่อดอลลาร์ ส่งมา = โชว์เหตุผลหลักหนึ่งบรรทัดต่อคน ("เคยทำงานมาแล้ว 8 บริษัท · ทำงานล่วงเวลา (OT)")
-export function TopRiskList({ n = 10, department = '', q = '', rate, onPick, onMore, onLess, compact = false }) {
-  const { loading, data, error } = useApi([`/company-summary/top-employees?${topQuery(n, department, q, !!rate)}`])
+// reasons = โชว์เหตุผลหลักหนึ่งบรรทัดต่อคน ("เคยทำงานมาแล้ว 8 บริษัท · ทำงานล่วงเวลา (OT)")
+export function TopRiskList({ n = 10, department = '', q = '', reasons = false, onPick, onMore, onLess, compact = false }) {
+  const { loading, data, error } = useApi([`/company-summary/top-employees?${topQuery(n, department, q, reasons)}`])
   const why = (e) =>
     e.reasons
-      .map((r) => featurePhrase(r.feature, r.value, r.feature === 'MonthlyIncome' ? baht(r.value * rate) : featureValue(r.feature, r.value)))
+      .map((r) => featurePhrase(r.feature, r.value, r.feature === 'MonthlyIncome' ? baht(r.value) : featureValue(r.feature, r.value)))
       .join(' · ')
   if (error) return <p className="text-sm text-risk-high">{error}</p>
   if (!data) return <Skeleton className={compact ? 'h-40' : 'h-80'} />
@@ -83,10 +83,10 @@ export function TopRiskList({ n = 10, department = '', q = '', rate, onPick, onM
               type="button"
               onClick={() => onPick(e.employee_id)}
               className={`lift flex w-full cursor-pointer gap-3 rounded-lg px-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                rate ? 'items-start py-3' : 'items-center py-2.5'
+                reasons ? 'items-start py-3' : 'items-center py-2.5'
               }`}
             >
-              <span className={`w-5 text-right text-xs tabular-nums text-muted-fg ${rate ? 'pt-2' : ''}`}>{i + 1}</span>
+              <span className={`w-5 text-right text-xs tabular-nums text-muted-fg ${reasons ? 'pt-2' : ''}`}>{i + 1}</span>
               <span className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold ring-1 ${b.pill}`} title={e.job_role} aria-hidden="true">
                 {e.name ? initials(e.name) : <Icon name="user" className="size-4" />}
               </span>
@@ -97,7 +97,7 @@ export function TopRiskList({ n = 10, department = '', q = '', rate, onPick, onM
                     {e.job_role} · {e.department} · {JOB_LEVELS[e.job_level] ?? `ระดับ ${e.job_level}`}
                   </span>
                 )}
-                {rate && e.reasons?.length > 0 && (
+                {reasons && e.reasons?.length > 0 && (
                   <span className="mt-1.5 flex items-start gap-1.5 text-sm text-fg">
                     <Icon name="up" className="mt-0.5 size-3.5 shrink-0 text-risk-high" />
                     <span>{why(e)}</span>
@@ -233,7 +233,7 @@ function NoEmployees({ who, onImport }) {
   )
 }
 
-export default function Overview({ greeting, rate, who, onPick, onImport, onCsv }) {
+export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
   const [department, setDepartment] = useState('')
   // ค้นหา/ดูทั้งหมดในการ์ดรายชื่อ (หน่วง 250ms ระหว่างพิมพ์ ไม่ยิง API ทุกตัวอักษร)
   const [find, setFind] = useState('')
@@ -296,8 +296,8 @@ export default function Overview({ greeting, rate, who, onPick, onImport, onCsv 
                 {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
               </button>
             </div>
-            <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.expected_loss_total * rate)}>
-              <CountUp value={s.expected_loss_total * rate} format={money} />
+            <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.expected_loss_total)}>
+              <CountUp value={s.expected_loss_total} format={money} />
             </div>
             <p className="mt-1 text-xs text-muted-fg">คะแนน × ต้นทุนหาคนแทน ใช้เทียบ ไม่ใช่ยอดจริง</p>
           </div>
@@ -350,7 +350,7 @@ export default function Overview({ greeting, rate, who, onPick, onImport, onCsv 
             department={department}
             q={query}
             n={listN}
-            rate={rate}
+            reasons
             onPick={onPick}
             onMore={() => setListN((v) => v + LIST_STEP)}
             onLess={() => setListN(10)}
@@ -412,8 +412,8 @@ export default function Overview({ greeting, rate, who, onPick, onImport, onCsv 
                   <td className="px-2 py-2.5 text-right tabular-nums">{d.n_employees.toLocaleString()}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums text-risk-high">{d.risk_bands.High}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{Math.round(d.mean_risk_score * 100)}</td>
-                  <td className="whitespace-nowrap px-5 py-2.5 text-right tabular-nums sm:px-6" title={baht(d.expected_loss_total * rate)}>
-                    {money(d.expected_loss_total * rate)}
+                  <td className="whitespace-nowrap px-5 py-2.5 text-right tabular-nums sm:px-6" title={baht(d.expected_loss_total)}>
+                    {money(d.expected_loss_total)}
                   </td>
                 </tr>
               ))}

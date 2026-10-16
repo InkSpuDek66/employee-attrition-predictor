@@ -15,7 +15,6 @@ st.set_page_config(page_title="ทดสอบโมเดลทำนายก�
 st.navigation(
     [
         st.Page("app_pages/model_page.py", title="ทดสอบโมเดล", url_path="model", default=True),
-        st.Page("app_pages/whatif_page.py", title="What-if Simulator", url_path="whatif"),
     ],
     position="top",
 ).run()

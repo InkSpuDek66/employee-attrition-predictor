@@ -20,7 +20,7 @@ UNCALIBRATED_WARNING = (
 
 class Contribution(BaseModel):
     feature: str
-    value: float
+    value: float  # ค่าของพนักงาน (เงินเดือน = บาทที่บริษัทกรอก ไม่ใช่หน่วยที่ส่งเข้าโมเดล)
     shap_value: float  # log-odds: บวก = ดันไปทางลาออก, ลบ = ดันไปทางอยู่ต่อ
     # UX-06/07: personal (ข้อมูลส่วนตัว ห้ามใช้ตัดสินใจ), unexplained (HR ตีความไม่ได้) ไม่ควรยกเป็นเหตุผล
     # actionable = บริษัทปรับได้ มี recommendation, background = ประวัติ/ตำแหน่ง ใช้ทำความเข้าใจ
@@ -81,7 +81,7 @@ def get_shap(employee_id: int, top_n: int = Query(10, ge=1, le=100), user: dict 
         contributions=[
             Contribution(
                 feature=(name := row.columns[i]),
-                value=float(row.iloc[0, i]),
+                value=float(raw[ms.INCOME] if name == ms.INCOME else row.iloc[0, i]),
                 shap_value=float(exp.values[0, i]),
                 kind=cs.factor_kind(name),
                 recommendation=cs.RECOMMENDATIONS.get(cs.feature_group(name)),

@@ -40,8 +40,9 @@ def performance() -> dict:
 
 
 def predict(row: dict):
-    """คืน (risk_score, SHAP explanation ของแถวนี้)"""
-    X = ms.to_features(pd.DataFrame([row]))
+    """คืน (risk_score, SHAP explanation ของแถวนี้) row ใช้เงินเดือนหน่วยของ IBM (หน้าทดสอบใช้ข้อมูล IBM ตรงๆ)
+    แปลงเป็นบาทด้วยตัวคูณคงที่ แล้วเทียบอันดับกับ IBM ที่แปลงแบบเดียวกัน = ได้คะแนนตามหน่วยเดิม (DE-01)"""
+    X = ms.to_features(ms.ibm_in_thb(pd.DataFrame([row])), ms.ibm_in_thb(ms.reference_employees())[ms.INCOME])
     return float(ms.risk_scores(X)[0]), ms.explainer()(X)
 
 
@@ -120,13 +121,8 @@ def th(v):
     return VALUE_TH.get(v, v)
 
 
-def factor_text(f: str, v: float, row: dict, thb_per_usd: float = None) -> tuple:
-    """(ชื่อปัจจัย, ค่าของพนักงานคนนี้ที่คนอ่านเข้าใจ) จากชื่อคอลัมน์หลัง encode และค่าของมัน
-
-    thb_per_usd: ถ้าระบุ แสดงรายได้ต่อเดือนเป็นบาท (ถือว่า dataset เป็นดอลลาร์)
-    """
-    if f == "MonthlyIncome" and thb_per_usd:
-        return FIELDS[f][1], f"{v * thb_per_usd:,.0f} บาท"
+def factor_text(f: str, v: float, row: dict) -> tuple:
+    """(ชื่อปัจจัย, ค่าของพนักงานคนนี้ที่คนอ่านเข้าใจ) จากชื่อคอลัมน์หลัง encode และค่าของมัน (หน่วยของข้อมูล IBM)"""
     group = cs.feature_group(f)
     if group != f:  # one-hot เช่น JobRole_Sales Executive -> "ตำแหน่งงาน: ผู้บริหารฝ่ายขาย"
         category = th(f.split("_", 1)[1])
@@ -140,7 +136,7 @@ def factor_text(f: str, v: float, row: dict, thb_per_usd: float = None) -> tuple
     return FIELDS[f][1], f"{v:,.0f}"
 
 
-def explain(exp, row: dict, band: str, thb_per_usd: float = None) -> None:
+def explain(exp, row: dict, band: str) -> None:
     """ส่วน "ทำไมโมเดลถึงประเมินคนนี้แบบนี้" จาก SHAP ของพนักงาน 1 คน"""
     names, values, data = exp.feature_names, exp.values[0], exp.data[0]
     up = [j for j in values.argsort()[::-1] if values[j] > 0][:4]
@@ -148,7 +144,7 @@ def explain(exp, row: dict, band: str, thb_per_usd: float = None) -> None:
 
     st.markdown("#### ทำไมโมเดลถึงประเมินคนนี้แบบนี้")
     if up:
-        reasons = [factor_text(names[j], data[j], row, thb_per_usd) for j in up[:3]]
+        reasons = [factor_text(names[j], data[j], row) for j in up[:3]]
         st.markdown(
             ("สัญญาณที่ทำให้โมเดลมองว่าคนนี้**มีความเสี่ยง**มากที่สุดคือ " if band != "Low"
              else "ความเสี่ยงโดยรวม**ต่ำ** แต่สัญญาณที่ดันความเสี่ยงขึ้นมากที่สุดคือ ")
@@ -158,7 +154,7 @@ def explain(exp, row: dict, band: str, thb_per_usd: float = None) -> None:
     with up_col:
         st.markdown(":red[**ดันให้เสี่ยงลาออก**]")
         for j in up:
-            name, val = factor_text(names[j], data[j], row, thb_per_usd)
+            name, val = factor_text(names[j], data[j], row)
             rec = cs.RECOMMENDATIONS.get(cs.feature_group(names[j]))
             st.markdown(f"- **{name}**" + (f": {val}" if val else ""))
             st.caption(f"แนวทาง: {rec}" if rec else "ข้อมูลส่วนตัว/ประวัติ บริษัทปรับไม่ได้ ใช้ประกอบความเข้าใจเท่านั้น")
@@ -167,7 +163,7 @@ def explain(exp, row: dict, band: str, thb_per_usd: float = None) -> None:
     with down_col:
         st.markdown(":blue[**ช่วยให้อยู่ต่อ**]")
         for j in down:
-            name, val = factor_text(names[j], data[j], row, thb_per_usd)
+            name, val = factor_text(names[j], data[j], row)
             st.markdown(f"- **{name}**" + (f": {val}" if val else ""))
     st.caption(
         "นี่คือสิ่งที่โมเดลให้น้ำหนัก (SHAP) ไม่ใช่สาเหตุที่พิสูจน์แล้ว สาเหตุจริงอาจอยู่นอกข้อมูล เช่น ได้ข้อเสนองานใหม่ "

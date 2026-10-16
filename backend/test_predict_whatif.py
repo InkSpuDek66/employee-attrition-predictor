@@ -54,7 +54,7 @@ def test_whatif_rejects_impossible_combinations():
     """UX-04: พนักงาน #1 อยู่บริษัท 6 ปี เลื่อนแถบไปว่าไม่ได้เลื่อนตำแหน่ง 15 ปี ต้องไม่ได้คะแนนกลับมา"""
     r = client.post("/whatif", json={"employee_id": 1, "changes": {"YearsSinceLastPromotion": 15}})
     assert r.status_code == 422 and "YearsSinceLastPromotion: ต้องไม่เกิน 6 ปี" in r.json()["detail"]
-    for bad in ({"DistanceFromHome": 5000, "OfficeDaysPerWeek": 0}, {"Age": 18}, {"MonthlyIncome": 1_000_000}):
+    for bad in ({"DistanceFromHome": 5000, "OfficeDaysPerWeek": 0}, {"Age": 18}, {"MonthlyIncome": 6_000_000}):
         assert client.post("/whatif", json={"employee_id": 1, "changes": bad}).status_code == 422, bad
 
 

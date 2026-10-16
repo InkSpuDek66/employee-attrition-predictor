@@ -158,7 +158,7 @@ def test_shap_shows_real_distance_for_wfh_employee(monkeypatch):
     emp_id = int(raw.loc[raw["DistanceFromHome"] == 24, "EmployeeNumber"].iloc[0])
     raw.loc[raw["EmployeeNumber"] == emp_id, "OfficeDaysPerWeek"] = 1
     monkeypatch.setattr(ms, "_load_employees", lambda tenant: raw)
-    monkeypatch.setattr(ms, "_employee_features", lambda tenant: ms.to_features(raw).set_index(raw["EmployeeNumber"]))
+    monkeypatch.setattr(ms, "_employee_features", lambda tenant: ms.to_features(raw, raw[ms.INCOME]).set_index(raw["EmployeeNumber"]))
     r = client.get(f"/shap/{emp_id}", params={"top_n": 100}).json()
     assert r["commute"] == {"distance_km": 24, "office_days": 1, "used_km": 5}
     distance = next(c for c in r["contributions"] if c["feature"] == "DistanceFromHome")

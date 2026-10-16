@@ -4,7 +4,7 @@ import Login from './Login'
 import { mascotLine } from './mascot/line'
 import Mascot, { MascotLoader, SpeakingMascot } from './mascot/Mascot'
 import Overview from './Overview'
-import { api, BAND, employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD, THEME_NEXT } from './theme'
+import { api, BAND, employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THEME_NEXT } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
@@ -19,7 +19,7 @@ const Users = lazy(() => import('./Users'))
 //   query = { id, tenant, n } ของพนักงานที่เลือก (n เพิ่มทุกครั้งที่กดโหลด ให้โหลดซ้ำได้, tenant = บริษัทของผู้ login)
 //   onRisk({ id, band, score, label } | { error, notFound }) = แจ้งตัวการ์ตูนใน sidebar
 //   onDone() = โหลดเสร็จ (สำเร็จหรือพัง) ให้ปุ่ม "โหลด" เลิกหมุน
-//   rate = บาทต่อ 1 ดอลลาร์ (backend ส่งมาตอน login, สำรองด้วย THB_PER_USD ใน theme.js), dark = ธีม (สีแท่งกราฟ SHAP เลือกตามธีม), who = ผู้ช่วยที่เลือก
+//   เงินจาก API เป็นบาทแล้ว (DE-01) ไม่ต้องแปลง, dark = ธีม (สีแท่งกราฟ SHAP เลือกตามธีม), who = ผู้ช่วยที่เลือก
 // แท็บ/รหัสพนักงานเก็บใน URL (?tab=whatif&id=5) แชร์ลิงก์ได้ และปุ่ม back ใช้ได้
 // ต้อง login ก่อน (Login.jsx) บริษัทมาจากผู้ใช้ ไม่ให้พิมพ์เอง (SEC-02)
 const TABS = [
@@ -78,7 +78,7 @@ export default function App() {
   }, [])
   const theme = { dark, themeMode: mode, onToggleTheme: toggleTheme }
   if (!session) return <Login onLogin={(s) => (saveSession(s), setSession(s), setExpired(false))} expired={expired} {...theme} />
-  return <Workspace user={session.user} settings={session.settings} onLogout={() => (saveSession(null), setSession(null), setExpired(false), history.replaceState(null, '', location.pathname))} {...theme} />
+  return <Workspace user={session.user} onLogout={() => (saveSession(null), setSession(null), setExpired(false), history.replaceState(null, '', location.pathname))} {...theme} />
 }
 
 // คำทักทายตามช่วงเวลาบนหน้าภาพรวม
@@ -95,7 +95,7 @@ const IDLE = {
   users: { text: 'ชวนเพื่อนในทีมมาใช้ได้นะ', sub: 'เพิ่มบัญชีแล้วส่งชื่อผู้ใช้กับรหัสผ่านให้' },
 }
 
-function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme }) {
+function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
   const tenant = user.tenant_id
   const tabs = TABS.filter((t) => !t.admin || user.role === 'admin') // แท็บ admin ไม่โชว์ให้ HR
   const [initial] = useState(fromUrl) // อ่าน URL ครั้งเดียวตอนเปิดหน้า
@@ -117,7 +117,6 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
   const [findText, setFindText] = useState(initial.id)
   const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant, n: 1 } : null)
   const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
-  const rate = settings?.thb_per_usd ?? THB_PER_USD // จาก backend (DE-01) ผู้ใช้ไม่ต้องรู้ว่าโมเดลใช้ดอลลาร์เบื้องหลัง
   const [risk, setRisk] = useState({}) // ความเสี่ยงล่าสุดแยกตามแท็บ
   const [who, setWho] = useState(loadMascot) // ผู้ช่วยที่เลือก ใช้ทั้ง sidebar และหน้าว่าง
   // handler คงที่ต่อแท็บ ใส่ใน deps ของ effect ได้โดยไม่ทำให้โหลดซ้ำ
@@ -390,7 +389,6 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
         <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`} className="fade-up">
           <Overview
             greeting={greeting(user.name)}
-            rate={rate}
             who={who}
             onPick={pick}
             onImport={() => setTab('import')}
@@ -430,7 +428,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
         <Suspense fallback={<Skeleton className="h-96" />}>
           {TABS.filter((t) => t.Component).map(({ id, Component }) => (
             <div key={`${id}-${dataVersion}`} hidden={tab !== id} className="fade-up">
-              <Component query={query} rate={rate} dark={dark} who={who} tenant={tenant} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
+              <Component query={query} dark={dark} who={who} tenant={tenant} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
             </div>
           ))}
         </Suspense>

@@ -14,8 +14,9 @@ from pydantic import ValidationError
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 import business_rules  # noqa: E402
 import db  # noqa: E402
+import income_scale  # noqa: E402
 from clean_pipeline import RAW_FILENAME, load_raw_data  # noqa: E402
-from schemas import INCOME_IN_THB, EmployeeInput  # noqa: E402
+from schemas import EmployeeInput  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 SCHEMA = os.path.join(ROOT, "docker", "postgres", "init", "02-app-schema.sql")
@@ -97,13 +98,10 @@ def test_cross_field_rules_point_at_one_column():
     assert set(_errors({**base, "Age": 90})) == {"Age"}  # ไม่ซ้ำเป็น error ของ TotalWorkingYears
 
 
-def test_income_cap_depends_on_unit():
-    """เพดาน 5 ล้านบาท/เดือน: ไฟล์นำเข้ากรอกบาท ส่วน API ใช้หน่วยของโมเดล (หาร THB_PER_USD)"""
+def test_income_cap_in_baht():
+    """เพดาน 5 ล้านบาท/เดือน: เงินเดือนเป็นบาททั้งไฟล์นำเข้าและ API (DE-01)"""
     base = RAW.iloc[0][list(set(EmployeeInput.model_fields) - {"OfficeDaysPerWeek"})].to_dict()
     cap = business_rules.MAX_MONTHLY_INCOME_THB
-    assert EmployeeInput.model_validate({**base, "MonthlyIncome": cap}, context=INCOME_IN_THB).MonthlyIncome == cap
-    assert "5,000,000 บาท" in _errors({**base, "MonthlyIncome": cap + 1}, INCOME_IN_THB)["MonthlyIncome"]
-    model_cap = cap // business_rules.THB_PER_USD
-    assert EmployeeInput(**{**base, "MonthlyIncome": model_cap}).MonthlyIncome == model_cap
-    assert "MonthlyIncome" in _errors({**base, "MonthlyIncome": model_cap + 1})
-    assert pd.Series(RAW["MonthlyIncome"] * business_rules.THB_PER_USD).max() < cap  # IBM ทุกคนอยู่ใต้เพดาน
+    assert EmployeeInput(**{**base, "MonthlyIncome": cap}).MonthlyIncome == cap
+    assert "5,000,000 บาท" in _errors({**base, "MonthlyIncome": cap + 1})["MonthlyIncome"]
+    assert pd.Series(RAW["MonthlyIncome"] * income_scale.THB_PER_UNIT).max() < cap  # IBM ที่แปลงเป็นบาทอยู่ใต้เพดาน

@@ -3,6 +3,7 @@
 ข้อมูลพนักงานแยกตามบริษัท (tenant ของผู้ใช้ที่ login) อ่านจาก PostgreSQL ตาราง employees เมื่อตั้ง DATABASE_URL
 ไม่ตั้ง = บริษัทเดโม (ibm_demo) อ่าน CSV ดิบของ IBM ส่วนบริษัทอื่นว่าง
 ข้อมูลอ้างอิงตอนแปลงฟีเจอร์ (one-hot ให้ครบหมวด) ใช้ CSV ของ IBM เสมอ ไม่ขึ้นกับบริษัท
+เงินเดือน (MonthlyIncome) ของพนักงานเป็นบาทจริงทุกที่ แปลงเป็นหน่วยของโมเดลตอนเข้า to_features เท่านั้น (income_scale.py)
 โมเดลตั้งค่าด้วย env MLFLOW_TRACKING_URI / MODEL_URI (อ่านจาก .env ผ่าน src/mlflow_setup.py
 ค่าเริ่มต้น = โมเดลตัวทดลองใน mlflow.db ในเครื่อง)
 """
@@ -24,10 +25,13 @@ from clean_pipeline import NOISE_COLUMNS, RAW_FILENAME, TARGET_COLUMN, clean_dat
 from feature_pipeline import SELECTED_FEATURES, add_features  # noqa: E402
 import mlflow_setup  # noqa: E402  (โหลด .env)
 import db  # noqa: E402
+import income_scale  # noqa: E402
 
 # v2 = ไม่ใช้เพศ/สถานภาพสมรส (src/train.py EXCLUDED) ส่วน v1 ใช้ทั้งสองอย่าง ค่าปรับเทียบผูกกับเวอร์ชัน เปลี่ยนแล้วต้องปรับเทียบใหม่
 MODEL_URI = os.getenv("MODEL_URI", "models:/attrition-xgboost-P/2")
-MODEL_VERSION = MODEL_URI.removeprefix("models:/")  # ชื่อที่บันทึกใน model_runs เช่น 'attrition-xgboost-P/2'
+# ชื่อที่บันทึกใน model_runs ผูกกับค่าปรับเทียบ "+income-rank" = แปลงเงินเดือนแบบเทียบอันดับ (DE-01) คะแนนต่างจากแบบหาร 35
+# ผลปรับเทียบเดิมจึงขึ้นว่า "ทำไว้กับโมเดลรุ่นก่อน" ให้ปรับเทียบใหม่
+MODEL_VERSION = MODEL_URI.removeprefix("models:/") + "+income-rank"
 
 
 @lru_cache
@@ -35,6 +39,8 @@ def model():
     mlflow_setup.setup()
     return mlflow.xgboost.load_model(MODEL_URI)
 
+
+INCOME = "MonthlyIncome"
 
 # วันเข้าออฟฟิศต่อสัปดาห์ (WFH) ไม่ใช่ฟีเจอร์ของโมเดล IBM ไม่มีข้อมูลนี้ = ถือว่าเข้าทุกวัน
 OFFICE_DAYS = "OfficeDaysPerWeek"
@@ -92,12 +98,23 @@ def reference_employees() -> pd.DataFrame:
     return df.assign(**{OFFICE_DAYS: FULL_WEEK})
 
 
+@lru_cache
+def reference_income():
+    """เงินเดือนของ IBM (หน่วยของโมเดล) ที่ใช้เทียบอันดับ"""
+    return reference_employees()[INCOME].to_numpy(dtype=float)
+
+
+def ibm_in_thb(df: pd.DataFrame) -> pd.DataFrame:
+    """ข้อมูล IBM (หน่วยของโมเดล) -> เงินเดือนบาท สำหรับบริษัทเดโม/แถวตัวอย่าง (ไม่มีเงินเดือนไทยจริง ใช้ตัวคูณคงที่)"""
+    return df.assign(**{INCOME: (df[INCOME] * income_scale.THB_PER_UNIT).astype(int)})
+
+
 @lru_cache(maxsize=TENANT_CACHE)
 def _load_employees(tenant: str) -> pd.DataFrame:
     if db.url():
         df = db.read_employees(tenant)
     else:
-        df = reference_employees() if tenant == db.DEMO_TENANT else reference_employees().iloc[:0]
+        df = ibm_in_thb(reference_employees()) if tenant == db.DEMO_TENANT else reference_employees().iloc[:0]
     return df if OFFICE_DAYS in df else df.assign(**{OFFICE_DAYS: FULL_WEEK})
 
 
@@ -148,13 +165,21 @@ def employee_record(employee_id: int, tenant: str = db.DEMO_TENANT):
     return None if match.empty else json.loads(match.head(1).to_json(orient="records"))[0]
 
 
-def to_features(raw: pd.DataFrame) -> pd.DataFrame:
-    """แปลงข้อมูลดิบ (รูปแบบเดียวกับ CSV ของ IBM) เป็นเมทริกซ์ที่โมเดลรับได้ คงลำดับแถวเดิม
+def company_income(tenant: str):
+    """เงินเดือนบาทของพนักงานปัจจุบันทั้งบริษัท ใช้เทียบอันดับตอนให้คะแนนพนักงานของบริษัทนั้น (to_features)"""
+    return raw_employees(tenant)[INCOME]
+
+
+def to_features(raw: pd.DataFrame, company_thb) -> pd.DataFrame:
+    """แปลงข้อมูลดิบ (รูปแบบเดียวกับ CSV ของ IBM เงินเดือนเป็นบาท) เป็นเมทริกซ์ที่โมเดลรับได้ คงลำดับแถวเดิม
+    company_thb = เงินเดือนบาทของคนทั้งกลุ่มที่ใช้เทียบอันดับ (พนักงานของบริษัท หรือคนในไฟล์ปรับเทียบ) บังคับส่ง
+    ให้ทุกคนที่เรียกเลือกเองว่าเทียบกับใคร เทียบผิดกลุ่ม = คะแนนผิดแบบเงียบๆ
 
     ต่อข้อมูลอ้างอิงเข้าไปก่อน clean เพื่อให้ one-hot ได้คอลัมน์ครบเหมือนตอนเทรน แม้ข้อมูลใหม่จะมีหมวดไม่ครบ
     """
     # Attrition ไม่ใช้ทำนาย (ตัดทิ้งก่อนเข้าโมเดล) แต่ clean_data ต้องมีครบ พนักงานที่ import มายังไม่มีผลจริง จึงใส่ค่าแทน
-    both = pd.concat([commute_adjusted(raw), reference_employees()], ignore_index=True).assign(**{TARGET_COLUMN: "No"})
+    scaled = raw.assign(**{INCOME: income_scale.to_model(raw[INCOME], company_thb, reference_income()).astype(int)})
+    both = pd.concat([commute_adjusted(scaled), reference_employees()], ignore_index=True).assign(**{TARGET_COLUMN: "No"})
     X = add_features(clean_data(both), only=SELECTED_FEATURES).drop(columns=TARGET_COLUMN)
     return X.iloc[: len(raw)][model().feature_names_in_]
 
@@ -168,7 +193,8 @@ def employee_features(tenant: str = db.DEMO_TENANT) -> pd.DataFrame:
 @lru_cache(maxsize=TENANT_CACHE)
 def _employee_features(tenant: str) -> pd.DataFrame:
     raw = _load_employees(tenant)
-    return to_features(raw).set_index(raw["EmployeeNumber"])  # to_features ปรับระยะทางตามวันเข้าออฟฟิศให้แล้ว
+    # to_features ปรับระยะทางตามวันเข้าออฟฟิศ + เทียบอันดับเงินเดือนในบริษัทให้แล้ว
+    return to_features(raw, raw[INCOME]).set_index(raw["EmployeeNumber"])
 
 
 @lru_cache

@@ -44,6 +44,9 @@ DEMO_LAST_NAMES = ["ใจดี", "สุขสันต์", "มั่นค�
 # เหมือนบริษัทจริงที่อัตราลาออกต่างจาก IBM หน้าปรับเทียบจึงมีอะไรให้ปรับให้เห็น
 DEMO_SHIFT = 1.0
 EXAMPLE_SCORES = (0.2, 0.4, 0.6, 0.8)  # ให้หน้าเว็บโชว์ว่าคะแนนเดิมเท่านี้ หลังปรับเป็นเท่าไหร่
+# เงินเดือนจำลอง (บาท/เดือน) ต่อระดับตำแหน่ง ช่วงคร่าวๆ ของพนักงานออฟฟิศไทย (คู่มือเงินเดือนบริษัทจัดหางาน 2024–2025)
+# เป็นข้อมูลสมมติ ไม่ใช่เงินเดือนจริงของบริษัทใด โมเดลเห็นแค่อันดับในบริษัท (income_scale.py) ช่วงจึงไม่ต้องแม่น
+DEMO_SALARY_THB = {1: (15_000, 30_000), 2: (28_000, 50_000), 3: (45_000, 90_000), 4: (80_000, 160_000), 5: (150_000, 300_000)}
 
 Method = Literal["platt", "isotonic"]
 
@@ -86,14 +89,15 @@ class UploadResult(BaseModel):
 
 
 def _fit(raw: pd.DataFrame, method: str, tenant_id: str) -> RecalibrateResponse:
-    """raw = พนักงานคอลัมน์แบบ IBM + Attrition (Yes/No) หน่วยเงินของโมเดลแล้ว"""
+    """raw = พนักงานคอลัมน์แบบ IBM + Attrition (Yes/No) เงินเดือนบาท
+    เงินเดือนเทียบอันดับกับคนในไฟล์เอง (รวมคนที่ลาออกไปแล้ว) ไม่ใช่พนักงานปัจจุบันในระบบ"""
     labels = (raw["Attrition"] == "Yes").astype(int).to_numpy()
     if len(raw) < MIN_ROWS:
         raise HTTPException(422, f"ต้องมีพนักงานอย่างน้อย {MIN_ROWS} คน (มี {len(raw)} คน) ผลปรับเทียบจากข้อมูลน้อยกว่านี้ไม่น่าเชื่อถือ")
     if labels.min() == labels.max():
         raise HTTPException(422, "ต้องมีทั้งพนักงานที่ลาออกและที่ยังอยู่")
     try:
-        scores = ms.risk_scores(ms.to_features(raw[sorted(ms.input_columns())]))
+        scores = ms.risk_scores(ms.to_features(raw[sorted(ms.input_columns())], raw["MonthlyIncome"]))
     except (KeyError, ValueError, TypeError) as e:
         # SEC-08: ไม่ส่งรายละเอียดให้ผู้ใช้ และ log แค่ชนิด error (ข้อความ exception อาจมีค่าข้อมูลพนักงาน)
         log.warning("recalibrate: แปลงข้อมูลไม่ได้ (%s)", type(e).__name__)
@@ -158,11 +162,8 @@ def demo_employees(n: int = DEMO_ROWS, seed: int = DEMO_SEED) -> pd.DataFrame:
         df[col] = df[col].clip(upper=df["YearsAtCompany"])
     df["NumCompaniesWorked"] = jitter("NumCompaniesWorked", -1, 1).clip(0, 9)
     df["DistanceFromHome"] = jitter("DistanceFromHome", -3, 3).clip(1, 29)
-    # ช่วงล่าง (5–35%) ของคนระดับตำแหน่งเดียวกันใน IBM: ใกล้เงินเดือนไทยขึ้น แต่ยังอยู่ในช่วงที่โมเดลเคยเห็น
-    # ponytail: ต่ำกว่านี้ (เช่น 15,000 บาท) อยู่นอกข้อมูลที่โมเดลเรียน (IBM ต่ำสุด 1,009 ดอลลาร์ ≈ 35,000 บาท) ถ้าเทรนด้วยข้อมูลไทยค่อยใช้ช่วงจริง
-    low = ibm.groupby("JobLevel")["MonthlyIncome"].quantile(0.05)
-    high = ibm.groupby("JobLevel")["MonthlyIncome"].quantile(0.35)
-    df["MonthlyIncome"] = pd.Series(rng.uniform(df["JobLevel"].map(low), df["JobLevel"].map(high)), index=df.index).round().astype(int).clip(lower=1009)
+    low, high = (df["JobLevel"].map({lv: band[i] for lv, band in DEMO_SALARY_THB.items()}) for i in (0, 1))
+    df["MonthlyIncome"] = (pd.Series(rng.uniform(low, high), index=df.index) / 100).round().astype(int) * 100
     df["PercentSalaryHike"] = jitter("PercentSalaryHike", -2, 2).clip(11, 25)
     for col in eu.SURVEY_FIELDS:  # 30% ของคนได้คำตอบแบบสำรวจใหม่
         redraw = rng.random(n) < 0.3
@@ -175,7 +176,7 @@ def demo_employees(n: int = DEMO_ROWS, seed: int = DEMO_SEED) -> pd.DataFrame:
     df["EmployeeNumber"] = range(1, n + 1)
     df = db.demo_labels(df)  # แผนก/ตำแหน่งภาษาไทยชุดเดียวกับข้อมูลทดลองในภาพรวม (8 ฝ่าย)
     df[eu.NAME[0]] = [f"{rng.choice(DEMO_FIRST_NAMES[g])} {rng.choice(DEMO_LAST_NAMES)}" for g in df["Gender"]]
-    score = np.clip(ms.risk_scores(ms.to_features(df)), 1e-6, 1 - 1e-6)
+    score = np.clip(ms.risk_scores(ms.to_features(df, df["MonthlyIncome"])), 1e-6, 1 - 1e-6)  # เทียบอันดับในกลุ่มจำลองเอง
     true_p = 1 / (1 + np.exp(-(np.log(score / (1 - score)) - DEMO_SHIFT)))
     df["Attrition"] = np.where(rng.random(n) < true_p, "Yes", "No")
     return df
@@ -205,7 +206,7 @@ def recalibrate_upload(  # def ไม่ใช่ async: ตรวจไฟล�
     valid, check = eu._check(file, label=True)
     if check.missing_columns or check.n_invalid or not valid:
         return UploadResult(check=check, message="ไฟล์ยังมีคอลัมน์ที่ขาดหรือแถวที่ผิด แก้แล้วอัปโหลดใหม่")
-    result = _fit(eu.to_model_units(pd.DataFrame(valid)), method, user["tenant_id"])
+    result = _fit(eu.whole_baht(pd.DataFrame(valid)), method, user["tenant_id"])
     background.add_task(batch_score.refresh_in_background, user["tenant_id"])
     return UploadResult(check=check, result=result)
 

@@ -143,7 +143,7 @@ function PrintHeader({ id, name, printedAt }) {
   )
 }
 
-export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick }) {
+export default function ShapViewer({ query, who, onRisk, onDone, onPick }) {
   const [topN, setTopN] = useState(10)
   const [printedAt, setPrintedAt] = useState('')
   // ค่าเฉลี่ยทั้งบริษัท (คะแนนชุดเดียวกับคนนี้: ปรับเทียบแล้วถ้าบริษัทปรับเทียบ) โหลดไม่ได้ = ไม่แสดงขีด
@@ -199,7 +199,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
   const score = data.calibrated_risk_score ?? data.risk_score
   // เรียงจากผลกระทบมากไปน้อย (API เรียงให้แล้ว) กราฟแนวนอนแสดงตัวบนสุดก่อน
   const shownValue = (c) => {
-    if (c.feature === 'MonthlyIncome') return baht(c.value * rate)
+    if (c.feature === 'MonthlyIncome') return baht(c.value) // บาทที่บริษัทกรอก (backend ส่งแทนค่าที่โมเดลเห็น)
     if (data.commute && c.feature === 'DistanceFromHome') return commuteText(data.commute, c.value)
     if (data.commute && c.feature === 'OverTimeXDistance' && c.value > 0) return commuteText(data.commute, c.value)
     return featureValue(c.feature, c.value)
