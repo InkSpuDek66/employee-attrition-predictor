@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Logo from '../logo/Logo'
 import Login from './Login'
-import Mascot, { MascotLoader } from './mascot/Mascot'
+import { mascotLine } from './mascot/line'
+import Mascot, { MascotLoader, SpeakingMascot } from './mascot/Mascot'
 import Overview from './Overview'
 import { api, BAND, employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD, THEME_NEXT } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
@@ -77,7 +78,7 @@ export default function App() {
   }, [])
   const theme = { dark, themeMode: mode, onToggleTheme: toggleTheme }
   if (!session) return <Login onLogin={(s) => (saveSession(s), setSession(s), setExpired(false))} expired={expired} {...theme} />
-  return <Workspace user={session.user} settings={session.settings} onLogout={() => (saveSession(null), setSession(null), setExpired(false))} {...theme} />
+  return <Workspace user={session.user} settings={session.settings} onLogout={() => (saveSession(null), setSession(null), setExpired(false), history.replaceState(null, '', location.pathname))} {...theme} />
 }
 
 // คำทักทายตามช่วงเวลาบนหน้าภาพรวม
@@ -112,7 +113,8 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
     sayTimer.current = setTimeout(() => setSay(null), 4500)
   }
   const [employeeId, setEmployeeId] = useState(initial.id || '1') // ช่องรหัสแบบย่อที่ลอยมุมขวาบน
-  const [findText, setFindText] = useState('') // ช่องหาพนักงานด้านบน เริ่มว่าง (เดิมค้างรหัส "1" พิมพ์ชื่อต่อกลายเป็น "1สม")
+  // ช่องหาพนักงานด้านบน: ค้างรหัสของคนที่โหลดล่าสุดไว้จนออกจากระบบ (กดที่ช่อง = เลือกทั้งข้อความ พิมพ์ชื่อใหม่ทับได้เลย)
+  const [findText, setFindText] = useState(initial.id)
   const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant, n: 1 } : null)
   const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
   const rate = settings?.thb_per_usd ?? THB_PER_USD // จาก backend (DE-01) ผู้ใช้ไม่ต้องรู้ว่าโมเดลใช้ดอลลาร์เบื้องหลัง
@@ -137,6 +139,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
   )
   const onDone = useMemo(() => Object.fromEntries(PER_EMPLOYEE.map((t) => [t, () => setPending((p) => ({ ...p, [t]: false }))])), [])
   const current = TABS.find((t) => t.id === tab)
+  const line = mascotLine({ risk: risk[tab], say, idle: IDLE[tab] })
 
   // มือถือ: เลื่อนลงไปไกลแล้วมีปุ่มกลับขึ้นด้านบน (หน้าภาพรวมบนมือถือยาวกว่า 3,000 px) จอใหญ่ซ่อนไว้
   const [farDown, setFarDown] = useState(false)
@@ -176,6 +179,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
       const u = fromUrl()
       setTab(u.tab)
       setEmployeeId(u.id || '1')
+      setFindText(u.id)
       if (!u.id) return setQuery(null)
       setQuery((q) => {
         if (q?.id === Number(u.id)) return q // คนเดิม ไม่ต้องโหลดใหม่
@@ -197,7 +201,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
     const typed = (e.currentTarget === headerForm.current ? findText : employeeId).trim()
     if (!/^\d+$/.test(typed)) return // พิมพ์ชื่อ = เลือกจากรายการค้นหา (EmployeeSearch จัดการ Enter เอง)
     setEmployeeId(typed)
-    setFindText('')
+    setFindText(typed)
     load(typed)
     if (!PER_EMPLOYEE.includes(tab)) setTab('shap') // แท็บที่ไม่ใช่รายคน (ภาพรวม, นำเข้า) พาไปดูคนนั้น
   }
@@ -205,7 +209,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
   // เลือกพนักงานจากรายชื่อ (ภาพรวม/หน้าว่าง) แล้วไปดูว่าทำไมถึงเสี่ยง
   function pick(id) {
     setEmployeeId(String(id))
-    setFindText('')
+    setFindText(String(id))
     load(id)
     if (!PER_EMPLOYEE.includes(tab)) setTab('shap') // แท็บที่ไม่ใช่รายคน (ภาพรวม, นำเข้า) พาไปดูคนนั้น
   }
@@ -262,8 +266,8 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
           })}
         </nav>
 
-        <div className="hidden flex-1 items-center justify-center lg:flex">
-          <Mascot risk={risk[tab]} who={who} say={say} idle={IDLE[tab]} onChoose={(v) => (setWho(v), saveMascot(v))} />
+        <div className={`hidden flex-1 justify-center lg:flex ${tab === 'overview' && say ? 'items-center' : 'items-end pb-6'}`}>
+          <Mascot risk={risk[tab]} who={who} say={say} idle={IDLE[tab]} chooserOnly={!(tab === 'overview' && say)} onChoose={(v) => (setWho(v), saveMascot(v))} />
         </div>
 
         {/* ชื่อรุ่นโมเดลเป็นรายละเอียดของทีมพัฒนา ไม่โชว์ให้ HR (เดิมกินที่จนท้าย sidebar ถูกตัดที่จอสูง 900px) */}
@@ -281,18 +285,28 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
       </aside>
 
       <main id="main" className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8 print:max-w-none print:p-0">
-        <header className="mb-6 flex flex-col gap-5 print:hidden xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            {/* หัวข้อหน้า = คำถามของ HR ตัวใหญ่ หนา ชื่อเครื่องมือ/คำทักทายเป็นบรรทัดรองใต้หัวข้อ (ไม่มีป้ายเล็กเหนือหัวข้อ) */}
-            <h1 className="text-balance text-2xl font-bold tracking-tight text-fg sm:text-[2rem] sm:leading-tight">{current.hint}</h1>
-            <p className="mt-1 text-sm text-muted-fg">{tab === 'overview' ? `${greeting(user.name)} · ${current.label}` : current.label}</p>
-          </div>
-          {/* ช่องรหัสพนักงานใช้เฉพาะแท็บรายคน (ภาพรวม/นำเข้า เลือกคนจากรายชื่อแทน) */}
+        {/* หัวเพจ (ยกเว้นภาพรวมที่มีหัวของตัวเอง): ผู้ช่วยพูดหัวข้อ = คำถามของ HR ท่า/คำพูดเปลี่ยนตามความเสี่ยงของคนที่ดูอยู่
+            ช่องรหัสพนักงานอยู่ในหัวเพจเฉพาะแท็บรายคน (ภาพรวม/นำเข้า เลือกคนจากรายชื่อแทน) */}
+        <header
+          className={`hero-sky -mx-4 mb-6 flex-col gap-5 px-4 pb-5 pt-5 print:hidden sm:mx-0 sm:rounded-3xl sm:border sm:border-line sm:px-7 xl:flex-row xl:items-end xl:justify-between ${
+            tab === 'overview' ? 'hidden' : 'flex'
+          }`}
+        >
+          <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="md">
+            <p className="text-sm text-muted-fg">{current.label}</p>
+            <h1 className="mt-1.5 text-balance text-2xl font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2rem]">{current.hint}</h1>
+            <p className="mt-2 text-sm text-fg/80" aria-live="polite">
+              <span className="font-medium">{line.text}</span> {line.sub}
+              {risk[tab]?.band && !say && (
+                <span className="tabular-nums text-muted-fg"> · พนักงาน #{risk[tab].id} {risk[tab].label} {Math.round(risk[tab].score * 100)}</span>
+              )}
+            </p>
+          </SpeakingMascot>
           {PER_EMPLOYEE.includes(tab) && (
             <form
               ref={headerForm}
               onSubmit={submit}
-              className="grid gap-3 rounded-xl border border-line bg-card p-3 sm:max-w-md sm:grid-cols-[1fr_auto] sm:items-end xl:w-[22rem] xl:shrink-0"
+              className="grid gap-3 rounded-xl border border-line bg-card/90 p-3 sm:max-w-md sm:grid-cols-[1fr_auto] sm:items-end xl:w-[22rem] xl:shrink-0"
             >
               <Field label="รหัสหรือชื่อพนักงาน" icon="user">
                 <EmployeeSearch value={findText} onChange={setFindText} onPick={pick} />
@@ -364,6 +378,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
 
         <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`} className="fade-up">
           <Overview
+            greeting={greeting(user.name)}
             rate={rate}
             who={who}
             onPick={pick}
@@ -465,7 +480,7 @@ function EmployeeSearch({ value, onChange, onPick }) {
   const hits = open && found.text === text ? found.hits : []
   const choose = (e) => (setOpen(false), onPick(e.employee_id))
   function onKeyDown(e) {
-    if (e.key === 'Escape') return setOpen(false)
+    if (e.key === 'Escape' || (e.key === 'Enter' && /^\d+$/.test(text))) return setOpen(false) // รหัสล้วน Enter = โหลด ปิดรายการ (ช่องค้างรหัสไว้)
     if (!hits.length) return
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
@@ -492,6 +507,7 @@ function EmployeeSearch({ value, onChange, onPick }) {
         value={value}
         onChange={(e) => (onChange(e.target.value), setOpen(true))}
         onKeyDown={onKeyDown}
+        onFocus={(e) => e.target.select()}
         onBlur={() => setOpen(false)}
       />
       {hits.length > 0 && (

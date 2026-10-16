@@ -6,15 +6,8 @@ import Joy from './Joy'
 import Kit from './Kit'
 import PetCharacter from './PetCharacter'
 import { loadMascot, MASCOTS } from '../theme'
+import { mascotLine } from './line'
 
-const MOOD = {
-  none: { text: 'สวัสดี! เลือกพนักงานก่อนนะ', sub: 'เราจะช่วยดูความเสี่ยงให้' },
-  Low: { text: 'สบายใจได้', sub: 'ความเสี่ยงต่ำ ดูแลแบบเดิมต่อไป' },
-  Medium: { text: 'ควรติดตาม', sub: 'ความเสี่ยงปานกลาง ลองดูมาตรการ' },
-  High: { text: 'ควรรีบดูแล', sub: 'ความเสี่ยงสูง คุยกับพนักงานเร็วๆ นี้' },
-  Sorry: { text: 'ขอโทษนะ', sub: 'ตอนนี้ดึงข้อมูลไม่ได้ ลองใหม่อีกครั้ง' },
-  NotFound: { text: 'ไม่เจอพนักงานรหัสนี้นะ', sub: 'ลองเช็กรหัสอีกที' },
-}
 
 const CHARACTERS = {
   joy: Joy,
@@ -84,16 +77,32 @@ export function PointHint({ children, align = 'left', who, pet, partner, role = 
   )
 }
 
-// หน้าว่างก่อนเลือกพนักงาน: ผู้ช่วยที่เลือกไว้โบกมือ + บอกว่าต้องทำอะไร
-export function AssistantHint({ who, title, children }) {
+// หัวหน้าเพจ: ผู้ช่วยยืนพูดหัวข้อของหน้าเอง (กล่องคำพูดใหญ่ หางชี้ไปที่ตัวการ์ตูน)
+// มือถือ: ตัวการ์ตูนอยู่บน กล่องคำพูดอยู่ล่าง / จอใหญ่: ตัวการ์ตูนซ้าย
+// mood = ท่าของตัวการ์ตูน (ตามความเสี่ยงของคนที่ดูอยู่) replay = เปลี่ยนค่าแล้วเล่นท่าเข้าใหม่ size = 'lg' หน้าภาพรวม | 'md' หน้าอื่น
+export function SpeakingMascot({ who, mood = 'none', replay, size = 'lg', children }) {
   const Character = CHARACTERS[who]
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-secondary px-6 py-10 sm:flex-row sm:justify-center sm:gap-6">
-      {/* จอใหญ่มีผู้ช่วยใน sidebar แล้ว ซ่อนตัวนี้ไม่ให้ขึ้นสองตัว (มือถือไม่มี sidebar ยังโชว์) */}
-      <div className="w-36 shrink-0 lg:hidden">
-        <Character mood="none" />
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-end sm:gap-5">
+      <div className={`shrink-0 [&_svg]:h-auto [&_svg]:w-full ${size === 'lg' ? 'w-24 sm:w-40' : 'w-20 sm:w-28'}`} aria-hidden="true">
+        <Character key={`${who}-${mood}-${replay ?? ''}`} mood={mood} />
       </div>
-      <Bubble tail="side" className="max-w-md text-left">
+      <Bubble
+        tail="side"
+        className={`w-full max-w-3xl shadow-[0_18px_40px_-24px_rgb(30_70_140/0.35)] ${size === 'lg' ? 'px-6 py-5 sm:mb-6 sm:px-8 sm:py-6' : 'px-5 py-4 sm:mb-3 sm:px-7 sm:py-5'}`}
+      >
+        {children}
+      </Bubble>
+    </div>
+  )
+}
+
+// หน้าว่างก่อนเลือกพนักงาน: ผู้ช่วยที่เลือกไว้โบกมือ + บอกว่าต้องทำอะไร
+export function AssistantHint({ title, children }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-secondary px-6 py-10 sm:flex-row sm:justify-center sm:gap-6">
+      {/* ตัวการ์ตูนอยู่ที่หัวเพจแล้ว (ไม่ให้ขึ้นสองตัว) เหลือแค่กล่องคำพูด */}
+      <Bubble tail="none" className="max-w-md text-left">
         <div className="font-semibold text-fg">{title}</div>
         <p className="mt-1 text-sm text-muted-fg">{children}</p>
       </Bubble>
@@ -170,13 +179,16 @@ export function NotFoundState({ who, message }) {
 
 // say = { n, text, sub } ข้อความชั่วคราวหลังผู้ใช้ทำอะไรสำเร็จ (บันทึก/ปรับเทียบ/ดาวน์โหลด) ทำท่าดีใจแทนท่าตามความเสี่ยง
 // idle = { text, sub } ข้อความตอนยังไม่มีพนักงานให้ดู (หน้าที่ไม่ใช่รายคน เช่น นำเข้า/บัญชี) ไม่ส่ง = ชวนเลือกพนักงาน
-export default function Mascot({ risk, who, onChoose, say, idle }) {
-  const mood = say ? 'Low' : risk?.notFound ? 'NotFound' : risk?.error ? 'Sorry' : (risk?.band ?? 'none')
-  const m = say ?? ((mood === 'none' && idle) || MOOD[mood])
+// chooserOnly = เหลือแค่ปุ่มเลือกผู้ช่วย (หน้าภาพรวมมีผู้ช่วยพูดอยู่ในหัวหน้าแล้ว ไม่ให้ขึ้นสองตัว)
+export default function Mascot({ risk, who, onChoose, say, idle, chooserOnly = false }) {
+  const m = mascotLine({ risk, say, idle })
+  const mood = m.mood
   const Character = CHARACTERS[who]
 
   return (
     <div className="px-4 pb-2 text-center">
+      {!chooserOnly && (
+      <>
       <button
         type="button"
         onClick={() => onChoose(MASCOTS[(MASCOTS.indexOf(who) + 1) % MASCOTS.length])}
@@ -196,8 +208,10 @@ export default function Mascot({ risk, who, onChoose, say, idle }) {
           </div>
         )}
       </Bubble>
+      </>
+      )}
       {/* เลือกผู้ช่วย: รูปหน้าเล็กเรียงกัน (คล้ายเลือกรูปโปรไฟล์) */}
-      <div className="mt-4 border-t border-line pt-3">
+      <div className={chooserOnly ? '' : 'mt-4 border-t border-line pt-3'}>
         <div className="text-xs text-muted-fg">อยากให้ใครเป็นผู้ช่วยดี?</div>
         <div className="mt-2 flex justify-center gap-2" role="radiogroup" aria-label="เลือกผู้ช่วย">
           {MASCOTS.map((k) => {

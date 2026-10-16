@@ -138,6 +138,13 @@ body {
     radial-gradient(40rem 28rem at 100% 0%, color-mix(in oklab, var(--color-primary) 7%, transparent), transparent 70%),
     radial-gradient(36rem 26rem at 0% 100%, color-mix(in oklab, var(--color-primary) 5%, transparent), transparent 70%);
 }
+/* หัวหน้าภาพรวม: ท้องฟ้าฟ้าอมม่วงจางๆ จุดเดียวของทั้งหน้าที่มีบรรยากาศ */
+.hero-sky {
+  background: linear-gradient(160deg, #e3eefc 0%, #edf2fd 55%, #f0edfb 100%);
+}
+.dark .hero-sky {
+  background: linear-gradient(160deg, #13263f 0%, #151f39 60%, #1b1a36 100%);
+}
 /* กล่องรอโหลด: แถบแสงวิ่งผ่านแทนการกะพริบ */
 .skeleton {
   background: linear-gradient(90deg, var(--color-muted) 0%, color-mix(in oklab, var(--color-card) 70%, var(--color-muted)) 50%, var(--color-muted) 100%);

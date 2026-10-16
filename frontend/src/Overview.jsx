@@ -3,7 +3,7 @@
 // ทุกส่วนใช้คะแนนชุดเดียวกัน: ปรับเทียบแล้วถ้าบริษัทของผู้ใช้ปรับเทียบ (DE-11) ยังไม่ปรับ = backend ส่ง warning มา
 import { useEffect, useState } from 'react'
 import { featureLabel, featurePhrase, featureValue, JOB_LEVELS } from './featureLabels'
-import { AssistantHint, SorryState } from './mascot/Mascot'
+import { AssistantHint, SorryState, SpeakingMascot } from './mascot/Mascot'
 import { api, baht, BAND, bahtShort, csvCell, employeeLabel, friendly, inputClass, useApi } from './theme'
 import { Alert, Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
@@ -237,7 +237,7 @@ function NoEmployees({ who, onImport }) {
   )
 }
 
-export default function Overview({ rate, who, onPick, onImport, onCsv }) {
+export default function Overview({ greeting, rate, who, onPick, onImport, onCsv }) {
   const [department, setDepartment] = useState('')
   // ค้นหา/ดูทั้งหมดในการ์ดรายชื่อ (หน่วง 250ms ระหว่างพิมพ์ ไม่ยิง API ทุกตัวอักษร)
   const [find, setFind] = useState('')
@@ -267,9 +267,47 @@ export default function Overview({ rate, who, onPick, onImport, onCsv }) {
   const deptOptions = [['', 'ทั้งบริษัท'], ...departments.map((d) => [d.department, d.department])]
   const manyDepartments = departments.length > 8
   const maxShare = Math.max(...s.top_factors.map((f) => f.share), 1e-9)
+  const high = s.risk_bands.High
+  const where = department || 'ตอนนี้'
+  const headline = high > 0 ? `${where}มี ${high.toLocaleString()} คนที่ควรคุยด้วยเร็วๆ นี้` : `${where}ยังไม่มีใครเสี่ยงสูง`
+  const fix = s.top_factors.find((f) => f.actionable)
+  const lead = `จากพนักงาน ${s.n_employees.toLocaleString()} คน คะแนนเฉลี่ย ${Math.round(s.mean_risk_score * 100)} จาก 100${
+    fix ? ` เรื่องที่บริษัทปรับได้และส่งผลมากที่สุดคือ${featureLabel(fix.feature)}` : ''
+  }`
 
   return (
     <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
+      {/* หัวหน้า: ผู้ช่วยพูดหัวข้อเอง ประโยคมาจากข้อมูลจริง (กี่คนควรคุย + ปัจจัยที่เจอบ่อยสุด) ตัวเลขรวมอยู่แถวล่างของกล่อง */}
+      <section className="hero-sky -mx-4 px-4 pb-6 pt-6 sm:mx-0 sm:rounded-3xl sm:border sm:border-line sm:px-8 sm:pt-8">
+        <SpeakingMascot who={who}>
+          <p className="text-sm text-muted-fg">{greeting}</p>
+          <h1 className="mt-2 text-balance text-[1.75rem] font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2.5rem]">
+            {headline}
+          </h1>
+          {lead && <p className="mt-3 max-w-[60ch] text-base text-fg/80">{lead}</p>}
+        </SpeakingMascot>
+        <div className="mt-6 grid gap-6 border-t border-line pt-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-16">
+          <BandBar bands={s.risk_bands} total={s.n_employees} />
+          <div className="sm:text-right">
+            <div className="flex items-center gap-2 text-sm text-muted-fg sm:justify-end">
+              มูลค่าความเสี่ยงรวม
+              <button
+                type="button"
+                onClick={() => setFullBaht((v) => !v)}
+                aria-pressed={fullBaht}
+                className="cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
+              </button>
+            </div>
+            <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.expected_loss_total * rate)}>
+              <CountUp value={s.expected_loss_total * rate} format={money} />
+            </div>
+            <p className="mt-1 text-xs text-muted-fg">คะแนน × ต้นทุนหาคนแทน ใช้เทียบ ไม่ใช่ยอดจริง</p>
+          </div>
+        </div>
+      </section>
+
       {/* มือถือ หรือแผนกเยอะ (ปุ่มเรียงหลายแถว) = ช่องเลือกแบบเลื่อนลง */}
       <select aria-label="เลือกแผนก" value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputClass} ${manyDepartments ? '' : 'sm:hidden'}`}>
         {deptOptions.map(([v, text]) => (
@@ -324,30 +362,6 @@ export default function Overview({ rate, who, onPick, onImport, onCsv }) {
         </Card>
 
         <div className="min-w-0 space-y-4 lg:sticky lg:top-4">
-          <Card
-            title={department || 'ทั้งบริษัท'}
-            subtitle={`พนักงาน ${s.n_employees.toLocaleString()} คน · คะแนนเฉลี่ย ${Math.round(s.mean_risk_score * 100)} จาก 100`}
-          >
-            <BandBar bands={s.risk_bands} total={s.n_employees} />
-            <div className="mt-5 border-t border-line pt-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-muted-fg">มูลค่าความเสี่ยงรวม</span>
-                <button
-                  type="button"
-                  onClick={() => setFullBaht((v) => !v)}
-                  aria-pressed={fullBaht}
-                  className="-mr-1 shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                >
-                  {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
-                </button>
-              </div>
-              <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.expected_loss_total * rate)}>
-                <CountUp value={s.expected_loss_total * rate} format={money} />
-              </div>
-              <p className="mt-1 text-xs text-muted-fg">คะแนน × ต้นทุนหาคนแทน ใช้เทียบ ไม่ใช่ยอดจริง</p>
-            </div>
-          </Card>
-
           <Card title="ปัจจัยเด่นของทั้งกลุ่ม" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ต่อคะแนน">
             <ul className="space-y-4">
               {s.top_factors.map((f) => (
