@@ -87,7 +87,7 @@ pip install -r requirements-dev.txt
 
 backend โหลดโมเดลจาก MLflow Model Registry จึงต้องตั้ง `.env` ก่อน (`cp .env.example .env`)
 
-- DagsHub (ทีมใช้ช่วงพัฒนา): ใส่ `MLFLOW_TRACKING_URI`, ชื่อผู้ใช้ และ token ของตัวเอง ตามขั้นตอนใน [docs/mlflow_setup.md](docs/mlflow_setup.md) โมเดลที่ใช้ `models:/attrition-xgboost-P/2` อยู่บนนั้นแล้ว ไม่ต้องเทรนเอง (v2 ไม่ใช้เพศ/สถานภาพสมรสในการทำนาย, v1 = รุ่นแรกที่ยังใช้)
+- DagsHub (ทีมใช้ช่วงพัฒนา): ใส่ `MLFLOW_TRACKING_URI`, ชื่อผู้ใช้ และ token ของตัวเอง ตามขั้นตอนใน [docs/mlflow_setup.md](docs/mlflow_setup.md) โมเดลที่ใช้ `models:/attrition-xgboost-P/3` อยู่บนนั้นแล้ว ไม่ต้องเทรนเอง (v2 ไม่ใช้เพศ/สถานภาพสมรสในการทำนาย, v1 = รุ่นแรกที่ยังใช้)
 - Self-host ด้วย docker compose: ตั้ง `POSTGRES_PASSWORD` และ `MLFLOW_TRACKING_URI=http://localhost:5000` แล้วรัน
   ```bash
   docker compose up -d --build --wait
@@ -331,7 +331,7 @@ expected_benefit = (risk_score ก่อน - risk_score หลังทำม�
   ระหว่างกลุ่มตาม protected attribute (เพศ, ช่วงอายุ) ด้วย Fairlearn
   -> threshold ที่ยอมรับได้จะกำหนดใน Backend & Analysis phase (wk6–7)
 ```
-> ที่ทำแล้ว (รอทีมตรวจ): [notebooks/09_fairness_check_Y.ipynb](notebooks/09_fairness_check_Y.ipynb) ทำต่อจาก DS-04 ของ [review Data Engineering](docs/reviews/round1-2_data_engineering_S.md) ด้วย Fairlearn `MetricFrame` ใช้ equal opportunity (TPR) เป็นเกณฑ์หลัก ผล: อายุและสถานภาพสมรสไม่เท่าเทียม (คนอายุ 40 ปีขึ้นไปที่จะลาออกจับได้ไม่ถึงครึ่ง ขณะที่อายุ 18–29 จับได้ 79%) ส่วนเพศใกล้เคียงกันแต่โมเดลใช้เพศโดยตรง ตัดเพศและสถานภาพออกแล้ว AUC ไม่ลด เสนอเกณฑ์อัตราส่วน TPR ≥ 0.8 ให้ทีมตัดสินใจ · โมเดล v2 (`attrition-xgboost-P/2`) ตัดเพศและสถานภาพสมรสแล้วตามผลนี้ ดู [docs/additions_dev007_P.md](docs/additions_dev007_P.md)
+> ที่ทำแล้ว (รอทีมตรวจ): [notebooks/09_fairness_check_Y.ipynb](notebooks/09_fairness_check_Y.ipynb) ทำต่อจาก DS-04 ของ [review Data Engineering](docs/reviews/round1-2_data_engineering_S.md) ด้วย Fairlearn `MetricFrame` ใช้ equal opportunity (TPR) เป็นเกณฑ์หลัก ผล: อายุและสถานภาพสมรสไม่เท่าเทียม (คนอายุ 40 ปีขึ้นไปที่จะลาออกจับได้ไม่ถึงครึ่ง ขณะที่อายุ 18–29 จับได้ 79%) ส่วนเพศใกล้เคียงกันแต่โมเดลใช้เพศโดยตรง ตัดเพศและสถานภาพออกแล้ว AUC ไม่ลด เสนอเกณฑ์อัตราส่วน TPR ≥ 0.8 ให้ทีมตัดสินใจ · โมเดล v2 (`attrition-xgboost-P/3`) ตัดเพศและสถานภาพสมรสแล้วตามผลนี้ ดู [docs/additions_dev007_P.md](docs/additions_dev007_P.md)
 
 ### 6.5 Model Localization (เพื่อให้ใช้ในไทยได้จริง)
 ```

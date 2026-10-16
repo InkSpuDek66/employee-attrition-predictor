@@ -24,8 +24,8 @@ const Users = lazy(() => import('./Users'))
 // ต้อง login ก่อน (Login.jsx) บริษัทมาจากผู้ใช้ ไม่ให้พิมพ์เอง (SEC-02)
 const TABS = [
   { id: 'overview', icon: 'chart', label: 'ภาพรวมบริษัท', short: 'ภาพรวม', hint: 'ใครเสี่ยงลาออก และเพราะอะไร' },
-  { id: 'shap', icon: 'search', label: 'SHAP Viewer', short: 'SHAP', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
-  { id: 'whatif', icon: 'sliders', label: 'What-if Simulator', short: 'What-if', hint: 'ถ้าปรับเงื่อนไข ความเสี่ยงจะเปลี่ยนไหม', Component: WhatIfSimulator },
+  { id: 'shap', icon: 'search', label: 'ทำไมถึงเสี่ยง', short: 'เหตุผล', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
+  { id: 'whatif', icon: 'sliders', label: 'ลองปรับเงื่อนไข', short: 'ลองปรับ', hint: 'ถ้าปรับเงื่อนไข ความเสี่ยงจะเปลี่ยนไหม', Component: WhatIfSimulator },
   { id: 'calibrate', icon: 'scale', label: 'ปรับเทียบโมเดล', short: 'ปรับเทียบ', hint: 'ปรับคะแนนให้ตรงกับอัตราลาออกจริงของบริษัท', admin: true },
   { id: 'import', icon: 'upload', label: 'นำเข้าข้อมูล', short: 'นำเข้า', hint: 'อัปโหลดรายชื่อพนักงานของบริษัท' },
   { id: 'users', icon: 'user', label: 'บัญชีผู้ใช้', short: 'บัญชี', hint: 'ใครเข้าระบบของบริษัทนี้ได้บ้าง', admin: true },

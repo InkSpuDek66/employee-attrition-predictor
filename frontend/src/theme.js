@@ -8,7 +8,7 @@ export const HIGH = 0.7
 // เงิน (DE-01): เงินเดือนและต้นทุนทุกตัวจาก API เป็นบาทจริงแล้ว หน้าเว็บแสดง/ส่งเป็นบาทตรงๆ ไม่ต้องแปลง
 // backend แปลงเงินเดือนเป็นหน่วยของโมเดลเองตอนให้คะแนน (เทียบอันดับเงินเดือนในบริษัท src/income_scale.py)
 export const INCOME_MIN_BAHT = 5000 // ขั้นต่ำของช่อง/แถบเงินเดือน (ต่ำกว่าค่าแรงขั้นต่ำรายเดือน กันพิมพ์ตกหลัก)
-export const baht = (v) => `${Math.round(v).toLocaleString()} บาท`
+export const baht = (v) => `${Math.round(v).toLocaleString().replace('-', '−')} บาท`
 // เงินก้อนใหญ่แบบย่อ อ่านง่ายในการ์ด: 457,969,584 -> "~458 ล้านบาท" (~ = ปัดแล้ว ประมาณ) ต่ำกว่าล้านแสดงเต็ม
 export const bahtShort = (v) =>
   Math.abs(v) < 1e6 ? baht(v) : `~${(v / 1e6).toLocaleString('en-US', { maximumFractionDigits: Math.abs(v) >= 1e8 ? 0 : 1 })} ล้านบาท`

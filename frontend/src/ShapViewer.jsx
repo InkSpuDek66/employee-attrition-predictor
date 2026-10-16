@@ -227,7 +227,7 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick }) {
                 </div>
               )}
             </div>
-            <RiskGauge title="ความเสี่ยงที่จะลาออก" score={score} avg={company?.mean_risk_score} />
+            <RiskGauge title="คะแนนความเสี่ยง (ใช้จัดลำดับ)" score={score} avg={company?.mean_risk_score} />
             <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-fg">
               <Icon name="info" className="size-4 shrink-0" />
               คะแนนใช้เทียบว่าใครเสี่ยงกว่าใคร ไม่ใช่โอกาสลาออกจริง
@@ -277,7 +277,14 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick }) {
             <ShapBars key={query.n} rows={rows} maxAbs={maxAbs} />
           </Card>
 
-          <Card icon="list" title="รายละเอียดแต่ละปัจจัย" subtitle="ค่าจริงของพนักงานและทิศทางที่ส่งผล">
+          {/* ตารางเป็นปัจจัยชุดเดียวกับกราฟด้านบน (เดิมเปิดค้าง เห็นซ้ำสองรอบ) พับไว้ เปิดดูค่าจริงได้ */}
+          <details className="group rounded-xl border border-line bg-card">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 text-sm font-semibold text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:px-6 [&::-webkit-details-marker]:hidden">
+              <Icon name="list" className="size-4 text-accent" />
+              ดูค่าจริงของแต่ละปัจจัย (ตาราง)
+              <Icon name="down" className="ml-auto size-4 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
+            </summary>
+            <div className="px-5 pb-5 sm:px-6">
             <div className="-mx-5 overflow-x-auto sm:-mx-6">
               <table className="w-full text-sm">
                 <thead>
@@ -323,7 +330,8 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick }) {
               </table>
             </div>
             <p className="mt-4 text-xs text-muted-fg">SHAP บอกความสัมพันธ์กับโมเดล ไม่ใช่เหตุและผลที่พิสูจน์แล้ว</p>
-          </Card>
+            </div>
+          </details>
         </div>
       </div>
     </div>

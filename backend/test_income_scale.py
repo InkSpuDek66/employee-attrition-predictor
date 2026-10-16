@@ -55,6 +55,15 @@ def test_whatif_raise_moves_model_input():
     assert after > before
 
 
+def test_salary_raise_never_raises_risk():
+    """โมเดล v3 (src/train.py MONOTONE): ขึ้นเงินเดือนแล้วความเสี่ยงต้องไม่เพิ่ม ทุกคนในบริษัทเดโม
+    (v2 เพิ่มได้ HR เห็นใน What-if ว่า "ขึ้นเงินเดือนแล้วเสี่ยงขึ้น" ถ้า test นี้ fail ให้เช็ก MODEL_URI ใน .env)"""
+    raw = ms.raw_employees().sample(200, random_state=0)
+    company = ms.company_income(ms.db.DEMO_TENANT)
+    scores = [ms.risk_scores(ms.to_features(raw.assign(**{ms.INCOME: (raw[ms.INCOME] * k).astype(int)}), company)) for k in (1, 1.1, 1.3, 2)]
+    assert (np.diff(np.stack(scores), axis=0) <= 1e-9).all()
+
+
 def test_shap_shows_salary_in_baht_not_model_units():
     record = ms.employee_record(1)
     salary = next(c for c in client.get("/shap/1?top_n=100").json()["contributions"] if c["feature"] == ms.INCOME)

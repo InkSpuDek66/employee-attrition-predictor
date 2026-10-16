@@ -71,7 +71,7 @@ def read_token(token: str):
     return data.get("sub") if data.get("exp", 0) > time.time() else None
 
 
-TENANT_NAMES = {"ibm_demo": "IBM HR Analytics (ข้อมูลตัวอย่าง)", "newco_demo": "บริษัทตัวอย่าง (เริ่มจากว่าง)"}  # ชื่อเดียวกับตาราง tenants ใน DB
+TENANT_NAMES = {"ibm_demo": "IBM HR Analytics (ข้อมูลตัวอย่าง)", "newco_demo": "บริษัทตัวอย่าง"}  # ชื่อเดียวกับตาราง tenants ใน DB
 
 # ---- รหัสผ่านของบัญชีใน DB: PBKDF2-SHA256 (stdlib) salt สุ่มต่อบัญชี ----
 PBKDF2_ROUNDS = 240_000

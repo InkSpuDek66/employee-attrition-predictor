@@ -27,8 +27,9 @@ import mlflow_setup  # noqa: E402  (โหลด .env)
 import db  # noqa: E402
 import income_scale  # noqa: E402
 
-# v2 = ไม่ใช้เพศ/สถานภาพสมรส (src/train.py EXCLUDED) ส่วน v1 ใช้ทั้งสองอย่าง ค่าปรับเทียบผูกกับเวอร์ชัน เปลี่ยนแล้วต้องปรับเทียบใหม่
-MODEL_URI = os.getenv("MODEL_URI", "models:/attrition-xgboost-P/2")
+# v3 = v2 + เงินเดือนมากขึ้นแล้วความเสี่ยงไม่เพิ่ม (src/train.py MONOTONE), v2 = ไม่ใช้เพศ/สถานภาพสมรส (EXCLUDED), v1 ใช้ทั้งสองอย่าง
+# ค่าปรับเทียบผูกกับเวอร์ชัน เปลี่ยนแล้วต้องปรับเทียบใหม่
+MODEL_URI = os.getenv("MODEL_URI", "models:/attrition-xgboost-P/3")
 # ชื่อที่บันทึกใน model_runs ผูกกับค่าปรับเทียบ "+income-rank" = แปลงเงินเดือนแบบเทียบอันดับ (DE-01) คะแนนต่างจากแบบหาร 35
 # ผลปรับเทียบเดิมจึงขึ้นว่า "ทำไว้กับโมเดลรุ่นก่อน" ให้ปรับเทียบใหม่
 MODEL_VERSION = MODEL_URI.removeprefix("models:/") + "+income-rank"

@@ -3,7 +3,7 @@ import { featureLabel, JOB_LEVELS, SURVEY_NOTE } from './featureLabels'
 import { api, baht, BAND, employeeLabel, friendly, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
-import { Alert, Card, CountUp, Field, Icon, RiskGauge, Segmented, Skeleton, UncalibratedNote } from './ui'
+import { Alert, Card, CountUp, Icon, RiskGauge, Segmented, Skeleton, UncalibratedNote } from './ui'
 
 // ฟีเจอร์ที่ HR ปรับได้จริงผ่านมาตรการ (ไม่ใส่ข้อมูลส่วนตัว เช่น อายุ เพศ สถานภาพ)
 const SAT = [[1, 'ต่ำ'], [2, 'กลาง'], [3, 'สูง'], [4, 'สูงมาก']]
@@ -182,18 +182,34 @@ function Stat({ label, value, tone, sub }) {
   )
 }
 
-// UX-15: ผลที่คาดว่าจะได้ = ความเสี่ยงที่ลดได้ - ต้นทุนมาตรการ (backend คิดให้เมื่อส่ง risk_after) ติดลบ = ไม่คุ้ม บอกตรงๆ
-function BenefitStat({ impact, money }) {
-  const label = 'ผลที่คาดว่าจะได้'
-  if (impact.expected_benefit == null) return <Stat label={label} value="—" tone="muted" sub="ลองกดมาตรการหรือปรับค่าด้านบนก่อน" />
-  const worth = impact.expected_benefit >= 0
+// UX-15: ผลที่คาดว่าจะได้ = ความเสี่ยงที่ลดได้ - ต้นทุนมาตรการ (backend คิดให้เมื่อส่ง risk_after)
+// ยังไม่ปรับเทียบ: คะแนนตันใกล้ 100 มาตรการขยับได้ไม่กี่คะแนน ผลจึงติดลบแทบทุกครั้ง ไม่ได้แปลว่าไม่คุ้มจริง
+// จึงไม่ตัดสินเขียว/แดง บอกแค่ความเสี่ยงที่ลดได้เทียบต้นทุน (critique 2026-10-16 รอบ 5)
+// มาตรการที่ยังไม่มีต้นทุนในระบบ (uncosted) = ตัวเลขดูดีเกินจริง ขึ้นสีเหลือง
+function MoneyVerdict({ impact, money }) {
+  if (impact.expected_benefit == null) return null
+  const reduced = impact.expected_loss - impact.expected_loss_after
+  const partial = impact.uncosted?.length > 0
+  const verdict = impact.warning
+    ? { tone: 'text-fg', text: 'ยังไม่ปรับเทียบ จึงยังบอกไม่ได้ว่าคุ้มไหม ใช้เทียบว่ามาตรการไหนลดความเสี่ยงได้มากกว่า' }
+    : partial
+      ? { tone: 'text-risk-mid', text: 'คิดต้นทุนไม่ครบ ผลจริงจะน้อยกว่านี้' }
+      : impact.expected_benefit >= 0
+        ? { tone: 'text-risk-low', text: `คุ้ม: ความเสี่ยงที่ลดได้มากกว่าต้นทุน ${money(impact.expected_benefit)}` }
+        : { tone: 'text-risk-high', text: `ยังไม่คุ้ม: ต้นทุนสูงกว่าความเสี่ยงที่ลดได้ ${money(-impact.expected_benefit)}` }
   return (
-    <Stat
-      label={label}
-      value={money(impact.expected_benefit)}
-      tone={worth ? 'green' : 'red'}
-      sub={worth ? 'ความเสี่ยงที่ลดได้มากกว่าต้นทุนมาตรการ' : 'ต้นทุนสูงกว่าความเสี่ยงที่ลดได้'}
-    />
+    <div className="rounded-lg border border-line p-3 text-sm" aria-live="polite">
+      <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+        <dt className="text-muted-fg">มูลค่าความเสี่ยงที่ลดได้</dt>
+        <dd className="text-right font-semibold tabular-nums text-fg">{money(reduced)}</dd>
+        <dt className="text-muted-fg">ต้นทุนมาตรการ (1 ปี)</dt>
+        <dd className="text-right font-semibold tabular-nums text-fg">{money(impact.retain_cost)}</dd>
+      </dl>
+      <p className={`mt-2 border-t border-line pt-2 text-xs ${verdict.tone}`}>{verdict.text}</p>
+      {partial && (
+        <p className="mt-1 text-xs text-risk-mid">ยังไม่มีตัวเลขค่าใช้จ่ายของ: {impact.uncosted.map(featureLabel).join(', ')}</p>
+      )}
+    </div>
   )
 }
 
@@ -220,17 +236,22 @@ function DeltaBadge({ delta: raw, idle = false, className = '' }) {
         {delta !== 0 && <Icon name={delta < 0 ? 'down' : 'up'} className="size-4" />}
         {delta < 0 ? 'ความเสี่ยงลดลง' : delta > 0 ? 'ความเสี่ยงเพิ่มขึ้น' : 'ยังไม่เปลี่ยน'}
       </span>
-      <span className="text-2xl font-semibold tabular-nums">
-        {delta > 0 ? '+' : ''}
-        {delta}
-      </span>
+      <span className="text-2xl font-semibold tabular-nums">{Math.abs(delta)}</span>
     </div>
   )
 }
 
 // ปัจจัยที่ทำให้คะแนนเปลี่ยนมากสุด (backend เทียบ SHAP ก่อน/หลัง) ไว้ตอบ "ทำไมขึ้นเงินเดือนแล้วความเสี่ยงไม่ลด"
-function Drivers({ drivers }) {
+// ฟีเจอร์ที่โมเดลคิดจากหลายช่อง: ถือว่า "ปรับแล้ว" ถ้าช่องใดช่องหนึ่งในนี้ถูกปรับ
+const DERIVED = {
+  OverTimeXDistance: ['OverTime', 'DistanceFromHome', 'OfficeDaysPerWeek'],
+  AvgSatisfaction: ['EnvironmentSatisfaction', 'JobSatisfaction', 'RelationshipSatisfaction', 'JobInvolvement'],
+  TenureRatio: ['YearsAtCompany', 'TotalWorkingYears'],
+  DistanceFromHome: ['DistanceFromHome', 'OfficeDaysPerWeek'],
+}
+function Drivers({ drivers, changed }) {
   if (!drivers?.length) return null
+  const touched = (f) => (DERIVED[f] ?? [f]).some((k) => k in changed)
   return (
     <div>
       <div className="mb-1.5 text-xs font-medium text-muted-fg">สิ่งที่ทำให้คะแนนเปลี่ยน</div>
@@ -238,7 +259,10 @@ function Drivers({ drivers }) {
         {drivers.map((d) => (
           <li key={d.feature} className="flex items-center gap-2 text-sm text-fg">
             <Icon name={d.change > 0 ? 'up' : 'down'} className={`size-4 shrink-0 ${d.change > 0 ? 'text-risk-high' : 'text-risk-low'}`} />
-            <span className="min-w-0 flex-1">{featureLabel(d.feature)}</span>
+            <span className="min-w-0 flex-1">
+              {featureLabel(d.feature)}
+              {!touched(d.feature) && <span className="block text-xs text-muted-fg">ไม่ได้ปรับ แต่โมเดลคิดร่วมกับสิ่งที่ปรับ</span>}
+            </span>
             <span className={`text-xs ${d.change > 0 ? 'text-risk-high' : 'text-risk-low'}`}>{d.change > 0 ? 'ทำให้เสี่ยงขึ้น' : 'ทำให้เสี่ยงลดลง'}</span>
           </li>
         ))}
@@ -290,7 +314,8 @@ const PRESETS = [
   // เปลี่ยนแค่เงินเดือน (เดิมแอบเพิ่ม "เงินเดือนขึ้นล่าสุด (%)" ด้วย ผู้ใช้ไม่เห็นว่าเปลี่ยน critique 2026-10-16)
   { label: 'ขึ้นเงินเดือน 10%', retention: 'salary_raise_10pct', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.1 }) },
   { label: 'ขึ้นเงินเดือน 20%', retention: 'salary_raise_20pct', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2 }) },
-  { label: 'เลื่อนตำแหน่ง', retention: 'training_and_promotion_track', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0 }) },
+  // เลื่อนตำแหน่งในไทยมักขึ้นเงินเดือนด้วย (เดิมไม่ขึ้น: ระดับสูงขึ้นแต่เงินเท่าเดิม โมเดลกลับให้เสี่ยงขึ้น critique รอบ 5)
+  { label: 'เลื่อนตำแหน่ง + ขึ้นเงินเดือน 15%', retention: 'training_and_promotion_track', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0, MonthlyIncome: b.MonthlyIncome * 1.15 }) },
   { label: 'งดงานนอกสถานที่', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
   { label: 'ให้ WFH 3 วัน (เข้าออฟฟิศ 2 วัน)', apply: (b) => ({ OfficeDaysPerWeek: Math.min(b.OfficeDaysPerWeek ?? 5, 2) }) },
   { label: 'อบรมเพิ่ม', retention: 'training_and_promotion_track', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
@@ -601,23 +626,21 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
 
           {impact && (
             <Card icon="money" title="ต้นทุน: ดูแลต่อ หรือ หาคนแทน" subtitle="ประมาณการ คิดจากข้อมูลเดิมของพนักงาน">
-              {/* ยังไม่ได้ปรับอะไร: เลือกดูต้นทุนของมาตรการทีละแบบ / ปรับแล้ว: ต้นทุนคิดจากทุกอย่างที่ปรับ ไม่ต้องเลือก */}
-              {!impact.costed_from_changes && (
-                <Field label="ดูต้นทุนของมาตรการ" className="mb-4 max-w-md">
-                  <select className={`${inputClass} cursor-pointer`} value={impact.retention} onChange={(e) => setRetention(e.target.value)}>
-                    {Object.entries(impact.retention_options).map(([k, text]) => <option key={k} value={k}>{text}</option>)}
-                  </select>
-                </Field>
-              )}
-              <div className="grid gap-3 sm:grid-cols-3">
+              {/* ผลคุ้ม/ไม่คุ้มอยู่ข้างคะแนนด้านขวา (MoneyVerdict) ตรงนี้เป็นตัวเลขประกอบ */}
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Stat label="ต้นทุนถ้าต้องหาคนแทน" value={money(impact.replacement_cost)} tone="red" />
                 <Stat
-                  label={impact.costed_from_changes ? 'ต้นทุนมาตรการที่ปรับ (1 ปี)' : `ต้นทุนมาตรการ: ${impact.retention_label}`}
-                  value={money(impact.retain_cost)}
-                  tone="blue"
-                  sub={impact.costed_from_changes && impact.measures?.length > 1 ? `รวม ${impact.measures.length} มาตรการ` : undefined}
+                  label="ต้นทุนมาตรการที่ปรับ (1 ปี)"
+                  value={impact.costed_from_changes ? money(impact.retain_cost) : '—'}
+                  tone={impact.costed_from_changes ? 'blue' : 'muted'}
+                  sub={
+                    !impact.costed_from_changes
+                      ? 'ลองกดมาตรการหรือปรับค่าก่อน'
+                      : impact.measures?.length > 1
+                        ? `รวม ${impact.measures.length} มาตรการ`
+                        : undefined
+                  }
                 />
-                <BenefitStat impact={impact} money={money} />
               </div>
               {/* บอกที่มาของตัวเลข กันคนเข้าใจผิดว่าเป็นต้นทุนจริงของบริษัท (สูตรใน src/business_rules.py) */}
               <details className="mt-3 rounded-lg bg-muted text-xs text-muted-fg">
@@ -628,44 +651,24 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   {(impact.hiring_cost / (impact.monthly_income * 12)).toFixed(2)} (ตัวคูณของตำแหน่งระดับ {impact.job_level})
                   {impact.include_severance && ` + ค่าชดเชย ${impact.severance_days} วัน (${money(impact.severance_pay)})`}
                 </p>
-                {impact.costed_from_changes ? (
+                {impact.costed_from_changes && (
                   <p>
                     <b className="text-fg">ต้นทุนมาตรการ</b> ={' '}
                     {impact.measures.length
                       ? impact.measures.map((m) => `${m.label} ${money(m.cost)}`).join(' + ')
                       : 'ไม่มีมาตรการที่มีค่าใช้จ่าย'}
                   </p>
-                ) : (
-                  <p>
-                    <b className="text-fg">ต้นทุนมาตรการ</b> = เงินเดือน × {(impact.retain_cost / impact.monthly_income).toFixed(1)} เดือน
-                  </p>
-                )}
-                {impact.uncosted?.length > 0 && (
-                  <p className="text-risk-mid">
-                    <b>ยังไม่ได้คิดต้นทุน:</b> {impact.uncosted.map(featureLabel).join(', ')} (ระบบยังไม่มีตัวเลขค่าใช้จ่าย
-                    ถ้ามีค่าใช้จ่ายจริง ผลที่คาดว่าจะได้จะน้อยกว่านี้)
-                  </p>
                 )}
                 <p>
-                  <b className="text-fg">ผลที่คาดว่าจะได้</b> = มูลค่าความเสี่ยงที่ลดลง (ก่อน − หลังปรับ) − ต้นทุนมาตรการ
-                  {impact.expected_benefit != null &&
-                    ` = ${money(impact.expected_loss)} − ${money(impact.expected_loss_after)} − ${money(impact.retain_cost)}`}
+                  <b className="text-fg">มูลค่าความเสี่ยง</b> = คะแนน × ต้นทุนหาคนแทน
+                  {impact.expected_benefit != null && ` ก่อน ${money(impact.expected_loss)} หลังปรับ ${money(impact.expected_loss_after)}`}
                 </p>
-                <p>ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท</p>
+                <p>
+                  ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท
+                  {!impact.include_severance && ' · ไม่นับค่าชดเชยตามมาตรา 118 เพราะจ่ายเมื่อนายจ้างเลิกจ้าง ไม่ใช่เมื่อลาออกเอง'}
+                </p>
                 </div>
               </details>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary-soft px-4 py-3 text-fg ring-1 ring-primary/50">
-                <span className="text-sm text-muted-fg">มูลค่าความเสี่ยง (คะแนน × ต้นทุนหาคนแทน)</span>
-                <span className="flex items-center gap-2 text-lg font-semibold tabular-nums">
-                  {money(impact.expected_loss)}
-                  <Icon name="right" className="size-4 text-muted-fg" />
-                  {money(afterScore * impact.replacement_cost)}
-                </span>
-              </div>
-              <p className="mt-3 text-xs text-muted-fg">
-                ตัวเลขเป็นบาท ค่าประมาณเพื่อเปรียบเทียบมาตรการ ไม่ใช่ต้นทุนจริงของบริษัท
-                {!impact.include_severance && ' · ไม่นับค่าชดเชยตามมาตรา 118 เพราะจ่ายเมื่อนายจ้างเลิกจ้าง ไม่ใช่เมื่อลาออกเอง'}
-              </p>
             </Card>
           )}
         </div>
@@ -685,7 +688,8 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
               <RiskGauge size="md" title="หลังปรับ" score={afterScore} band={result.after.risk_band} bandTh={result.after.risk_band_th} />
               <div aria-live="polite" className="space-y-3">
                 <DeltaBadge delta={delta} idle={!nChanged} />
-                <Drivers drivers={result.drivers} />
+                <Drivers drivers={result.drivers} changed={result.changes_applied} />
+                <MoneyVerdict impact={impact ?? {}} money={money} />
               </div>
               {/* DE-18: ผลของ WFH มาจากสูตรประมาณ (ระยะทาง × วันเข้าออฟฟิศ / 5) โมเดลไม่เคยเรียนเรื่องนี้ บอกไว้ใกล้ตัวเลข */}
               {'OfficeDaysPerWeek' in result.changes_applied && (

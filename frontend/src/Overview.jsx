@@ -261,6 +261,8 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
   const [s, { departments }] = data
   if (s.n_employees === 0 && !department) return <NoEmployees who={who} onImport={onImport} />
   const deptOptions = [['', 'ทั้งบริษัท'], ...departments.map((d) => [d.department, d.department])]
+  // แผนกที่ควรดูก่อน = คนเสี่ยงสูงมากสุด (เดิมเรียงตามมูลค่าความเสี่ยงรวม แผนกที่ไม่มีคนเสี่ยงสูงแต่เงินเดือนสูงขึ้นมาก่อน)
+  const byHighRisk = [...departments].sort((a, b) => b.risk_bands.High - a.risk_bands.High || b.mean_risk_score - a.mean_risk_score)
   const manyDepartments = departments.length > 8
   const maxShare = Math.max(...s.top_factors.map((f) => f.share), 1e-9)
   const high = s.risk_bands.High
@@ -286,7 +288,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
           <BandBar bands={s.risk_bands} total={s.n_employees} />
           <div className="sm:text-right">
             <div className="flex items-center gap-2 text-sm text-muted-fg sm:justify-end">
-              มูลค่าความเสี่ยงรวม
+              {s.risk_bands.High > 0 ? `ถ้า ${s.risk_bands.High.toLocaleString()} คนที่เสี่ยงสูงลาออก` : 'ต้นทุนหาคนแทนคนเสี่ยงสูง'}
               <button
                 type="button"
                 onClick={() => setFullBaht((v) => !v)}
@@ -296,10 +298,13 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                 {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
               </button>
             </div>
-            <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.expected_loss_total)}>
-              <CountUp value={s.expected_loss_total} format={money} />
+            {/* เดิมโชว์มูลค่าความเสี่ยงรวมทั้งบริษัท แต่ครึ่งหนึ่งมาจากคนเสี่ยงต่ำที่เงินเดือนสูง (critique รอบ 5) ไม่ตรงกับหัวข้อ "ควรคุยกับใคร" */}
+            <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.high_risk_replacement_cost)}>
+              <CountUp value={s.high_risk_replacement_cost} format={money} />
             </div>
-            <p className="mt-1 text-xs text-muted-fg">คะแนน × ต้นทุนหาคนแทน ใช้เทียบ ไม่ใช่ยอดจริง</p>
+            <p className="mt-1 text-xs text-muted-fg">
+              ต้นทุนหาคนแทน (ประมาณการ ไม่ใช่ยอดจริง) · มูลค่าความเสี่ยงรวมทั้งบริษัท {bahtShort(s.expected_loss_total)}
+            </p>
           </div>
         </div>
       </section>
@@ -380,7 +385,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
         </div>
       </div>
 
-      <Card icon="money" title="แยกตามแผนก" subtitle="เรียงตามมูลค่าความเสี่ยงรวม กดที่แผนกเพื่อกรอง">
+      <Card icon="money" title="แยกตามแผนก" subtitle="เรียงตามจำนวนคนเสี่ยงสูง กดที่แผนกเพื่อกรอง">
         <div className="-mx-5 overflow-x-auto sm:-mx-6">
           <table className="w-full text-sm">
             <thead>
@@ -389,11 +394,11 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                 <th className="px-2 py-2 text-right">พนักงาน</th>
                 <th className="px-2 py-2 text-right">เสี่ยงสูง</th>
                 <th className="px-2 py-2 text-right">คะแนนเฉลี่ย</th>
-                <th className="px-5 py-2 text-right sm:px-6">มูลค่าความเสี่ยงรวม</th>
+                <th className="px-5 py-2 text-right sm:px-6">หาคนแทนคนเสี่ยงสูง (ล้านบาท)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {departments.map((d) => (
+              {byHighRisk.map((d) => (
                 <tr
                   key={d.department}
                   onClick={() => setDepartment(d.department)}
@@ -412,8 +417,8 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                   <td className="px-2 py-2.5 text-right tabular-nums">{d.n_employees.toLocaleString()}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums text-risk-high">{d.risk_bands.High}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{Math.round(d.mean_risk_score * 100)}</td>
-                  <td className="whitespace-nowrap px-5 py-2.5 text-right tabular-nums sm:px-6" title={baht(d.expected_loss_total)}>
-                    {money(d.expected_loss_total)}
+                  <td className="whitespace-nowrap px-5 py-2.5 text-right tabular-nums sm:px-6" title={baht(d.high_risk_replacement_cost)}>
+                    {(d.high_risk_replacement_cost / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               ))}

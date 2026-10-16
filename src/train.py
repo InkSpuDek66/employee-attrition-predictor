@@ -41,6 +41,10 @@ RAW_PATH = f"data/raw/{RAW_FILENAME}"  # relative เพราะ source ถู�
 # เทียบกับ v1 (มีเพศ+สถานภาพ) ด้วย split/params เดียวกัน: CV AUC 0.827 -> 0.826, Recall@top20% 0.596 เท่าเดิม
 # ข้อมูลที่เหลือเดาเพศได้แค่ AUC 0.53 (ไม่มี proxy) ส่วนอายุยังใช้ เพราะอายุงาน/ระดับตำแหน่งแทนอายุได้อยู่ดี (AUC 0.86)
 EXCLUDED = ["Gender", "MaritalStatus"]
+# v3: เงินเดือนมากขึ้น = ความเสี่ยงต้องไม่เพิ่ม (ต้นไม้แบ่งเงินเดือนเป็นช่วงๆ v2 ขึ้นเงินเดือนแล้วคะแนนกลับขึ้นได้
+# HR เห็นใน What-if ว่า "ขึ้นเงินเดือนแล้วเสี่ยงขึ้น" critique 2026-10-16 รอบ 5) วัดด้วย split/params เดียวกับ v2:
+# test AUC 0.792 -> 0.792, CV AUC 0.832 -> 0.834, คน test ที่ขึ้นเงินเดือนแล้วคะแนนเพิ่ม 294/294 -> 0/294
+MONOTONE = {"MonthlyIncome": -1}
 
 
 def bootstrap_auc_ci(y, p, n=BOOT_N, seed=BOOT_SEED):
@@ -57,10 +61,10 @@ def train(name: str) -> str:
     X, y = df.drop(columns=[TARGET_COLUMN, *excluded]), df[TARGET_COLUMN]
     Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)  # เหมือน notebook 04
     spw = (ytr == 0).sum() / (ytr == 1).sum()
-    model = XGBClassifier(**PARAMS, scale_pos_weight=spw, random_state=42, n_jobs=N_JOBS).fit(Xtr, ytr)
+    model = XGBClassifier(**PARAMS, scale_pos_weight=spw, monotone_constraints=MONOTONE, random_state=42, n_jobs=N_JOBS).fit(Xtr, ytr)
 
     p = model.predict_proba(Xte)[:, 1]
-    cv_auc = cross_val_score(XGBClassifier(**PARAMS, scale_pos_weight=spw, random_state=42, n_jobs=N_JOBS), Xtr, ytr,
+    cv_auc = cross_val_score(XGBClassifier(**PARAMS, scale_pos_weight=spw, monotone_constraints=MONOTONE, random_state=42, n_jobs=N_JOBS), Xtr, ytr,
                              cv=StratifiedKFold(5, shuffle=True, random_state=42), scoring="roc_auc")
     ci_low, ci_high = bootstrap_auc_ci(yte.to_numpy(), p)
     metrics = {"test_auc": roc_auc_score(yte, p), "test_pr_auc": average_precision_score(yte, p),
@@ -73,6 +77,7 @@ def train(name: str) -> str:
     with mlflow.start_run(run_name=f"train-{name}"):
         # mlflow.source.name ค่าเดิมเป็น path เต็มในเครื่อง (MLflow ติด commit ของ git ให้เองใน mlflow.source.git.commit)
         mlflow.set_tags({"source": "src/train.py", "mlflow.source.name": "src/train.py", "feature_set": "P_selected", "excluded_features": ",".join(EXCLUDED),
+                         "monotone_constraints": ",".join(f"{k}:{v}" for k, v in MONOTONE.items()),
                          "platform": platform.platform(), "n_jobs": N_JOBS, "cpu_count": os.cpu_count(),
                          # hash จากค่าในตาราง ไม่ใช่ byte ของไฟล์ จึงไม่เปลี่ยนตาม line ending ของแต่ละ OS
                          "data_sha256": hashlib.sha256(pd.util.hash_pandas_object(raw, index=False).values).hexdigest()})
