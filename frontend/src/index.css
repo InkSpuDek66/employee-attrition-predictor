@@ -390,8 +390,6 @@ input[type='range'] {
   transform-origin: center;
   animation: mascot-twinkle 1.8s ease-in-out infinite;
 }
-  75% { transform: translateX(1px); }
-}
 .mascot-drip {
   animation: mascot-drip 1.6s ease-in infinite;
 }
