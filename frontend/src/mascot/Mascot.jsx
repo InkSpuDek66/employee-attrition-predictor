@@ -89,7 +89,8 @@ export function AssistantHint({ who, title, children }) {
   const Character = CHARACTERS[who]
   return (
     <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-secondary px-6 py-10 sm:flex-row sm:justify-center sm:gap-6">
-      <div className="w-36 shrink-0">
+      {/* จอใหญ่มีผู้ช่วยใน sidebar แล้ว ซ่อนตัวนี้ไม่ให้ขึ้นสองตัว (มือถือไม่มี sidebar ยังโชว์) */}
+      <div className="w-36 shrink-0 lg:hidden">
         <Character mood="none" />
       </div>
       <Bubble tail="side" className="max-w-md text-left">
@@ -190,14 +191,14 @@ export default function Mascot({ risk, who, onChoose, say, idle }) {
         <div className="text-sm font-semibold text-fg">{m.text}</div>
         <div className="text-xs text-muted-fg">{m.sub}</div>
         {risk?.band && !say && (
-          <div className="mt-1 text-[11px] tabular-nums text-muted-fg/80">
+          <div className="mt-1 text-xs tabular-nums text-muted-fg/80">
             พนักงาน #{risk.id} · {risk.label} {Math.round(risk.score * 100)}
           </div>
         )}
       </Bubble>
       {/* เลือกผู้ช่วย: รูปหน้าเล็กเรียงกัน (คล้ายเลือกรูปโปรไฟล์) */}
       <div className="mt-4 border-t border-line pt-3">
-        <div className="text-[11px] text-muted-fg">อยากให้ใครเป็นผู้ช่วยดี?</div>
+        <div className="text-xs text-muted-fg">อยากให้ใครเป็นผู้ช่วยดี?</div>
         <div className="mt-2 flex justify-center gap-2" role="radiogroup" aria-label="เลือกผู้ช่วย">
           {MASCOTS.map((k) => {
             const Avatar = CHARACTERS[k]
@@ -219,7 +220,7 @@ export default function Mascot({ risk, who, onChoose, say, idle }) {
             )
           })}
         </div>
-        <div className="mt-1.5 text-[11px] font-medium text-fg">{LABELS[who]}</div>
+        <div className="mt-1.5 text-xs font-medium text-fg">{LABELS[who]}</div>
       </div>
     </div>
   )

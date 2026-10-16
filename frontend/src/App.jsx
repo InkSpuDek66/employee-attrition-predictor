@@ -3,7 +3,7 @@ import Logo from '../logo/Logo'
 import Login from './Login'
 import Mascot, { MascotLoader } from './mascot/Mascot'
 import Overview from './Overview'
-import { employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD, THEME_NEXT } from './theme'
+import { api, BAND, employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THB_PER_USD, THEME_NEXT } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
 import WhatIfSimulator from './WhatIfSimulator'
 
@@ -111,7 +111,8 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
     setSay((s) => ({ n: (s?.n ?? 0) + 1, text, sub }))
     sayTimer.current = setTimeout(() => setSay(null), 4500)
   }
-  const [employeeId, setEmployeeId] = useState(initial.id || '1')
+  const [employeeId, setEmployeeId] = useState(initial.id || '1') // ช่องรหัสแบบย่อที่ลอยมุมขวาบน
+  const [findText, setFindText] = useState('') // ช่องหาพนักงานด้านบน เริ่มว่าง (เดิมค้างรหัส "1" พิมพ์ชื่อต่อกลายเป็น "1สม")
   const [query, setQuery] = useState(initial.id ? { id: Number(initial.id), tenant, n: 1 } : null)
   const [pending, setPending] = useState(() => (initial.id ? Object.fromEntries(PER_EMPLOYEE.map((t) => [t, true])) : {}))
   const rate = settings?.thb_per_usd ?? THB_PER_USD // จาก backend (DE-01) ผู้ใช้ไม่ต้องรู้ว่าโมเดลใช้ดอลลาร์เบื้องหลัง
@@ -193,13 +194,18 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
 
   function submit(e) {
     e.preventDefault()
-    load(employeeId)
+    const typed = (e.currentTarget === headerForm.current ? findText : employeeId).trim()
+    if (!/^\d+$/.test(typed)) return // พิมพ์ชื่อ = เลือกจากรายการค้นหา (EmployeeSearch จัดการ Enter เอง)
+    setEmployeeId(typed)
+    setFindText('')
+    load(typed)
     if (!PER_EMPLOYEE.includes(tab)) setTab('shap') // แท็บที่ไม่ใช่รายคน (ภาพรวม, นำเข้า) พาไปดูคนนั้น
   }
 
   // เลือกพนักงานจากรายชื่อ (ภาพรวม/หน้าว่าง) แล้วไปดูว่าทำไมถึงเสี่ยง
   function pick(id) {
     setEmployeeId(String(id))
+    setFindText('')
     load(id)
     if (!PER_EMPLOYEE.includes(tab)) setTab('shap') // แท็บที่ไม่ใช่รายคน (ภาพรวม, นำเข้า) พาไปดูคนนั้น
   }
@@ -235,9 +241,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
           style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
           aria-label="เครื่องมือ"
         >
-          <div className="hidden px-2 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-muted-fg/70 lg:block">
-            เครื่องมือวิเคราะห์
-          </div>
+          <div className="hidden pt-2 lg:block" aria-hidden="true" />
           {tabs.map((t) => {
             const active = tab === t.id
             return (
@@ -251,7 +255,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
               >
                 {active && <span className="absolute inset-y-2 left-0 hidden w-1 rounded-r bg-accent lg:block" />}
                 <Icon name={t.icon} className="size-5" />
-                <span className="whitespace-nowrap text-[11px] sm:text-xs lg:hidden">{t.short}</span>
+                <span className="whitespace-nowrap text-xs lg:hidden">{t.short}</span>
                 <span className="hidden lg:inline">{t.label}</span>
               </button>
             )
@@ -262,14 +266,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
           <Mascot risk={risk[tab]} who={who} say={say} idle={IDLE[tab]} onChoose={(v) => (setWho(v), saveMascot(v))} />
         </div>
 
-        <div className="hidden border-t border-line px-5 py-4 text-xs text-muted-fg lg:block">
-          โมเดล{' '}
-          <span className="font-medium text-fg" translate="no">
-            attrition-xgboost-P
-          </span>
-          <br />
-          คะแนนใช้จัดลำดับความเสี่ยง ไม่ใช่คำตัดสิน
-        </div>
+        {/* ชื่อรุ่นโมเดลเป็นรายละเอียดของทีมพัฒนา ไม่โชว์ให้ HR (เดิมกินที่จนท้าย sidebar ถูกตัดที่จอสูง 900px) */}
         <div className="hidden items-center gap-3 border-t border-line bg-card px-4 py-3 lg:sticky lg:bottom-0 lg:flex lg:px-5">
           <div className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-fg">
             <Icon name="user" className="size-5" />
@@ -286,9 +283,9 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
       <main id="main" className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8 print:max-w-none print:p-0">
         <header className="mb-6 flex flex-col gap-5 print:hidden xl:flex-row xl:items-end xl:justify-between">
           <div>
-            {tab === 'overview' && <div className="mb-1 text-sm text-accent">{greeting(user.name)}</div>}
-            <div className="text-sm font-medium text-muted-fg">{current.label}</div>
-            <h1 className="mt-0.5 text-balance text-2xl font-semibold tracking-tight text-fg sm:text-3xl">{current.hint}</h1>
+            {/* หัวข้อหน้า = คำถามของ HR ตัวใหญ่ หนา ชื่อเครื่องมือ/คำทักทายเป็นบรรทัดรองใต้หัวข้อ (ไม่มีป้ายเล็กเหนือหัวข้อ) */}
+            <h1 className="text-balance text-2xl font-bold tracking-tight text-fg sm:text-[2rem] sm:leading-tight">{current.hint}</h1>
+            <p className="mt-1 text-sm text-muted-fg">{tab === 'overview' ? `${greeting(user.name)} · ${current.label}` : current.label}</p>
           </div>
           {/* ช่องรหัสพนักงานใช้เฉพาะแท็บรายคน (ภาพรวม/นำเข้า เลือกคนจากรายชื่อแทน) */}
           {PER_EMPLOYEE.includes(tab) && (
@@ -297,18 +294,8 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
               onSubmit={submit}
               className="grid gap-3 rounded-xl border border-line bg-card p-3 sm:max-w-md sm:grid-cols-[1fr_auto] sm:items-end xl:w-[22rem] xl:shrink-0"
             >
-              <Field label="รหัสพนักงาน" icon="user">
-                <input
-                  className={inputClass}
-                  name="employee_id"
-                  type="number"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  min="1"
-                  required
-                  value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
-                />
+              <Field label="รหัสหรือชื่อพนักงาน" icon="user">
+                <EmployeeSearch value={findText} onChange={setFindText} onPick={pick} />
               </Field>
               <PrimaryButton loading={!!pending[tab]}>
                 โหลด <Icon name="right" className="size-4" />
@@ -335,7 +322,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
                             : 'cursor-pointer border-line bg-card text-fg hover:border-accent/40 hover:text-accent'
                         }`}
                       >
-                        #{r.id}
+                        {r.name ? `${r.name.split(' ')[0]} · #${r.id}` : `#${r.id}`}
                       </button>
                     )
                   })}
@@ -454,5 +441,89 @@ function LogoutButton({ user, onLogout, className = '' }) {
     >
       <Icon name="logout" className="size-5" />
     </button>
+  )
+}
+
+// ช่องหาพนักงาน (combobox): พิมพ์รหัสแล้วกดโหลด หรือพิมพ์ชื่อ แผนก ตำแหน่ง แล้วเลือกจากรายการ (เรียงตามความเสี่ยง)
+// HR นึกถึงคนจากชื่อ ไม่ใช่รหัส (critique 2026-10-16) ค้นหาด้วย /company-summary/top-employees?q=
+function EmployeeSearch({ value, onChange, onPick }) {
+  const [open, setOpen] = useState(false) // เปิดรายการหลังพิมพ์เท่านั้น (ค่าเริ่มต้น "1" ไม่ต้องค้น)
+  const [found, setFound] = useState({ text: '', hits: [] }) // ผลของคำค้นไหน (ยังไม่ตรงกับที่พิมพ์ = กำลังค้น)
+  const [active, setActive] = useState(0)
+  const text = value.trim()
+  useEffect(() => {
+    if (!open || !text) return
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => {
+      api(`/company-summary/top-employees?${new URLSearchParams({ q: text, n: 8 })}`, { signal: ctrl.signal }).then(
+        (d) => (setFound({ text, hits: d.employees }), setActive(0)),
+        () => {},
+      )
+    }, 200)
+    return () => (clearTimeout(timer), ctrl.abort())
+  }, [open, text])
+  const hits = open && found.text === text ? found.hits : []
+  const choose = (e) => (setOpen(false), onPick(e.employee_id))
+  function onKeyDown(e) {
+    if (e.key === 'Escape') return setOpen(false)
+    if (!hits.length) return
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((i) => (i + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % hits.length)
+    } else if (e.key === 'Enter' && !/^\d+$/.test(text)) {
+      e.preventDefault() // พิมพ์รหัสล้วน Enter = โหลดรหัสนั้น (submit ของฟอร์ม) พิมพ์คำ = เลือกคนที่ไฮไลต์
+      choose(hits[active])
+    }
+  }
+  return (
+    <div className="relative">
+      <input
+        className={inputClass}
+        name="employee_id"
+        role="combobox"
+        aria-expanded={hits.length > 0}
+        aria-controls="employee-hits"
+        aria-activedescendant={hits.length ? `employee-hit-${hits[active].employee_id}` : undefined}
+        aria-autocomplete="list"
+        autoComplete="off"
+        spellCheck={false}
+        required
+        placeholder="เช่น 622 หรือ สมชาย"
+        value={value}
+        onChange={(e) => (onChange(e.target.value), setOpen(true))}
+        onKeyDown={onKeyDown}
+        onBlur={() => setOpen(false)}
+      />
+      {hits.length > 0 && (
+        <ul id="employee-hits" role="listbox" className="absolute inset-x-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-lg border border-line bg-card p-1 shadow-lg">
+          {hits.map((e, i) => (
+            <li
+              key={e.employee_id}
+              id={`employee-hit-${e.employee_id}`}
+              role="option"
+              aria-selected={i === active}
+              onMouseDown={(ev) => (ev.preventDefault(), choose(e))} // mousedown: ก่อนช่องเสียโฟกัสแล้วรายการปิด
+              onMouseEnter={() => setActive(i)}
+              className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 ${i === active ? 'bg-muted' : ''}`}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-fg">{employeeLabel(e.employee_id, e.name)}</span>
+                <span className="block truncate text-xs text-muted-fg">
+                  {e.job_role} · {e.department}
+                </span>
+              </span>
+              <span className={`text-sm font-semibold tabular-nums ${BAND[e.risk_band].text}`}>
+                {Math.round((e.calibrated_risk_score ?? e.risk_score) * 100)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && text && !/^\d+$/.test(text) && found.text === text && !found.hits.length && (
+        <p role="status" className="absolute inset-x-0 top-full z-30 mt-1 rounded-lg border border-line bg-card px-3 py-2 text-sm text-muted-fg shadow-lg">
+          ไม่พบพนักงานที่ตรงกับ “{text}”
+        </p>
+      )}
+    </div>
   )
 }

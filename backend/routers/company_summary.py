@@ -61,6 +61,11 @@ class DepartmentSummary(Summary):
     department: str
 
 
+class Reason(BaseModel):
+    feature: str  # ชื่อฟีเจอร์ของโมเดล (หน้าเว็บแปลงเป็นประโยค เช่น "เคยทำงานมาแล้ว 8 บริษัท")
+    value: float  # ค่าที่ส่งเข้าโมเดล (เงินเดือนเป็นหน่วยของโมเดล)
+
+
 class TopEmployee(BaseModel):
     employee_id: int
     name: Optional[str] = None  # ชื่อ-นามสกุลที่บริษัทกรอกตอนนำเข้า (ไม่บังคับ) ใช้แสดงผลเท่านั้น
@@ -71,10 +76,12 @@ class TopEmployee(BaseModel):
     department: str
     job_role: str
     job_level: int
+    reasons: list[Reason] = []  # ส่ง reasons=true: ปัจจัยที่ดันความเสี่ยงมากสุด 2 ข้อ (ไม่นับข้อมูลส่วนตัว/ตีความไม่ได้)
 
 
 class TopEmployeesResponse(BaseModel):
     employees: list[TopEmployee]
+    total: int = 0  # จำนวนที่ตรงเงื่อนไขทั้งหมด (ก่อนตัดเหลือ n) หน้าเว็บใช้บอก "แสดง 20 จาก 1,470 คน"
     note: str = "เรียงตามคะแนนความเสี่ยงจากมากไปน้อย ใช้เลือกว่าควรดูใครก่อน ไม่ใช่คำตัดสิน"
 
 
@@ -90,6 +97,22 @@ def _inputs(record, tenant: str):
     raw = ms.risk_scores(X)
     shown = calibration.apply(record, raw) if record else raw
     return ms.explainer()(X).values, list(X.columns), shown, ms.display_employees(tenant)
+
+
+MAX_REASONS = 2
+
+
+def _reasons(X) -> dict:
+    """{รหัส: [Reason]} ปัจจัยที่ดันความเสี่ยงขึ้นมากสุดของแต่ละคน ไว้เป็นเหตุผลหนึ่งบรรทัดในรายชื่อหน้าแรก
+    ใช้เกณฑ์เดียวกับหน้า SHAP: ไม่ยกข้อมูลส่วนตัว (อายุ ฯลฯ) หรือฟีเจอร์ที่ตีความไม่ได้มาเป็นเหตุผล
+    ข้ามคอลัมน์ one-hot (เช่น JobRole_Sales Executive) เพราะเป็นประโยคที่ HR อ่านไม่รู้เรื่อง"""
+    values = ms.explainer()(X).values
+    usable = [i for i, c in enumerate(X.columns) if "_" not in c and cs.factor_kind(c) in ("actionable", "background")]
+    out = {}
+    for row, emp_id in enumerate(X.index):
+        ranked = sorted((i for i in usable if values[row, i] > 0), key=lambda i: -values[row, i])[:MAX_REASONS]
+        out[emp_id] = [Reason(feature=X.columns[i], value=float(X.iat[row, i])) for i in ranked]
+    return out
 
 
 def _as_of(tenant: str) -> dict:
@@ -183,12 +206,15 @@ def departments_summary(top_n: int = Query(3, ge=1, le=50), user: dict = Depends
 
 @router.get("/company-summary/top-employees", response_model=TopEmployeesResponse)
 def top_employees(
-    n: int = Query(10, ge=1, le=100),
+    n: int = Query(10, ge=1, le=2000),
     department: Optional[str] = None,
+    q: Optional[str] = Query(None, max_length=100),
+    reasons: bool = False,
     user: dict = Depends(auth.current_user),
 ):
     """พนักงานที่คะแนนความเสี่ยงสูงสุด n คน (ทั้งบริษัทหรือแผนกเดียว) ให้หน้าเว็บกดเลือกได้โดยไม่ต้องรู้รหัส
-    บริษัทที่ recalibrate แล้ว (ของผู้ใช้ที่ login) จัดลำดับ/แบ่งระดับด้วยคะแนนที่ปรับเทียบ ให้ตรงกับหน้า SHAP/What-if"""
+    บริษัทที่ recalibrate แล้ว (ของผู้ใช้ที่ login) จัดลำดับ/แบ่งระดับด้วยคะแนนที่ปรับเทียบ ให้ตรงกับหน้า SHAP/What-if
+    q = ค้นหา: ชื่อ แผนก หรือตำแหน่งที่มีคำนี้ (ไม่สนตัวพิมพ์เล็ก/ใหญ่) หรือรหัสที่ขึ้นต้นด้วยตัวเลขนี้ ผลยังเรียงตามความเสี่ยง"""
     tenant = user["tenant_id"]
     record = calibration.load(tenant)
     X = ms.employee_features(tenant)
@@ -201,8 +227,17 @@ def top_employees(
         if department not in set(rows["Department"]):
             raise HTTPException(404, f"ไม่พบแผนก '{department}' (มี: {sorted(rows['Department'].unique())})")
         rows = rows[rows["Department"] == department]
+    if q and q.strip():
+        word = q.strip().casefold()
+        text = rows[db.FULL_NAME].fillna("").astype(str) + " " + rows["Department"].astype(str) + " " + rows["JobRole"].astype(str)
+        hit = text.str.casefold().str.contains(word, regex=False)
+        if word.isdigit():
+            hit |= rows.index.astype(str).str.startswith(word)
+        rows = rows[hit]
     top = rows.nlargest(n, "shown")
+    why = _reasons(X.loc[top.index]) if reasons and len(top) else {}
     return TopEmployeesResponse(
+        total=len(rows),
         employees=[
             TopEmployee(
                 employee_id=int(emp_id),
@@ -214,6 +249,7 @@ def top_employees(
                 department=r.Department,
                 job_role=r.JobRole,
                 job_level=int(r.JobLevel),
+                reasons=why.get(emp_id, []),
             )
             for emp_id, r in top.iterrows()
         ]

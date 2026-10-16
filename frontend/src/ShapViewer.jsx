@@ -5,7 +5,7 @@ import Logo from '../logo/Logo'
 import { api, baht, bandOf, employeeLabel, friendly, loadSession, useApi } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
-import { Alert, Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
+import { Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
 
 const TOP_N = [5, 10, 15, 20].map((n) => [n, `${n}`])
 
@@ -250,7 +250,12 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
           </div>
 
           <Summary ups={ups} downs={downs} band={bandOf(score)} />
-          {data.warning && <Alert tone="warning">{data.warning}</Alert>}
+          {data.warning && (
+            <p className="flex items-start gap-1.5 text-xs text-risk-mid">
+              <Icon name="warning" className="size-4 shrink-0" />
+              ยังไม่ปรับเทียบกับบริษัท ใช้ SHAP ดูทิศทางของปัจจัย ไม่ใช่ตัวเลขยืนยัน
+            </p>
+          )}
 
           <Card
             icon="chart"
@@ -295,7 +300,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
                         <td className="px-5 py-2.5 sm:px-6">
                           <div className="font-medium text-fg">{r.label}</div>
                           {NOT_A_REASON[r.kind] && (
-                            <span className="mt-0.5 inline-block rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-fg">{NOT_A_REASON[r.kind]}</span>
+                            <span className="mt-0.5 inline-block rounded bg-muted px-1.5 py-0.5 text-xs text-muted-fg">{NOT_A_REASON[r.kind]}</span>
                           )}
                           {up && r.recommendation && <div className="mt-0.5 text-xs text-muted-fg">{r.recommendation}</div>}
                           <div className="mt-1 h-1 w-full max-w-40 rounded-full bg-muted">

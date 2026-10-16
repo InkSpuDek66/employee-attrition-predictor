@@ -1,8 +1,8 @@
 // ภาพรวมบริษัท (README 6.6) + รายชื่อพนักงานเสี่ยงสูงสุดให้กดเลือก ไม่ต้องรู้รหัสก่อน
 // ใช้ /company-summary, /company-summary/departments, /company-summary/top-employees
 // ทุกส่วนใช้คะแนนชุดเดียวกัน: ปรับเทียบแล้วถ้าบริษัทของผู้ใช้ปรับเทียบ (DE-11) ยังไม่ปรับ = backend ส่ง warning มา
-import { useState } from 'react'
-import { featureLabel, JOB_LEVELS } from './featureLabels'
+import { useEffect, useState } from 'react'
+import { featureLabel, featurePhrase, featureValue, JOB_LEVELS } from './featureLabels'
 import { AssistantHint, SorryState } from './mascot/Mascot'
 import { api, baht, BAND, bahtShort, csvCell, employeeLabel, friendly, inputClass, useApi } from './theme'
 import { Alert, Card, CountUp, Icon, Segmented, Skeleton } from './ui'
@@ -15,7 +15,8 @@ const initials = (name) => {
   const words = name.match(/[A-Za-z]+/g)
   return words ? words.slice(0, 2).map((w) => w[0].toUpperCase()).join('') : name.replace(/^[เแโใไ]/, '').charAt(0)
 }
-const topQuery = (n, department) => new URLSearchParams({ n, ...(department && { department }) })
+const topQuery = (n, department, q, reasons) =>
+  new URLSearchParams({ n, ...(department && { department }), ...(q && { q }), ...(reasons && { reasons: true }) })
 
 // ดาวน์โหลดรายชื่อเสี่ยงสูงเป็น CSV (เปิดใน Excel ภาษาไทยได้ เพราะใส่ BOM) ไว้ใช้ในประชุม/ส่งหัวหน้าแผนก
 async function downloadCsv(department) {
@@ -56,14 +57,24 @@ export function CsvButton({ department, onDone = () => {} }) {
 }
 
 // รายชื่อพนักงานเสี่ยงสูงสุด กดแถวแล้วไปดูรายละเอียดคนนั้น (คะแนนปรับเทียบถ้ามี ตรงกับหน้า SHAP/What-if)
-export function TopRiskList({ n = 10, department = '', onPick, compact = false }) {
-  const q = topQuery(n, department)
-  const { loading, data, error } = useApi([`/company-summary/top-employees?${q}`])
+// q = คำค้น (ชื่อ รหัส แผนก ตำแหน่ง) onMore = ปุ่มแสดงเพิ่ม (ดูได้ทุกคน ไม่ใช่แค่ 10 อันดับแรก)
+// rate = บาทต่อดอลลาร์ ส่งมา = โชว์เหตุผลหลักหนึ่งบรรทัดต่อคน ("เคยทำงานมาแล้ว 8 บริษัท · ทำงานล่วงเวลา (OT)")
+export function TopRiskList({ n = 10, department = '', q = '', rate, onPick, onMore, onLess, compact = false }) {
+  const { loading, data, error } = useApi([`/company-summary/top-employees?${topQuery(n, department, q, !!rate)}`])
+  const why = (e) =>
+    e.reasons
+      .map((r) => featurePhrase(r.feature, r.value, r.feature === 'MonthlyIncome' ? baht(r.value * rate) : featureValue(r.feature, r.value)))
+      .join(' · ')
   if (error) return <p className="text-sm text-risk-high">{error}</p>
-  if (loading) return <Skeleton className={compact ? 'h-40' : 'h-80'} />
-  if (data[0].employees.length === 0) return <p className="px-2 py-6 text-center text-sm text-muted-fg">ยังไม่มีพนักงาน นำเข้าข้อมูลก่อน</p>
+  if (!data) return <Skeleton className={compact ? 'h-40' : 'h-80'} />
+  const { employees, total } = data[0]
+  if (employees.length === 0)
+    return (
+      <p className="px-2 py-6 text-center text-sm text-muted-fg">{q ? `ไม่พบพนักงานที่ตรงกับ “${q}”` : 'ยังไม่มีพนักงาน นำเข้าข้อมูลก่อน'}</p>
+    )
   return (
-    <ul className="divide-y divide-line">
+    <>
+    <ul className={`divide-y divide-line transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
       {data[0].employees.map((e, i) => {
         const b = BAND[e.risk_band]
         return (
@@ -71,10 +82,12 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
             <button
               type="button"
               onClick={() => onPick(e.employee_id)}
-              className="lift flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className={`lift flex w-full cursor-pointer gap-3 rounded-lg px-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                rate ? 'items-start py-3' : 'items-center py-2.5'
+              }`}
             >
-              <span className="w-5 text-right text-xs tabular-nums text-muted-fg">{i + 1}</span>
-              <span className={`grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold ring-1 ${b.pill}`} title={e.job_role} aria-hidden="true">
+              <span className={`w-5 text-right text-xs tabular-nums text-muted-fg ${rate ? 'pt-2' : ''}`}>{i + 1}</span>
+              <span className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold ring-1 ${b.pill}`} title={e.job_role} aria-hidden="true">
                 {e.name ? initials(e.name) : <Icon name="user" className="size-4" />}
               </span>
               <span className="min-w-0 flex-1">
@@ -82,6 +95,12 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
                 {!compact && (
                   <span className="block truncate text-xs text-muted-fg">
                     {e.job_role} · {e.department} · {JOB_LEVELS[e.job_level] ?? `ระดับ ${e.job_level}`}
+                  </span>
+                )}
+                {rate && e.reasons?.length > 0 && (
+                  <span className="mt-1.5 flex items-start gap-1.5 text-sm text-fg">
+                    <Icon name="up" className="mt-0.5 size-3.5 shrink-0 text-risk-high" />
+                    <span>{why(e)}</span>
                   </span>
                 )}
               </span>
@@ -93,8 +112,30 @@ export function TopRiskList({ n = 10, department = '', onPick, compact = false }
         )
       })}
     </ul>
+    {(onMore || onLess) && (total > employees.length || n > 10) && (
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-sm">
+        <span className="text-muted-fg tabular-nums">
+          แสดง {employees.length.toLocaleString()} จาก {total.toLocaleString()} คน
+        </span>
+        <span className="flex gap-2">
+          {n > 10 && (
+            <button type="button" onClick={onLess} className="h-9 cursor-pointer rounded-lg border border-line px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
+              ย่อเหลือ 10 คน
+            </button>
+          )}
+          {total > employees.length && (
+            <button type="button" onClick={onMore} disabled={loading} className="h-9 cursor-pointer rounded-lg border border-line px-3 font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-wait">
+              แสดงเพิ่มอีก {Math.min(LIST_STEP, total - employees.length).toLocaleString()} คน
+            </button>
+          )}
+        </span>
+      </div>
+    )}
+    </>
   )
 }
+
+const LIST_STEP = 20
 
 // หน้าว่าง: ผู้ช่วยบอกวิธีใช้ + รายชื่อเสี่ยงสูงสุดให้กดเลือกได้เลย ไม่ต้องรู้รหัส
 export function EmptyPicker({ who, title, children, onPick }) {
@@ -138,86 +179,38 @@ function DataAsOf({ asOf, days }) {
   )
 }
 
-// num + format = ตัวเลขนับขึ้นตอนเปิด/สลับแผนก
-// action = ปุ่มเล็กมุมขวาบน (เช่น สลับดูจำนวนเต็ม), title = ข้อความตอนชี้
-function Kpi({ label, num, format, sub, tone = 'text-fg', small = false, action, title }) {
-  return (
-    <div className="rounded-xl border border-line bg-card p-5" title={title}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="text-xs font-medium text-muted-fg">{label}</div>
-        {action}
-      </div>
-      <div className={`mt-1 font-semibold tabular-nums ${small ? 'text-2xl' : 'text-3xl'} ${tone}`}>
-        <CountUp value={num} format={format} />
-      </div>
-      {sub && <div className="mt-1 text-xs text-muted-fg">{sub}</div>}
-    </div>
-  )
-}
-
-// โดนัทสัดส่วน ต่ำ/กลาง/สูง + ตัวเลขกำกับทุกช่วง (ไม่ใช้สีอย่างเดียว) ชี้ที่ช่วงเพื่อดูจำนวน
+// สัดส่วนต่ำ/กลาง/สูง เป็นแถบเดียว + ตัวเลขทุกช่วง (ไม่ใช้สีอย่างเดียว) ชี้ที่ช่วงเพื่อดูจำนวน
 const BANDS = [
-  ['Low', 'stroke-band-low', 'bg-band-low'],
-  ['Medium', 'stroke-band-mid', 'bg-band-mid'],
-  ['High', 'stroke-band-high', 'bg-band-high'],
+  ['Low', 'bg-band-low'],
+  ['Medium', 'bg-band-mid'],
+  ['High', 'bg-band-high'],
 ]
-const R = 42
-const C = 2 * Math.PI * R
-const GAP = 1.5 // ช่องว่างสีพื้นระหว่างช่วง (หน่วยเดียวกับ viewBox)
 
-function BandDonut({ bands, total }) {
-  const lens = BANDS.map(([k]) => (bands[k] / total) * C)
-  const starts = lens.map((_, i) => lens.slice(0, i).reduce((a, b) => a + b, 0)) // แต่ละช่วงเริ่มต่อจากช่วงก่อนหน้า
+function BandBar({ bands, total }) {
+  const pct = (k) => (bands[k] / total) * 100
   return (
-    <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
-      <svg viewBox="0 0 100 100" className="size-40 shrink-0 -rotate-90" role="img" aria-label={`พนักงาน ${total} คน: ${BANDS.map(([k]) => `เสี่ยง${BAND[k].th} ${bands[k]} คน`).join(', ')}`}>
-        <circle cx="50" cy="50" r={R} fill="none" className="stroke-muted" strokeWidth="12" />
-        {BANDS.map(([k, stroke], i) =>
-          bands[k] > 0 && (
-            <circle
-              key={k}
-              cx="50"
-              cy="50"
-              r={R}
-              fill="none"
-              strokeWidth="12"
-              className={`donut-arc ${stroke}`}
-              strokeDasharray={`${Math.max(lens[i] - GAP, 0)} ${C}`}
-              strokeDashoffset={-starts[i]}
-            >
-              <title>{`เสี่ยง${BAND[k].th} ${bands[k].toLocaleString()} คน`}</title>
-            </circle>
-          ),
-        )}
-        <g className="rotate-90 [transform-origin:50px_50px]">
-          <text x="50" y="49" textAnchor="middle" className="fill-fg text-[15px] font-semibold tabular-nums">
-            {total.toLocaleString()}
-          </text>
-          <text x="50" y="61" textAnchor="middle" className="fill-muted-fg text-[7px]">
-            คนทั้งหมด
-          </text>
-        </g>
-      </svg>
-      <ul className="grid w-full grid-cols-3 gap-2 sm:gap-3">
-        {BANDS.map(([k, , fill]) => (
-          <li key={k} className="rounded-lg bg-canvas px-3 py-2.5">
-            <div className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-fg">
-              <span className={`size-2.5 shrink-0 rounded-sm ${fill}`} />
-              {/* จอแคบ (มือถือ) ตัดคำว่า "เสี่ยง" / "ของพนักงาน" ออก กล่องแคบจนข้อความตกบรรทัด */}
-              <span>
-                <span className="hidden sm:inline">เสี่ยง</span>
-                {BAND[k].th}
-              </span>
-            </div>
-            <div className={`mt-1 text-2xl font-semibold tabular-nums ${BAND[k].text}`}>
+    <div>
+      <div
+        className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-muted"
+        role="img"
+        aria-label={`พนักงาน ${total.toLocaleString()} คน: ${BANDS.map(([k]) => `เสี่ยง${BAND[k].th} ${bands[k]} คน`).join(', ')}`}
+      >
+        {BANDS.map(([k, fill]) => bands[k] > 0 && <div key={k} className={`bar-grow ${fill}`} style={{ width: `${pct(k)}%` }} title={`เสี่ยง${BAND[k].th} ${bands[k].toLocaleString()} คน`} />)}
+      </div>
+      <dl className="mt-3 grid grid-cols-3 gap-2">
+        {BANDS.map(([k, fill]) => (
+          <div key={k}>
+            <dt className="flex items-center gap-1.5 text-xs text-muted-fg">
+              <span className={`size-2 shrink-0 rounded-sm ${fill}`} />
+              เสี่ยง{BAND[k].th}
+            </dt>
+            <dd className={`mt-0.5 text-xl font-semibold tabular-nums ${BAND[k].text}`}>
               <CountUp value={bands[k]} format={(v) => Math.round(v).toLocaleString()} />
-            </div>
-            <div className="text-xs tabular-nums text-muted-fg">
-              {Math.round((bands[k] / total) * 100)}%<span className="hidden sm:inline"> ของพนักงาน</span>
-            </div>
-          </li>
+            </dd>
+            <dd className="text-xs tabular-nums text-muted-fg">{Math.round(pct(k))}%</dd>
+          </div>
         ))}
-      </ul>
+      </dl>
     </div>
   )
 }
@@ -246,6 +239,14 @@ function NoEmployees({ who, onImport }) {
 
 export default function Overview({ rate, who, onPick, onImport, onCsv }) {
   const [department, setDepartment] = useState('')
+  // ค้นหา/ดูทั้งหมดในการ์ดรายชื่อ (หน่วง 250ms ระหว่างพิมพ์ ไม่ยิง API ทุกตัวอักษร)
+  const [find, setFind] = useState('')
+  const [query, setQuery] = useState('')
+  const [listN, setListN] = useState(10)
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(find.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [find])
   const [fullBaht, setFullBaht] = useState(false) // false = ย่อเป็นล้านบาท, true = จำนวนเต็มทุกหลัก
   const money = fullBaht ? baht : bahtShort
   const q = new URLSearchParams({ top_n: 5, ...(department && { department }) })
@@ -254,19 +255,15 @@ export default function Overview({ rate, who, onPick, onImport, onCsv }) {
   if (error) return <SorryState message={error} />
   if (!data) {
     return (
-      <div className="grid gap-4 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-28" />
-        ))}
-        <Skeleton className="h-96 lg:col-span-2" />
-        <Skeleton className="h-96 lg:col-span-2" />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <Skeleton className="h-[36rem]" />
+        <Skeleton className="h-80" />
       </div>
     )
   }
 
   const [s, { departments }] = data
   if (s.n_employees === 0 && !department) return <NoEmployees who={who} onImport={onImport} />
-  const highPct = Math.round((s.risk_bands.High / s.n_employees) * 100)
   const deptOptions = [['', 'ทั้งบริษัท'], ...departments.map((d) => [d.department, d.department])]
   const manyDepartments = departments.length > 8
   const maxShare = Math.max(...s.top_factors.map((f) => f.share), 1e-9)
@@ -295,71 +292,82 @@ export default function Overview({ rate, who, onPick, onImport, onCsv }) {
         </Alert>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="พนักงานทั้งหมด" num={s.n_employees} format={(v) => Math.round(v).toLocaleString()} sub={department || 'ทุกแผนก'} />
-        <Kpi label="คะแนนความเสี่ยงเฉลี่ย" num={s.mean_risk_score * 100} format={Math.round} sub="จาก 100" />
-        <Kpi label="เสี่ยงสูง" num={s.risk_bands.High} format={(v) => `${Math.round(v).toLocaleString()} คน`} sub={`${highPct}% ของพนักงาน`} tone="text-risk-high" />
-        <Kpi
-          small={fullBaht}
-          label="มูลค่าความเสี่ยงรวม"
-          num={s.expected_loss_total * rate}
-          format={money}
-          title={fullBaht ? undefined : baht(s.expected_loss_total * rate)}
-          sub="คะแนน × ต้นทุนหาคนแทน (ใช้เทียบ ไม่ใช่ยอดจริง)"
-          action={
-            <button
-              type="button"
-              onClick={() => setFullBaht((v) => !v)}
-              aria-pressed={fullBaht}
-              className="-mr-1 -mt-1 shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 text-[11px] font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            >
-              {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
-            </button>
-          }
-        />
-      </div>
-
-      <Card icon="chart" title="สัดส่วนระดับความเสี่ยง">
-        <BandDonut bands={s.risk_bands} total={s.n_employees} />
-      </Card>
-
-      {/* UX-14: grid item มี min-width: auto เนื้อหาข้างในเคยดันการ์ดกว้าง 461px บนจอ 390px จึงใส่ min-w-0 */}
-      <div className="grid items-start gap-4 xl:grid-cols-2">
+      {/* หน้าแรก = คนที่ควรคุยก่อนพร้อมเหตุผล (PRODUCT.md: รู้ในไม่กี่วินาทีว่าควรคุยกับใคร) ตัวเลขรวมอยู่แถบข้าง
+          UX-14: grid item มี min-width: auto เนื้อหาข้างในเคยดันการ์ดกว้างเกินจอมือถือ จึงใส่ min-w-0 */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
         <Card
           className="min-w-0"
-          icon="user"
-          title="พนักงานเสี่ยงสูงสุด 10 คน"
-          subtitle="กดที่แถวเพื่อดูว่าทำไมถึงเสี่ยง"
+          title={find.trim() ? 'ผลการค้นหา' : 'ควรคุยกับใครก่อน'}
+          subtitle="เรียงตามความเสี่ยง พร้อมเหตุผลหลักของแต่ละคน กดที่ชื่อเพื่อดูรายละเอียด"
           action={<CsvButton department={department} onDone={onCsv} />}
         >
-          <TopRiskList department={department} onPick={onPick} />
+          <label className="relative mb-2 block">
+            <span className="sr-only">ค้นหาพนักงาน</span>
+            <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-fg" />
+            <input
+              type="search"
+              className={`${inputClass} pl-9`}
+              placeholder="ค้นหาชื่อ รหัส แผนก หรือตำแหน่ง"
+              value={find}
+              onChange={(e) => (setFind(e.target.value), setListN(10))}
+            />
+          </label>
+          <TopRiskList
+            department={department}
+            q={query}
+            n={listN}
+            rate={rate}
+            onPick={onPick}
+            onMore={() => setListN((v) => v + LIST_STEP)}
+            onLess={() => setListN(10)}
+          />
         </Card>
 
-        <Card className="min-w-0" icon="list" title="ปัจจัยที่ทำให้เสี่ยงมากที่สุด" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ของทั้งกลุ่ม">
-          <ul className="space-y-4">
-            {s.top_factors.map((f) => (
-              <li key={f.feature}>
-                <div className="flex items-center justify-between gap-2 text-sm">
-                  <span className="font-medium text-fg">{featureLabel(f.feature)}</span>
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${
-                        f.actionable ? 'bg-accent-soft text-accent' : 'bg-muted text-muted-fg'
-                      }`}
-                    >
-                      {f.actionable ? 'บริษัทปรับได้' : 'ปรับไม่ได้'}
-                    </span>
+        <div className="min-w-0 space-y-4 lg:sticky lg:top-4">
+          <Card
+            title={department || 'ทั้งบริษัท'}
+            subtitle={`พนักงาน ${s.n_employees.toLocaleString()} คน · คะแนนเฉลี่ย ${Math.round(s.mean_risk_score * 100)} จาก 100`}
+          >
+            <BandBar bands={s.risk_bands} total={s.n_employees} />
+            <div className="mt-5 border-t border-line pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-muted-fg">มูลค่าความเสี่ยงรวม</span>
+                <button
+                  type="button"
+                  onClick={() => setFullBaht((v) => !v)}
+                  aria-pressed={fullBaht}
+                  className="-mr-1 shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                >
+                  {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
+                </button>
+              </div>
+              <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.expected_loss_total * rate)}>
+                <CountUp value={s.expected_loss_total * rate} format={money} />
+              </div>
+              <p className="mt-1 text-xs text-muted-fg">คะแนน × ต้นทุนหาคนแทน ใช้เทียบ ไม่ใช่ยอดจริง</p>
+            </div>
+          </Card>
+
+          <Card title="ปัจจัยเด่นของทั้งกลุ่ม" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ต่อคะแนน">
+            <ul className="space-y-4">
+              {s.top_factors.map((f) => (
+                <li key={f.feature}>
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium text-fg">{featureLabel(f.feature)}</span>
                     <span className="tabular-nums text-muted-fg">{Math.round(f.share * 100)}%</span>
-                  </span>
-                </div>
-                <div className="mt-1.5 h-1.5 rounded-full bg-muted">
-                  <div className="bar-grow h-full rounded-full bg-accent" style={{ width: `${(f.share / maxShare) * 100}%` }} />
-                </div>
-                {f.recommendation && <p className="mt-1.5 text-xs text-muted-fg">{f.recommendation}</p>}
-              </li>
-            ))}
-          </ul>
-        </Card>
+                  </div>
+                  <div className="mt-1.5 h-1.5 rounded-full bg-muted">
+                    <div className="bar-grow h-full rounded-full bg-accent" style={{ width: `${(f.share / maxShare) * 100}%` }} />
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-fg">
+                    <span className={f.actionable ? 'font-medium text-accent' : ''}>{f.actionable ? 'บริษัทปรับได้' : 'ปรับไม่ได้'}</span>
+                    {f.recommendation && ` · ${f.recommendation}`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
       </div>
 
       <Card icon="money" title="แยกตามแผนก" subtitle="เรียงตามมูลค่าความเสี่ยงรวม กดที่แผนกเพื่อกรอง">

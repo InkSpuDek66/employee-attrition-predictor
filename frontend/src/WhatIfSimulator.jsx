@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { featureLabel, JOB_LEVELS, SURVEY_NOTE } from './featureLabels'
-import { api, baht, BAND, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
+import { api, baht, BAND, employeeLabel, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
 import { Alert, Card, CountUp, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
@@ -90,7 +90,7 @@ function MoneyControl({ field, base, value, rate, onChange }) {
           {featureLabel(field)} (บาท)
         </label>
         {changed && (
-          <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[11px] font-medium text-on-primary">
+          <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-xs font-medium text-on-primary">
             เดิม {baht(base * rate)}
           </span>
         )}
@@ -121,7 +121,7 @@ function MoneyControl({ field, base, value, rate, onChange }) {
             onChange={(e) => onChange(Number(e.target.value))}
             aria-label={`${featureLabel(field)} (ลาก)`}
           />
-          <div className="mt-1 flex justify-between text-[11px] tabular-nums text-muted-fg">
+          <div className="mt-1 flex justify-between text-xs tabular-nums text-muted-fg">
             <span>{baht(min)}</span>
             <span>{baht(max)}</span>
           </div>
@@ -155,7 +155,7 @@ function Control({ field, type, options, base, value, onChange, unit, wide, hint
           {hint && <span className="block text-xs font-normal text-muted-fg">{hint}</span>}
         </span>
         {changed && (
-          <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[11px] font-medium text-on-primary">
+          <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-xs font-medium text-on-primary">
             เดิม {type === 'range' ? withUnit(base) : optionText(base)}
           </span>
         )}
@@ -164,7 +164,7 @@ function Control({ field, type, options, base, value, onChange, unit, wide, hint
         <>
           <div className="mb-2 text-xl font-semibold tabular-nums text-fg">{withUnit(value)}</div>
           <input type="range" {...range} value={value} onChange={(e) => onChange(e.target.value)} aria-label={featureLabel(field)} />
-          <div className="mt-1 flex justify-between text-[11px] tabular-nums text-muted-fg">
+          <div className="mt-1 flex justify-between text-xs tabular-nums text-muted-fg">
             <span>{withUnit(range.min)}</span>
             <span>{withUnit(range.max)}</span>
           </div>
@@ -202,7 +202,9 @@ function BenefitStat({ impact, money }) {
   )
 }
 
-function DeltaBadge({ delta, className = '' }) {
+// ปัดก่อนแล้วค่อยเลือกสี/ข้อความ (เดิมดูจากค่าก่อนปัด: ขึ้น "ความเสี่ยงเพิ่มขึ้น +0" สีแดง ทั้งที่คะแนนเท่าเดิม)
+function DeltaBadge({ delta: raw, className = '' }) {
+  const delta = Math.round(raw * 100)
   const style =
     delta < 0
       ? 'bg-risk-low-soft text-risk-low ring-risk-low/15'
@@ -217,8 +219,27 @@ function DeltaBadge({ delta, className = '' }) {
       </span>
       <span className="text-2xl font-semibold tabular-nums">
         {delta > 0 ? '+' : ''}
-        {Math.round(delta * 100)}
+        {delta}
       </span>
+    </div>
+  )
+}
+
+// ปัจจัยที่ทำให้คะแนนเปลี่ยนมากสุด (backend เทียบ SHAP ก่อน/หลัง) ไว้ตอบ "ทำไมขึ้นเงินเดือนแล้วความเสี่ยงไม่ลด"
+function Drivers({ drivers }) {
+  if (!drivers?.length) return null
+  return (
+    <div>
+      <div className="mb-1.5 text-xs font-medium text-muted-fg">สิ่งที่ทำให้คะแนนเปลี่ยน</div>
+      <ul className="space-y-1">
+        {drivers.map((d) => (
+          <li key={d.feature} className="flex items-center gap-2 text-sm text-fg">
+            <Icon name={d.change > 0 ? 'up' : 'down'} className={`size-4 shrink-0 ${d.change > 0 ? 'text-risk-high' : 'text-risk-low'}`} />
+            <span className="min-w-0 flex-1">{featureLabel(d.feature)}</span>
+            <span className={`text-xs ${d.change > 0 ? 'text-risk-high' : 'text-risk-low'}`}>{d.change > 0 ? 'ทำให้เสี่ยงขึ้น' : 'ทำให้เสี่ยงลดลง'}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -263,11 +284,12 @@ function BandToast({ kind }) {
 // retention = มาตรการใน config/financial_impact.json ที่ใช้คิดต้นทุน กดแล้วการ์ดต้นทุนเปลี่ยนตาม (UX-15 ข้อ 2 / UX-03)
 const PRESETS = [
   { label: 'ปิด OT', retention: 'reduce_overtime', apply: () => ({ OverTime: 'No' }) },
-  { label: 'ขึ้นเงินเดือน 10%', retention: 'salary_raise_10pct', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.1, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 10) }) },
-  { label: 'ขึ้นเงินเดือน 20%', retention: 'salary_raise_20pct', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2, PercentSalaryHike: Math.min(30, b.PercentSalaryHike + 20) }) },
+  // เปลี่ยนแค่เงินเดือน (เดิมแอบเพิ่ม "เงินเดือนขึ้นล่าสุด (%)" ด้วย ผู้ใช้ไม่เห็นว่าเปลี่ยน critique 2026-10-16)
+  { label: 'ขึ้นเงินเดือน 10%', retention: 'salary_raise_10pct', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.1 }) },
+  { label: 'ขึ้นเงินเดือน 20%', retention: 'salary_raise_20pct', apply: (b) => ({ MonthlyIncome: b.MonthlyIncome * 1.2 }) },
   { label: 'เลื่อนตำแหน่ง', retention: 'training_and_promotion_track', apply: (b) => ({ JobLevel: Math.min(5, b.JobLevel + 1), YearsSinceLastPromotion: 0 }) },
   { label: 'งดงานนอกสถานที่', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
-  { label: 'ให้ WFH 3 วัน', apply: (b) => ({ OfficeDaysPerWeek: Math.min(b.OfficeDaysPerWeek ?? 5, 2) }) },
+  { label: 'ให้ WFH 3 วัน (เข้าออฟฟิศ 2 วัน)', apply: (b) => ({ OfficeDaysPerWeek: Math.min(b.OfficeDaysPerWeek ?? 5, 2) }) },
   { label: 'อบรมเพิ่ม', retention: 'training_and_promotion_track', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
   { label: 'ให้สิทธิ์ซื้อหุ้น', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
 ]
@@ -370,9 +392,22 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
   const isBase = (field, v) =>
     field === 'MonthlyIncome' ? Math.round(v * rate) === Math.round(loaded.base[field] * rate) : v === loaded.base[field]
 
-  function applyPreset(p) {
-    if (p.retention) setRetention(p.retention)
+  // สถานะปุ่มมาตรการ: noop = คนนี้เป็นแบบนั้นอยู่แล้ว (เช่น ปิด OT กับคนที่ไม่ทำ OT) กดไม่ได้
+  // applied = ค่าที่ปรับอยู่ตรงกับมาตรการนี้ กดอีกทีเพื่อยกเลิก (คืนค่าเดิมเฉพาะช่องของมาตรการนี้)
+  // เงินเดือน: ส่ง API เป็นดอลลาร์จำนวนเต็ม (toApiChanges) ค่าที่กลับมาอาจต่างจากที่คำนวณไม่ถึง 1 ดอลลาร์ ถือว่าเท่ากัน
+  const sameValue = (field, a, b) => (field === 'MonthlyIncome' ? Math.abs(a - b) < 1 : a === b)
+  function presetState(p) {
     const patch = p.apply(loaded.base)
+    const keys = Object.keys(patch)
+    if (keys.every((k) => isBase(k, patch[k]))) return 'noop'
+    return keys.every((k) => k in changes && sameValue(k, changes[k], patch[k])) ? 'applied' : 'off'
+  }
+  function applyPreset(p) {
+    const patch = p.apply(loaded.base)
+    if (presetState(p) === 'applied') {
+      return setChanges((c) => Object.fromEntries(Object.entries(c).filter(([k]) => !(k in patch))))
+    }
+    if (p.retention) setRetention(p.retention)
     setChanges((c) => {
       const next = { ...c, ...patch }
       for (const k of Object.keys(patch)) if (isBase(k, next[k])) delete next[k]
@@ -447,18 +482,32 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
             <div className="mb-6">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-fg">มาตรการสำเร็จรูป</div>
               <div className="flex flex-wrap gap-2">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => applyPreset(p)}
-                    className="lift h-9 cursor-pointer rounded-full border border-line bg-card px-3.5 text-sm font-medium text-fg hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                  >
-                    + {p.label}
-                  </button>
-                ))}
+                {PRESETS.map((p) => {
+                  const state = presetState(p)
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => applyPreset(p)}
+                      disabled={state === 'noop'}
+                      aria-pressed={state === 'applied'}
+                      title={state === 'noop' ? 'พนักงานคนนี้เป็นแบบนี้อยู่แล้ว' : state === 'applied' ? 'กดอีกครั้งเพื่อยกเลิก' : undefined}
+                      className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        state === 'applied'
+                          ? 'cursor-pointer border-accent bg-accent-soft text-accent'
+                          : state === 'noop'
+                            ? 'cursor-not-allowed border-dashed border-line text-muted-fg'
+                            : 'lift cursor-pointer border-line bg-card text-fg hover:border-accent hover:bg-accent-soft hover:text-accent'
+                      }`}
+                    >
+                      {state === 'applied' ? <Icon name="check" className="size-4" /> : state === 'off' ? <span aria-hidden="true">+</span> : null}
+                      {p.label}
+                      {state === 'noop' && <span className="text-xs font-normal">· ทำอยู่แล้ว</span>}
+                    </button>
+                  )
+                })}
               </div>
-              <p className="mt-2 text-xs text-muted-fg">กดหลายอันได้ ผลรวมกัน · ปรับละเอียดต่อได้ที่ช่องด้านล่าง</p>
+              <p className="mt-2 text-xs text-muted-fg">กดหลายอันได้ ผลรวมกัน · กดซ้ำเพื่อยกเลิก · ปรับละเอียดต่อได้ที่ช่องด้านล่าง</p>
             </div>
             <div className="space-y-6">
               {GROUPS.map((g) => (
@@ -491,7 +540,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
           </Card>
 
           {impact && (
-            <Card icon="money" title="ต้นทุน Retain vs Replace" subtitle="ประมาณการ คิดจากข้อมูลเดิมของพนักงาน">
+            <Card icon="money" title="ต้นทุน: ดูแลต่อ หรือ หาคนแทน" subtitle="ประมาณการ คิดจากข้อมูลเดิมของพนักงาน">
               {/* ยังไม่ได้ปรับอะไร: เลือกดูต้นทุนของมาตรการทีละแบบ / ปรับแล้ว: ต้นทุนคิดจากทุกอย่างที่ปรับ ไม่ต้องเลือก */}
               {!impact.costed_from_changes && (
                 <Field label="ดูต้นทุนของมาตรการ" className="mb-4 max-w-md">
@@ -564,15 +613,16 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <div className="text-xs font-medium text-muted-fg">ผลจำลอง</div>
-                <div className="font-semibold text-fg">พนักงาน #{loaded.id}</div>
+                <div className="font-semibold text-fg">{employeeLabel(loaded.id, result.name)}</div>
               </div>
               <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-fg">อัปเดตอัตโนมัติ</span>
             </div>
             <div className="space-y-5">
               <RiskGauge size="md" title="ก่อนปรับ" score={scoreOf(result.before)} band={result.before.risk_band} bandTh={result.before.risk_band_th} />
               <RiskGauge size="md" title="หลังปรับ" score={afterScore} band={result.after.risk_band} bandTh={result.after.risk_band_th} />
-              <div aria-live="polite">
+              <div aria-live="polite" className="space-y-3">
                 <DeltaBadge delta={delta} />
+                <Drivers drivers={result.drivers} />
               </div>
               {/* DE-18: ผลของ WFH มาจากสูตรประมาณ (ระยะทาง × วันเข้าออฟฟิศ / 5) โมเดลไม่เคยเรียนเรื่องนี้ บอกไว้ใกล้ตัวเลข */}
               {'OfficeDaysPerWeek' in result.changes_applied && (
@@ -611,7 +661,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                                 {Math.round(s.delta * 100)}
                               </span>
                               {i === 0 && saved.length > 1 && (
-                                <span className="ml-auto rounded bg-risk-low-soft px-1.5 py-0.5 text-[11px] font-medium text-risk-low">ดีที่สุด</span>
+                                <span className="ml-auto rounded bg-risk-low-soft px-1.5 py-0.5 text-xs font-medium text-risk-low">ดีที่สุด</span>
                               )}
                             </span>
                             <span className="mt-0.5 block text-xs text-muted-fg">{describe(s.changes, rate)}</span>
@@ -629,7 +679,13 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                   </ul>
                 </div>
               )}
-              {result.warning && <Alert tone="warning">{result.warning}</Alert>}
+              {/* คำเตือนเต็มอยู่หน้าภาพรวมแล้ว ตรงนี้ย่อเหลือบรรทัดเดียว (เดิมซ้ำทุกหน้า) */}
+              {result.warning && (
+                <p className="flex items-start gap-1.5 text-xs text-risk-mid">
+                  <Icon name="warning" className="size-4 shrink-0" />
+                  ยังไม่ปรับเทียบกับบริษัท ใช้ดูทิศทาง ไม่ใช่ตัวเลขยืนยัน
+                </p>
+              )}
               <p className="text-xs text-muted-fg">{result.note}</p>
             </div>
           </Card>
@@ -640,7 +696,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-card/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-xl items-center gap-4">
           <div>
-            <div className="text-[11px] text-muted-fg">หลังปรับ</div>
+            <div className="text-xs text-muted-fg">หลังปรับ</div>
             <div className={`text-2xl font-semibold leading-none tabular-nums ${BAND[result.after.risk_band].text}`}>
               <CountUp value={afterScore * 100} />
             </div>

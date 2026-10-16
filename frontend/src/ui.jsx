@@ -117,21 +117,16 @@ export function PrimaryButton({ loading, children, loadingText = 'กำลั�
   )
 }
 
-export function Card({ title, subtitle, icon, action, children, className = '' }) {
+// หัวการ์ดเป็นตัวหนังสือล้วน (เดิมมีกล่องไอคอนหน้าหัวข้อทุกการ์ด = หน้าตาแบบ template ทั่วไป, critique 2026-10-16)
+// prop icon ยังรับไว้ให้ที่เรียกเดิมไม่พัง แต่ไม่วาดแล้ว
+export function Card({ title, subtitle, action, children, className = '' }) {
   return (
     <section className={`rounded-xl border border-line bg-card p-5 sm:p-6 ${className}`}>
       {title && (
-        <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            {icon && (
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-accent">
-                <Icon name={icon} className="size-5" />
-              </div>
-            )}
-            <div>
-              <h2 className="text-base font-semibold text-fg">{title}</h2>
-              {subtitle && <p className="text-sm text-muted-fg">{subtitle}</p>}
-            </div>
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold tracking-tight text-fg">{title}</h2>
+            {subtitle && <p className="mt-0.5 text-sm text-muted-fg">{subtitle}</p>}
           </div>
           {action}
         </header>
@@ -194,7 +189,7 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
           style={{ left: `${pct}%` }}
         />
       </div>
-      <div className="relative mt-1.5 h-4 text-[11px] tabular-nums text-muted-fg">
+      <div className="relative mt-1.5 h-4 text-xs tabular-nums text-muted-fg">
         <span className="absolute left-0">0</span>
         <span className="absolute -translate-x-1/2" style={{ left: `${LOW * 100}%` }}>{LOW * 100}</span>
         <span className="absolute -translate-x-1/2" style={{ left: `${HIGH * 100}%` }}>{HIGH * 100}</span>

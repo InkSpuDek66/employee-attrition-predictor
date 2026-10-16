@@ -33,7 +33,7 @@ const LABELS = {
   YearsWithCurrManager: 'อยู่กับหัวหน้าคนปัจจุบัน (ปี)',
   TenureRatio: 'สัดส่วนอายุงานที่บริษัทนี้',
   AvgSatisfaction: 'ความพึงพอใจเฉลี่ย',
-  OverTimeXDistance: 'OT × ระยะทางจากบ้าน',
+  OverTimeXDistance: 'ทำ OT ร่วมกับบ้านไกล',
 }
 
 // ระดับตำแหน่ง 1–5 ของ IBM เป็นคำ (เดาจากเงินเดือน/ประสบการณ์/ตำแหน่งในข้อมูล) ต้องตรงกับ JOB_LEVELS ใน backend/routers/employee_upload.py
@@ -63,7 +63,30 @@ const VALUES = {
 // หน่วยที่ต่อท้ายค่า (IBM ไม่ได้ระบุหน่วยระยะทาง ใช้ กม. แบบเดียวกับหน้า Streamlit)
 const UNITS = { DistanceFromHome: 'กม.', OverTimeXDistance: 'กม.', PercentSalaryHike: '%' }
 
+// ค่าในคอลัมน์ one-hot ของโมเดลเป็นภาษาไทย (เดิมขึ้น "ตำแหน่งงาน: Research Scientist: ใช่")
+const ONE_HOT = {
+  JobRole: {
+    'Sales Executive': 'เจ้าหน้าที่ขาย', 'Research Scientist': 'นักวิจัย', 'Laboratory Technician': 'นักเทคนิคห้องปฏิบัติการ',
+    'Manufacturing Director': 'ผู้อำนวยการฝ่ายผลิต', 'Healthcare Representative': 'ตัวแทนฝ่ายสุขภาพ', Manager: 'ผู้จัดการ',
+    'Sales Representative': 'ตัวแทนขาย', 'Research Director': 'ผู้อำนวยการฝ่ายวิจัย', 'Human Resources': 'เจ้าหน้าที่ฝ่ายบุคคล',
+  },
+  Department: { Sales: 'ฝ่ายขาย', 'Research & Development': 'ฝ่ายวิจัยและพัฒนา', 'Human Resources': 'ฝ่ายบุคคล' },
+  EducationField: {
+    'Life Sciences': 'วิทยาศาสตร์ชีวภาพ', Medical: 'การแพทย์', Marketing: 'การตลาด', 'Technical Degree': 'สายเทคนิค',
+    Other: 'อื่นๆ', 'Human Resources': 'บริหารงานบุคคล',
+  },
+  MaritalStatus: { Single: 'โสด', Married: 'สมรส', Divorced: 'หย่า' },
+}
+const oneHot = (name) => {
+  const i = name.indexOf('_')
+  if (i <= 0 || !LABELS[name.slice(0, i)]) return null
+  const group = name.slice(0, i)
+  const cat = name.slice(i + 1)
+  return { group, th: ONE_HOT[group]?.[cat] ?? cat }
+}
+
 export function featureValue(name, value) {
+  if (name === 'OverTimeXDistance' && !value) return 'ไม่ทำ OT'
   if (VALUES[name]?.[value]) return VALUES[name][value]
   if (UNITS[name]) return `${Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1)} ${UNITS[name]}`.replace(' %', '%')
   if (name.includes('_') && LABELS[name.split('_')[0]]) return value ? 'ใช่' : 'ไม่ใช่' // one-hot
@@ -72,8 +95,8 @@ export function featureValue(name, value) {
 
 export function featureLabel(name) {
   if (LABELS[name]) return LABELS[name]
-  const i = name.indexOf('_')
-  return i > 0 && LABELS[name.slice(0, i)] ? `${LABELS[name.slice(0, i)]}: ${name.slice(i + 1)}` : name
+  const hot = oneHot(name)
+  return hot ? `${LABELS[hot.group]}: ${hot.th}` : name
 }
 
 // ประโยคที่คนอ่านเข้าใจ แทน "ค่าของพนักงาน: …" เช่น "เงินเดือน 47,565 บาท", "บ้านห่างจากที่ทำงาน 3 กม."
@@ -104,5 +127,7 @@ const PHRASES = {
 }
 
 export function featurePhrase(name, value, shown) {
+  const hot = oneHot(name)
+  if (hot) return value ? `${LABELS[hot.group]}กลุ่ม${hot.th}` : `ไม่ได้อยู่${LABELS[hot.group]}กลุ่ม${hot.th}`
   return PHRASES[name]?.(shown, value) ?? `${featureLabel(name)}: ${shown}`
 }

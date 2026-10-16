@@ -124,6 +124,45 @@ def test_financial_impact():
     assert client.get("/financial-impact/999999").status_code == 404
 
 
+def test_top_employees_search_by_id_role_and_paging():
+    """ค้นหาพนักงานได้โดยไม่ต้องจำรหัส: รหัสขึ้นต้น, คำในตำแหน่ง (ไม่สนตัวพิมพ์) และบอกจำนวนทั้งหมดไว้ทำ "แสดงเพิ่ม" """
+    everyone = client.get("/company-summary/top-employees", params={"n": 5}).json()
+    assert len(everyone["employees"]) == 5 and everyone["total"] > 5
+    by_id = client.get("/company-summary/top-employees", params={"q": "147", "n": 50}).json()["employees"]
+    assert by_id and all(str(e["employee_id"]).startswith("147") for e in by_id)
+    role = client.get("/company-summary/top-employees", params={"q": "sales EXEC", "n": 2000}).json()
+    assert role["total"] > 0 and all("sales exec" in e["job_role"].lower() for e in role["employees"])
+    shown = [e.get("calibrated_risk_score") or e["risk_score"] for e in role["employees"]]
+    assert shown == sorted(shown, reverse=True)  # ยังเรียงตามความเสี่ยง
+    assert client.get("/company-summary/top-employees", params={"q": "ไม่มีใครชื่อนี้"}).json() == {
+        "employees": [], "total": 0, "note": everyone["note"]}
+
+
+def test_top_employees_reasons_skip_personal_and_one_hot():
+    """เหตุผลหนึ่งบรรทัดในรายชื่อหน้าแรก: ดันความเสี่ยงขึ้น ไม่เกิน 2 ข้อ ไม่ใช่ข้อมูลส่วนตัว/คอลัมน์ one-hot"""
+    import company_summary as cs
+
+    plain = client.get("/company-summary/top-employees", params={"n": 3}).json()["employees"]
+    assert all(e["reasons"] == [] for e in plain)  # ไม่ขอ = ไม่คำนวณ SHAP
+    rows = client.get("/company-summary/top-employees", params={"n": 10, "reasons": True}).json()["employees"]
+    assert any(e["reasons"] for e in rows)
+    for e in rows:
+        assert len(e["reasons"]) <= 2
+        for r in e["reasons"]:
+            assert "_" not in r["feature"] and cs.factor_kind(r["feature"]) in ("actionable", "background")
+
+
+def test_whatif_explains_what_moved_the_score():
+    """ปรับแล้วบอกปัจจัยที่ทำให้คะแนนเปลี่ยน (ไม่เกิน 3) ไม่ได้ปรับอะไร = ไม่มี"""
+    none = client.post("/whatif", json={"employee_id": 1, "changes": {}}).json()
+    assert none["drivers"] == []
+    base = none["employee"]
+    moved = client.post("/whatif", json={"employee_id": 1, "changes": {"OverTime": "No", "MonthlyIncome": base["MonthlyIncome"] * 2}}).json()
+    feats = [d["feature"] for d in moved["drivers"]]
+    assert 0 < len(feats) <= 3 and ("OverTime" in feats or "MonthlyIncome" in feats)
+    assert sorted((abs(d["change"]) for d in moved["drivers"]), reverse=True) == [abs(d["change"]) for d in moved["drivers"]]
+
+
 def test_cost_counts_every_applied_measure():
     """UX-15: ปิด OT + ขึ้นเงินเดือน 10% = ต้นทุนทั้งสองอย่าง (เดิมคิดแค่มาตรการเดียวที่เลือก ผลที่คาดว่าจะได้สูงเกินจริง)
     ปรับสิ่งที่ยังไม่มีต้นทุนในระบบ (WFH) = บอกไว้ใน uncosted ไม่ใช่นับเป็นศูนย์เงียบๆ"""

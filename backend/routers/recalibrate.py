@@ -158,7 +158,11 @@ def demo_employees(n: int = DEMO_ROWS, seed: int = DEMO_SEED) -> pd.DataFrame:
         df[col] = df[col].clip(upper=df["YearsAtCompany"])
     df["NumCompaniesWorked"] = jitter("NumCompaniesWorked", -1, 1).clip(0, 9)
     df["DistanceFromHome"] = jitter("DistanceFromHome", -3, 3).clip(1, 29)
-    df["MonthlyIncome"] = (df["MonthlyIncome"] * rng.uniform(0.85, 1.15, n)).round().astype(int).clip(lower=1009)
+    # ช่วงล่าง (5–35%) ของคนระดับตำแหน่งเดียวกันใน IBM: ใกล้เงินเดือนไทยขึ้น แต่ยังอยู่ในช่วงที่โมเดลเคยเห็น
+    # ponytail: ต่ำกว่านี้ (เช่น 15,000 บาท) อยู่นอกข้อมูลที่โมเดลเรียน (IBM ต่ำสุด 1,009 ดอลลาร์ ≈ 35,000 บาท) ถ้าเทรนด้วยข้อมูลไทยค่อยใช้ช่วงจริง
+    low = ibm.groupby("JobLevel")["MonthlyIncome"].quantile(0.05)
+    high = ibm.groupby("JobLevel")["MonthlyIncome"].quantile(0.35)
+    df["MonthlyIncome"] = pd.Series(rng.uniform(df["JobLevel"].map(low), df["JobLevel"].map(high)), index=df.index).round().astype(int).clip(lower=1009)
     df["PercentSalaryHike"] = jitter("PercentSalaryHike", -2, 2).clip(11, 25)
     for col in eu.SURVEY_FIELDS:  # 30% ของคนได้คำตอบแบบสำรวจใหม่
         redraw = rng.random(n) < 0.3

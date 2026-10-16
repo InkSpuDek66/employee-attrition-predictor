@@ -100,7 +100,7 @@ function CalibrationChart({ curve, bins }) {
       <div ref={box} className="relative w-full">
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="block overflow-visible" role="img" aria-label="กราฟเทียบคะแนนเดิมกับคะแนนหลังปรับเทียบ">
           {TICKS.map((t) => (
-            <g key={t} className="text-[11px] tabular-nums">
+            <g key={t} className="text-xs tabular-nums">
               <line x1={cx(0)} x2={cx(1)} y1={cy(t)} y2={cy(t)} className="stroke-line" strokeWidth="1" shapeRendering="crispEdges" />
               <text x={PAD.l - 8} y={cy(t) + 4} textAnchor="end" className="fill-muted-fg">
                 {t * 100}
@@ -110,7 +110,7 @@ function CalibrationChart({ curve, bins }) {
               </text>
             </g>
           ))}
-          <text x={(cx(0) + cx(1)) / 2} y={H - 2} textAnchor="middle" className="fill-muted-fg text-[11px]">
+          <text x={(cx(0) + cx(1)) / 2} y={H - 2} textAnchor="middle" className="fill-muted-fg text-xs">
             คะแนนเดิมของโมเดล →
           </text>
           <line x1={cx(0)} y1={cy(0)} x2={cx(1)} y2={cy(1)} className="stroke-muted-fg" strokeWidth="1" strokeDasharray="3 3" />
