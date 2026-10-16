@@ -21,28 +21,41 @@ const METHOD_TH = { platt: 'แบบเส้นตรง', isotonic: 'แบ�
 const when = (iso) => new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
 const pct = (v) => `${Math.round(v * 100)}%`
 
-function Status({ latest, onReset, resetting }) {
-  if (!latest)
+// active = ผลปรับเทียบที่ระบบใช้ให้คะแนนอยู่จริง (current จาก backend) ไม่ใช่แถวบนสุดของประวัติ
+// มีประวัติแต่ไม่มี active = ปรับเทียบไว้กับโมเดลรุ่นก่อน คะแนนทุกหน้ายังไม่ได้ปรับ ต้องบอกตรงๆ
+function Status({ active, stale, onReset, resetting }) {
+  if (!active && !stale)
     return (
       <Alert tone="warning">
         ยังไม่ได้ปรับเทียบ คะแนนทุกหน้าตอนนี้มาจากโมเดลกลางที่เรียนจากข้อมูล IBM ใช้จัดลำดับว่าใครเสี่ยงกว่าใครได้ แต่ตัวเลขอาจไม่ตรงกับอัตราลาออกจริงของบริษัท
       </Alert>
     )
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-risk-low/20 bg-risk-low-soft px-4 py-3 text-sm text-risk-low">
-      <Icon name="check" className="size-5 shrink-0" />
+    <div
+      className={`flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm ${
+        active ? 'border-risk-low/20 bg-risk-low-soft text-risk-low' : 'border-risk-mid/15 bg-risk-mid-soft text-risk-mid'
+      }`}
+    >
+      <Icon name={active ? 'check' : 'warning'} className="size-5 shrink-0" />
       {/* min-w: จอแคบให้ปุ่มยกเลิกตกลงบรรทัดใหม่ ไม่บีบข้อความจนเหลือไม่กี่คำต่อบรรทัด */}
-      <span className="min-w-60 flex-1">
-        ปรับเทียบแล้วเมื่อ {when(latest.calibrated_at)} ด้วยข้อมูล {latest.n_samples.toLocaleString()} คน (ลาออกจริง {pct(latest.positive_rate)}) วิธี
-        {METHOD_TH[latest.method] ?? latest.method} ทุกหน้าใช้คะแนนที่ปรับแล้ว
-      </span>
+      {active ? (
+        <span className="min-w-60 flex-1">
+          ปรับเทียบแล้วเมื่อ {when(active.calibrated_at)} ด้วยข้อมูล {active.n_samples.toLocaleString()} คน (ลาออกจริง {pct(active.positive_rate)}) วิธี
+          {METHOD_TH[active.method] ?? active.method} ทุกหน้าใช้คะแนนที่ปรับแล้ว
+        </span>
+      ) : (
+        <span className="min-w-60 flex-1">
+          <b>ผลปรับเทียบที่มีทำไว้กับโมเดลรุ่นก่อน ตอนนี้ยังไม่ได้ใช้</b> (ล่าสุดเมื่อ {when(stale.calibrated_at)}) คะแนนทุกหน้ามาจากโมเดลกลาง
+          อัปโหลดไฟล์เดิมด้านล่างอีกครั้งเพื่อปรับเทียบกับโมเดลปัจจุบัน
+        </span>
+      )}
       <button
         type="button"
         onClick={onReset}
         disabled={resetting}
         className="h-9 cursor-pointer rounded-lg border border-line bg-card px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-wait disabled:opacity-60"
       >
-        {resetting ? 'กำลังยกเลิก…' : 'ยกเลิกการปรับเทียบ'}
+        {resetting ? 'กำลังยกเลิก…' : active ? 'ยกเลิกการปรับเทียบ' : 'ลบผลปรับเทียบเก่า'}
       </button>
     </div>
   )
@@ -231,13 +244,14 @@ export default function Calibrate({ who, onChanged }) {
   }
 
   const items = history.data?.[0].history ?? []
+  const active = items.find((h) => h.current)
 
   return (
     <div className="space-y-4">
       {history.loading && !history.data ? (
         <Skeleton className="h-14" />
       ) : (
-        <Status latest={items[0]} onReset={reset} resetting={resetting} />
+        <Status active={active} stale={!active && items[0]} onReset={reset} resetting={resetting} />
       )}
 
       <Card icon="info" title="การปรับเทียบคืออะไร">
@@ -277,7 +291,7 @@ export default function Calibrate({ who, onChanged }) {
               type="button"
               onClick={run}
               disabled={!file || busy}
-              className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
             >
               {busy && <MascotLoader />}
               {busy ? 'กำลังตรวจไฟล์และปรับเทียบ…' : 'ปรับเทียบด้วยไฟล์นี้'}
@@ -305,7 +319,7 @@ export default function Calibrate({ who, onChanged }) {
       )}
 
       {items.length > 0 && (
-        <Card icon="clock" title="ประวัติการปรับเทียบ" subtitle="ระบบใช้ครั้งล่าสุด (แถวบนสุด)">
+        <Card icon="clock" title="ประวัติการปรับเทียบ" subtitle="ตัวหนา = ครั้งที่ระบบใช้อยู่ · ของโมเดลรุ่นก่อนเก็บไว้ดูเท่านั้น">
           <div className="-mx-5 overflow-x-auto sm:-mx-6">
             <table className="w-full whitespace-nowrap text-sm">
               <thead>
@@ -318,9 +332,13 @@ export default function Calibrate({ who, onChanged }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line tabular-nums">
-                {(showAll ? items : items.slice(0, HISTORY_SHOWN)).map((h, i) => (
-                  <tr key={h.calibrated_at} className={i === 0 ? 'font-medium text-fg' : 'text-muted-fg'}>
-                    <td className="px-5 py-2 sm:px-6">{when(h.calibrated_at)}</td>
+                {(showAll ? items : items.slice(0, HISTORY_SHOWN)).map((h) => (
+                  <tr key={h.calibrated_at} className={h === active ? 'font-medium text-fg' : 'text-muted-fg'}>
+                    <td className="px-5 py-2 sm:px-6">
+                      {when(h.calibrated_at)}
+                      {h === active && <span className="ml-2 rounded-md bg-risk-low-soft px-1.5 py-0.5 text-xs text-risk-low">ใช้อยู่</span>}
+                      {!h.current && <span className="ml-2 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-fg">โมเดลรุ่นก่อน</span>}
+                    </td>
                     <td className="px-3 py-2">{METHOD_TH[h.method] ?? h.method}</td>
                     <td className="px-3 py-2 text-right">{h.n_samples.toLocaleString()}</td>
                     <td className="px-3 py-2 text-right">{pct(h.positive_rate)}</td>

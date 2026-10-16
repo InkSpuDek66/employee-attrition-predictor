@@ -102,7 +102,8 @@ def test_recalibrate_from_excel_then_history_and_reset(tmp_path, monkeypatch):
     assert len(curve) == 51 and all(a["after"] <= b["after"] for a, b in zip(curve, curve[1:]))  # สูตรไม่สลับลำดับ
     assert bins and sum(b["n"] for b in bins) <= 300 and all(0 <= b["rate"] <= 1 for b in bins)
     assert client.get("/shap/1").json()["calibrated_risk_score"] is not None
-    assert client.get("/recalibrate/history").json()["history"][0]["method"] == "platt"
+    latest = client.get("/recalibrate/history").json()["history"][0]
+    assert latest["method"] == "platt" and latest["current"] is True  # หน้าปรับเทียบโชว์ "ปรับแล้ว" จาก current
 
     # ไม่มีคอลัมน์ผลจริง: ไม่ปรับเทียบ บอกคอลัมน์ที่ขาด
     r = client.post("/recalibrate/upload", files={"file": ("d.xlsx", _xlsx(df.drop(columns="ลาออกแล้วหรือยัง")), xlsx)}).json()

@@ -53,6 +53,45 @@ def retention_options() -> dict:
     return config()["retention_options"]["options"]
 
 
+# ปรับใน What-if แล้วนับเป็นมาตรการ "อบรม + แผนเลื่อนตำแหน่ง" (นับครั้งเดียวต่อแผน)
+GROWTH_FIELDS = ("JobLevel", "YearsSinceLastPromotion", "TrainingTimesLastYear")
+
+
+def plan_cost(employee: dict, changes: dict) -> tuple[list[dict], list[str]]:
+    """ต้นทุน 1 ปีของสิ่งที่ HR ปรับใน What-if ทั้งหมด (UX-15) คิดจากค่าที่เปลี่ยนจริง ไม่ใช่มาตรการเดียวที่เลือกไว้
+    employee = ค่าเดิม, changes = ค่าใหม่ (หน่วยของโมเดล เงินเดือนเป็นหน่วยเดียวกับ MonthlyIncome)
+    คืน ([{key, label, cost}], ฟีเจอร์ที่เปลี่ยนแต่ยังไม่มีต้นทุนใน config) อย่างหลังต้องบอกผู้ใช้ ผลที่คาดว่าจะได้จะสูงกว่าจริง"""
+    opts = retention_options()
+    monthly = float(employee["MonthlyIncome"])
+    items, rest = [], set(changes)
+
+    def months(key):
+        return {"key": key, "label": opts[key]["label"], "cost": monthly * opts[key]["months_of_salary"]}
+
+    if "MonthlyIncome" in changes:  # ขึ้นเงินเดือนจริงเท่าไร = จ่ายเพิ่ม 12 เดือน (10% = 1.2 เดือน ตรงกับ config)
+        rest -= {"MonthlyIncome", "PercentSalaryHike"}
+        raised = float(changes["MonthlyIncome"]) - monthly
+        if raised > 0:
+            items.append({"key": "salary_raise", "label": f"ขึ้นเงินเดือน {raised / monthly:.0%} (1 ปี)", "cost": raised * 12})
+    elif "PercentSalaryHike" in changes:
+        rest.discard("PercentSalaryHike")
+        extra = float(changes["PercentSalaryHike"]) - float(employee["PercentSalaryHike"])
+        if extra > 0:
+            items.append({"key": "salary_raise", "label": f"ขึ้นเงินเดือนเพิ่ม {extra:g}% (1 ปี)", "cost": monthly * extra / 100 * 12})
+    if changes.get("OverTime") == "No" and employee.get("OverTime") == "Yes":
+        rest.discard("OverTime")
+        items.append(months("reduce_overtime"))
+    grew = (
+        changes.get("JobLevel", employee["JobLevel"]) > employee["JobLevel"]
+        or changes.get("YearsSinceLastPromotion", employee["YearsSinceLastPromotion"]) < employee["YearsSinceLastPromotion"]
+        or changes.get("TrainingTimesLastYear", employee["TrainingTimesLastYear"]) > employee["TrainingTimesLastYear"]
+    )
+    if grew:
+        rest -= set(GROWTH_FIELDS)
+        items.append(months("training_and_promotion_track"))
+    return items, sorted(rest)
+
+
 def severance_days(years_at_company) -> np.ndarray:
     """จำนวนวันค่าชดเชยตามอายุงาน (มาตรา 118)
 
@@ -66,12 +105,14 @@ def severance_days(years_at_company) -> np.ndarray:
 
 
 def estimate(
-    employees: pd.DataFrame, risk_scores, retention: str = None, include_severance: bool = None, risk_scores_after=None
+    employees: pd.DataFrame, risk_scores, retention: str = None, include_severance: bool = None, risk_scores_after=None,
+    retain_cost=None,
 ) -> pd.DataFrame:
     """ประมาณต้นทุน Retain vs Replace ต่อพนักงาน (README 6.3)
 
     employees ต้องมีคอลัมน์ MonthlyIncome, YearsAtCompany, JobLevel (รูปแบบเดียวกับ CSV ของ IBM)
     risk_scores_after = คะแนนหลังทำมาตรการ (จาก What-if) ถ้าส่งมาจะได้ expected_benefit ด้วย (UX-15)
+    retain_cost = ต้นทุนมาตรการที่คิดไว้แล้ว (plan_cost) ไม่ส่ง = ใช้มาตรการ retention ตัวเดียว
     คืน DataFrame index เดียวกับ employees
     """
     cfg = config()
@@ -88,7 +129,10 @@ def estimate(
     severance_pay = monthly / cfg["days_per_month"] * days
     hiring_cost = monthly * 12 * multiplier
     replacement_cost = hiring_cost + (severance_pay if include_severance else 0)
-    retain_cost = monthly * retention_options()[retention]["months_of_salary"]
+    if retain_cost is None:
+        retain_cost = monthly * retention_options()[retention]["months_of_salary"]
+    else:
+        retain_cost = pd.Series(np.asarray(retain_cost, dtype=float), index=employees.index)
     risk = np.asarray(risk_scores, dtype=float)
 
     out = pd.DataFrame(

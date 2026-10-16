@@ -109,7 +109,7 @@ export function PrimaryButton({ loading, children, loadingText = 'กำลั�
   return (
     <button
       disabled={loading}
-      className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-wait disabled:opacity-60"
+      className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-wait disabled:opacity-60"
     >
       {loading && <MascotLoader />}
       {loading ? loadingText : children}

@@ -6,6 +6,8 @@
 /* Design tokens: ธีมฟ้าพาสเทลเป็นสีประจำเว็บ สีอื่นมีแค่แดง/เหลือง/เขียวของระดับความเสี่ยง
    - primary = ฟ้าพาสเทล (ปุ่มหลัก โลโก้) ตัวหนังสือบนปุ่มเป็นกรมท่า เพราะพาสเทลอ่อนเกินจะใช้ตัวขาว
    - accent = ฟ้าเข้ม ใช้กับตัวหนังสือ/ไอคอน/เส้นโฟกัสที่ต้องอ่านบนพื้นขาว (contrast ≥ 4.5:1)
+   - action = ปุ่มหลักที่กดได้ (ฟ้าเข้ม ตัวขาว) ปุ่มฟ้าพาสเทลเดิมดูเหมือนปุ่มที่กดไม่ได้ (critique 2026-10-16)
+     พาสเทล primary ยังใช้กับพื้นหลัง/แสงฟุ้ง/ไฮไลต์ ส่วนปุ่มที่กดไม่ได้เป็นเทาเรียบ (bg-muted)
    - พื้น/เส้น/ตัวหนังสือรองเป็นเทาอมฟ้า ให้ทั้งหน้าอยู่โทนเดียวกัน
    Geist ใช้กับตัวอังกฤษ/ตัวเลข ตัวไทยตกไปที่ IBM Plex Sans Thai ใช้ผ่าน class เช่น bg-primary text-muted-fg */
 @theme {
@@ -14,6 +16,9 @@
   --color-primary-hover: #8ec2f8;
   --color-primary-soft: #e7f2fe;
   --color-on-primary: #0b2a4a;
+  --color-action: #2b6cb0;
+  --color-action-hover: #235a94;
+  --color-on-action: #ffffff;
   --color-secondary: #bcd0e6;
   --color-accent: #2b6cb0;
   --color-accent-soft: #edf5fe;
@@ -54,6 +59,9 @@
   --color-primary-hover: #b9daf9;
   --color-primary-soft: #132640;
   --color-on-primary: #0a2238;
+  --color-action: #8cc2fa;
+  --color-action-hover: #a9d1fb;
+  --color-on-action: #0a2238;
   --color-secondary: #2c3f5c;
   --color-accent: #8cc2fa;
   --color-accent-soft: #10233c;

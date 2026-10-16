@@ -2,7 +2,11 @@
 
 ต้นทุน Retain vs Replace ของพนักงาน 1 คน ตัวเลขทั้งหมดมาจาก config/financial_impact.json
 ส่ง risk_after (คะแนนหลังทำมาตรการจาก /whatif) มาด้วยจะได้ expected_benefit = ความเสี่ยงที่ลดได้ - ต้นทุนมาตรการ (UX-15)
+ส่ง changes (JSON ค่าที่ปรับใน What-if) ด้วย = ต้นทุนมาตรการคิดจากทุกอย่างที่ปรับ (business_rules.plan_cost)
+ไม่งั้นความเสี่ยงที่ลดได้มาจากหลายมาตรการ แต่ต้นทุนมาจากมาตรการเดียว ผลที่คาดว่าจะได้สูงเกินจริง
 """
+
+import json
 
 from typing import Optional
 
@@ -14,11 +18,17 @@ import auth
 import calibration
 from routers.predict import resolve_employee, score
 from routers.shap import UNCALIBRATED_WARNING
-from schemas import EmployeeRef, Score
+from schemas import EmployeeInput, EmployeeRef, Score
 
 import business_rules  # noqa: E402  (อยู่ใน src/)
 
 router = APIRouter(tags=["business"])
+
+
+class Measure(BaseModel):
+    key: str
+    label: str
+    cost: float
 
 
 class FinancialImpact(BaseModel):
@@ -41,6 +51,10 @@ class FinancialImpact(BaseModel):
     # ผลที่คาดว่าจะได้ = expected_loss - expected_loss_after - retain_cost ติดลบ = ต้นทุนสูงกว่าความเสี่ยงที่ลดได้
     expected_benefit: Optional[float] = None
     retention_options: dict[str, str]
+    # ส่ง changes มา: ต้นทุนมาตรการ = ผลรวม measures, uncosted = ฟีเจอร์ที่ปรับแต่ยังไม่มีต้นทุนในระบบ (ต้องบอกผู้ใช้)
+    costed_from_changes: bool = False
+    measures: list[Measure] = []
+    uncosted: list[str] = []
     currency_note: str
     warning: Optional[str] = None
 
@@ -51,6 +65,7 @@ def financial_impact(
     retention: Optional[str] = None,
     include_severance: Optional[bool] = None,
     risk_after: Optional[float] = Query(None, ge=0, le=1),
+    changes: Optional[str] = Query(None, max_length=4000),
     # ไม่ต้องส่ง ใช้บริษัทจาก token (DE-11) เหลือไว้ให้ auth.same_tenant ตอบ 403 ถ้าส่งบริษัทอื่น
     tenant_id: Optional[str] = Query(None, pattern=calibration.TENANT_ID_PATTERN),
     user: dict = Depends(auth.current_user),
@@ -60,8 +75,25 @@ def financial_impact(
     (s,) = score([employee], record)
     shown = s.risk_score if s.calibrated_risk_score is None else s.calibrated_risk_score
     after = None if risk_after is None else [risk_after]
+    measures, uncosted, plan = [], [], None
+    if changes:
+        try:
+            changed = json.loads(changes)
+        except ValueError:
+            raise HTTPException(422, "changes ต้องเป็น JSON")
+        unknown = sorted(set(changed) - set(EmployeeInput.model_fields)) if isinstance(changed, dict) else ["(ไม่ใช่ object)"]
+        if unknown:
+            raise HTTPException(422, f"changes มีฟีเจอร์ที่ไม่รู้จัก: {unknown}")
+        changed = {k: v for k, v in changed.items() if employee.get(k) != v}
+        try:
+            measures, uncosted = business_rules.plan_cost(employee, changed)
+        except (TypeError, ValueError):
+            raise HTTPException(422, "ค่าใน changes ผิดชนิด")
+        plan = sum(m["cost"] for m in measures)
     try:
-        row = business_rules.estimate(pd.DataFrame([employee]), [shown], retention, include_severance, after).iloc[0]
+        row = business_rules.estimate(
+            pd.DataFrame([employee]), [shown], retention, include_severance, after, None if plan is None else [plan]
+        ).iloc[0]
     except ValueError as e:
         raise HTTPException(422, str(e))
 
@@ -80,13 +112,16 @@ def financial_impact(
         hiring_cost=row["hiring_cost"],
         replacement_cost=row["replacement_cost"],
         retention=retention,
-        retention_label=options[retention]["label"],
+        retention_label="มาตรการที่ปรับ" if plan is not None else options[retention]["label"],
         retain_cost=row["retain_cost"],
         expected_loss=row["expected_loss"],
         risk_after=risk_after,
         expected_loss_after=row.get("expected_loss_after"),
         expected_benefit=row.get("expected_benefit"),
         retention_options={k: v["label"] for k, v in options.items()},
+        costed_from_changes=plan is not None,
+        measures=measures,
+        uncosted=uncosted,
         currency_note=cfg["currency_note"],
         warning=None if record else UNCALIBRATED_WARNING,
     )

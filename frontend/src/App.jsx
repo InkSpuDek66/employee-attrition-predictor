@@ -367,7 +367,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
               </label>
               <button
                 disabled={!!pending[tab]}
-                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-wait disabled:opacity-60"
               >
                 {pending[tab] ? <MascotLoader /> : 'โหลด'}
               </button>

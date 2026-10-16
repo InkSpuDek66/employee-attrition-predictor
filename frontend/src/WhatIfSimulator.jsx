@@ -351,17 +351,20 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
   }, [loaded, changes, onRisk])
 
   // ต้นทุน Retain vs Replace ของพนักงานคนนี้ (คิดจากข้อมูลเดิม ไม่ใช่ค่าที่ปรับ)
-  // ปรับค่าแล้วส่งคะแนนหลังปรับไปด้วย backend คิด "ผลที่คาดว่าจะได้" ให้ (UX-15) ยังไม่ปรับ = ไม่ส่ง
+  // ปรับค่าแล้วส่งคะแนนหลังปรับ + ค่าที่ปรับทั้งหมดไปด้วย backend คิด "ผลที่คาดว่าจะได้" ให้ (UX-15) ยังไม่ปรับ = ไม่ส่ง
+  // ต้นทุนมาตรการคิดจากทุกอย่างที่ปรับ (ความเสี่ยงที่ลดก็มาจากทุกอย่าง) ไม่ใช่มาตรการเดียวในช่องเลือก
   const riskAfter = result && Object.keys(result.changes_applied).length ? scoreOf(result.after) : null
+  const applied = riskAfter != null ? JSON.stringify(result.changes_applied) : null
   useEffect(() => {
     if (!loaded?.base) return
     const ctrl = new AbortController()
     const params = new URLSearchParams()
     if (retention) params.set('retention', retention)
     if (riskAfter != null) params.set('risk_after', riskAfter)
+    if (applied) params.set('changes', applied)
     api(`/financial-impact/${loaded.id}?${params}`, { signal: ctrl.signal }).then(setImpact, (err) => err.name !== 'AbortError' && setError(friendly(err)))
     return () => ctrl.abort()
-  }, [loaded, retention, riskAfter])
+  }, [loaded, retention, riskAfter, applied])
 
   // ค่าเท่าค่าเดิมไหม (เงินเดือนเทียบเป็นบาทปัดเต็ม เพราะเก็บดอลลาร์ทศนิยม)
   const isBase = (field, v) =>
@@ -489,14 +492,22 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
 
           {impact && (
             <Card icon="money" title="ต้นทุน Retain vs Replace" subtitle="ประมาณการ คิดจากข้อมูลเดิมของพนักงาน">
-              <Field label="มาตรการรักษาคน" className="mb-4 max-w-md">
-                <select className={`${inputClass} cursor-pointer`} value={impact.retention} onChange={(e) => setRetention(e.target.value)}>
-                  {Object.entries(impact.retention_options).map(([k, text]) => <option key={k} value={k}>{text}</option>)}
-                </select>
-              </Field>
+              {/* ยังไม่ได้ปรับอะไร: เลือกดูต้นทุนของมาตรการทีละแบบ / ปรับแล้ว: ต้นทุนคิดจากทุกอย่างที่ปรับ ไม่ต้องเลือก */}
+              {!impact.costed_from_changes && (
+                <Field label="ดูต้นทุนของมาตรการ" className="mb-4 max-w-md">
+                  <select className={`${inputClass} cursor-pointer`} value={impact.retention} onChange={(e) => setRetention(e.target.value)}>
+                    {Object.entries(impact.retention_options).map(([k, text]) => <option key={k} value={k}>{text}</option>)}
+                  </select>
+                </Field>
+              )}
               <div className="grid gap-3 sm:grid-cols-3">
                 <Stat label="ต้นทุนถ้าต้องหาคนแทน" value={money(impact.replacement_cost)} tone="red" />
-                <Stat label={`ต้นทุนมาตรการ: ${impact.retention_label}`} value={money(impact.retain_cost)} tone="blue" />
+                <Stat
+                  label={impact.costed_from_changes ? 'ต้นทุนมาตรการที่ปรับ (1 ปี)' : `ต้นทุนมาตรการ: ${impact.retention_label}`}
+                  value={money(impact.retain_cost)}
+                  tone="blue"
+                  sub={impact.costed_from_changes && impact.measures?.length > 1 ? `รวม ${impact.measures.length} มาตรการ` : undefined}
+                />
                 <BenefitStat impact={impact} money={money} />
               </div>
               {/* บอกที่มาของตัวเลข กันคนเข้าใจผิดว่าเป็นต้นทุนจริงของบริษัท (สูตรใน src/business_rules.py) */}
@@ -506,9 +517,24 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                   {(impact.hiring_cost / (impact.monthly_income * 12)).toFixed(2)} (ตัวคูณของตำแหน่งระดับ {impact.job_level})
                   {impact.include_severance && ` + ค่าชดเชย ${impact.severance_days} วัน (${money(impact.severance_pay)})`}
                 </p>
-                <p>
-                  <b className="text-fg">ต้นทุนมาตรการ</b> = เงินเดือน × {(impact.retain_cost / impact.monthly_income).toFixed(1)} เดือน
-                </p>
+                {impact.costed_from_changes ? (
+                  <p>
+                    <b className="text-fg">ต้นทุนมาตรการ</b> ={' '}
+                    {impact.measures.length
+                      ? impact.measures.map((m) => `${m.label} ${money(m.cost)}`).join(' + ')
+                      : 'ไม่มีมาตรการที่มีค่าใช้จ่าย'}
+                  </p>
+                ) : (
+                  <p>
+                    <b className="text-fg">ต้นทุนมาตรการ</b> = เงินเดือน × {(impact.retain_cost / impact.monthly_income).toFixed(1)} เดือน
+                  </p>
+                )}
+                {impact.uncosted?.length > 0 && (
+                  <p className="text-risk-mid">
+                    <b>ยังไม่ได้คิดต้นทุน:</b> {impact.uncosted.map(featureLabel).join(', ')} (ระบบยังไม่มีตัวเลขค่าใช้จ่าย
+                    ถ้ามีค่าใช้จ่ายจริง ผลที่คาดว่าจะได้จะน้อยกว่านี้)
+                  </p>
+                )}
                 <p>
                   <b className="text-fg">ผลที่คาดว่าจะได้</b> = มูลค่าความเสี่ยงที่ลดลง (ก่อน − หลังปรับ) − ต้นทุนมาตรการ
                   {impact.expected_benefit != null &&

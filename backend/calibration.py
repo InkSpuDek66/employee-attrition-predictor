@@ -76,20 +76,23 @@ def save(tenant_id: str, method: str, params: dict, n_samples: int, positive_rat
 
 
 def history(tenant_id: str, limit: int = 10) -> list[dict]:
-    """ผลปรับเทียบล่าสุดก่อน (ไม่มี DB = มีแค่ครั้งล่าสุดจากไฟล์ JSON)"""
+    """ผลปรับเทียบล่าสุดก่อน (ไม่มี DB = มีแค่ครั้งล่าสุดจากไฟล์ JSON)
+    current = ทำกับโมเดลที่ใช้อยู่ (ตัวที่ load() ใช้ให้คะแนน) ของโมเดลรุ่นก่อน = เก็บไว้ดูเฉยๆ ไม่ถูกใช้
+    หน้าปรับเทียบต้องบอกสถานะจาก current ไม่ใช่แถวบนสุด ไม่งั้นบอกว่าปรับแล้วทั้งที่คะแนนยังไม่ได้ปรับ"""
     if not db.url():
         record = load(tenant_id)
-        return [record] if record else []
+        return [record | {"current": True}] if record else []
     _path(tenant_id)
     with db.connect() as conn:
         rows = conn.execute(
-            "SELECT method, n_samples, positive_rate, metrics, calibrated_at FROM tenant_calibrations "
+            "SELECT method, n_samples, positive_rate, metrics, calibrated_at, model_version FROM tenant_calibrations "
             "WHERE tenant_id = %s ORDER BY calibrated_at DESC LIMIT %s",
             (tenant_id, limit),
         ).fetchall()
     return [
-        {"tenant_id": tenant_id, "method": m, "n_samples": n, "positive_rate": p, "metrics": met, "calibrated_at": at.isoformat()}
-        for m, n, p, met, at in rows
+        {"tenant_id": tenant_id, "method": m, "n_samples": n, "positive_rate": p, "metrics": met, "calibrated_at": at.isoformat(),
+         "current": mv == model_store.MODEL_VERSION}
+        for m, n, p, met, at, mv in rows
     ]
 
 

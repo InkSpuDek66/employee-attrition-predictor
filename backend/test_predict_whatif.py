@@ -124,6 +124,26 @@ def test_financial_impact():
     assert client.get("/financial-impact/999999").status_code == 404
 
 
+def test_cost_counts_every_applied_measure():
+    """UX-15: ปิด OT + ขึ้นเงินเดือน 10% = ต้นทุนทั้งสองอย่าง (เดิมคิดแค่มาตรการเดียวที่เลือก ผลที่คาดว่าจะได้สูงเกินจริง)
+    ปรับสิ่งที่ยังไม่มีต้นทุนในระบบ (WFH) = บอกไว้ใน uncosted ไม่ใช่นับเป็นศูนย์เงียบๆ"""
+    import json
+
+    base = client.post("/whatif", json={"employee_id": 1, "changes": {}}).json()["employee"]
+    assert base["OverTime"] == "Yes"
+    changes = {"OverTime": "No", "MonthlyIncome": round(base["MonthlyIncome"] * 1.1), "OfficeDaysPerWeek": 2}
+    r = client.get("/financial-impact/1", params={"risk_after": 0.1, "changes": json.dumps(changes)}).json()
+    monthly = r["monthly_income"]
+    costs = {m["key"]: m["cost"] for m in r["measures"]}
+    assert costs["reduce_overtime"] == pytest.approx(monthly * 2.0)
+    assert costs["salary_raise"] == pytest.approx((changes["MonthlyIncome"] - monthly) * 12)
+    assert r["costed_from_changes"] and r["uncosted"] == ["OfficeDaysPerWeek"]
+    assert r["retain_cost"] == pytest.approx(sum(costs.values()))
+    assert r["expected_benefit"] == pytest.approx(r["expected_loss"] - r["expected_loss_after"] - r["retain_cost"])
+    assert client.get("/financial-impact/1", params={"changes": "{bad"}).status_code == 422
+    assert client.get("/financial-impact/1", params={"changes": json.dumps({"Nope": 1})}).status_code == 422
+
+
 def test_low_risk_employee_not_worth_retention_spend():
     """UX-15: พนักงาน #1804 เสี่ยง 1/100 สูตรเดิมบอกว่าคุ้ม 1.57 ล้าน แม้ลดความเสี่ยงเหลือศูนย์ก็ต้องติดลบ"""
     r = client.get("/financial-impact/1804", params={"risk_after": 0}).json()

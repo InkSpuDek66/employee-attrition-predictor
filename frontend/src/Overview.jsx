@@ -234,7 +234,7 @@ function NoEmployees({ who, onImport }) {
         <button
           type="button"
           onClick={onImport}
-          className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30"
+          className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30"
         >
           <Icon name="upload" className="size-4" />
           ไปนำเข้าข้อมูล

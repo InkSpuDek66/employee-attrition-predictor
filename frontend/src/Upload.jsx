@@ -466,7 +466,7 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
                   type="button"
                   onClick={askSave}
                   disabled={!ok || !canSave || saving}
-                  className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-primary px-5 font-medium text-on-primary transition-colors duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
                 >
                   {saving && <MascotLoader />}
                   {saving ? 'กำลังบันทึก…' : `บันทึกเข้าระบบ ${result.n_valid.toLocaleString()} คน`}
@@ -514,7 +514,7 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
             <button
               type="button"
               onClick={() => save(true)}
-              className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-primary px-4 text-sm font-medium text-on-primary hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30"
+              className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-action px-4 text-sm font-medium text-on-action hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30"
             >
               ใช่ บันทึก
             </button>
