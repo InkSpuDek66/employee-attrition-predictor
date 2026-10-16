@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:Anuphan,sans-serif;background:#dbe8f7;color:#142033;display:flex}
+.nav{width:220px;background:#f4f8fc;border-right:1px solid #c5d6ea;padding:28px 18px}
+.nav b{font-size:16px}
+.nav a{display:block;padding:9px 10px;margin-top:4px;border-radius:6px;font-size:15px;color:#3a4a60}
+.nav a.on{background:#1d4f91;color:#fff}
+.board{flex:1;background:#2f6bc4;margin:22px 0 22px 22px;border-radius:10px 0 0 10px;padding:30px;position:relative}
+.leaf{background:rgba(255,255,255,.93);border-radius:8px;padding:26px 30px;height:100%;box-shadow:2px 3px 0 rgba(20,32,51,.18)}
+.holes{position:absolute;left:10px;top:120px;display:flex;flex-direction:column;gap:300px}
+.holes i{width:12px;height:12px;border-radius:50%;background:#dbe8f7}
+h1{font-size:30px;font-weight:700}
+.s{color:#4b5b70;font-size:15px;margin-top:4px}
+.row{display:grid;grid-template-columns:1fr 70px;padding:14px 0;border-bottom:1px solid #dde6f1;font-size:16px;line-height:1.55}
+.row b{font-weight:600}
+.row span.w{display:block;color:#3a4a60;font-size:15px}
+.row .v{text-align:right;font-weight:700;font-size:22px;color:#c81e1e}
+.tabs{width:150px;margin:22px 22px 22px 0;display:flex;flex-direction:column;gap:3px}
+.tab{background:#8cc2fa;border-radius:0 8px 8px 0;padding:8px 12px;font-size:13px;color:#0f2c55;display:flex;flex-direction:column;justify-content:flex-end}
+.tab.on{background:#2f6bc4;color:#fff;margin-left:-22px;padding-left:34px}
+.tab small{font-weight:600}
+</style></head><body>
+<aside class="nav"><b>Attrition Predictor</b>
+<a class="on">ภาพรวมบริษัท</a><a>ทำไมถึงเสี่ยง</a><a>ลองปรับเงื่อนไข</a><a>ปรับเทียบโมเดล</a><a>นำเข้าข้อมูล</a><a>บัญชีผู้ใช้</a></aside>
+<section class="board"><div class="holes"><i></i><i></i></div>
+  <div class="leaf">
+    <h1>ฝ่ายวิจัยและพัฒนา</h1>
+    <p class="s">76 คน · เสี่ยงสูง 9 คน · ควรคุยกับใครก่อน</p>
+    <div class="row"><div><b>ประเสริฐ สมบูรณ์ · #191</b><span class="w">ทำ OT และบ้านห่าง 24 กม. · ความพึงพอใจเฉลี่ย 2 จาก 4</span></div><span class="v">99</span></div>
+    <div class="row"><div><b>จิราพร สายสุข · #53</b><span class="w">ทำ OT และบ้านห่าง 27 กม. · ทำงานล่วงเวลา (OT)</span></div><span class="v">96</span></div>
+    <div class="row"><div><b>วรวุฒิ บุญมา · #155</b><span class="w">ทำ OT และบ้านห่าง 13 กม. · เงินเดือน 57,995 บาท</span></div><span class="v">95</span></div>
+    <div class="row"><div><b>สุรเชษฐ์ บุญมา · #196</b><span class="w">ไม่มีสิทธิ์ซื้อหุ้นพนักงาน · อยู่บริษัทนี้มา 1 ปี</span></div><span class="v">91</span></div>
+    <div class="row"><div><b>อัญชลี ปัญญาดี · #14</b><span class="w">ทำงานล่วงเวลา (OT) · สมดุลงานกับชีวิตแย่</span></div><span class="v">89</span></div>
+  </div>
+</section>
+<div class="tabs">
+  <div class="tab" style="height:48px">ทั้งบริษัท<small>200</small></div>
+  <div class="tab on" style="height:150px">วิจัยและพัฒนา<small>76</small></div>
+  <div class="tab" style="height:104px">ฝ่ายขาย<small>48</small></div>
+  <div class="tab" style="height:56px">ลูกค้าสัมพันธ์<small>20</small></div>
+  <div class="tab" style="height:48px">ฝ่ายผลิต<small>16</small></div>
+  <div class="tab" style="height:46px">ฝ่ายไอที<small>15</small></div>
+  <div class="tab" style="height:44px">การตลาด<small>14</small></div>
+  <div class="tab" style="height:40px">ฝ่ายบุคคล<small>8</small></div>
+</div>
+</body></html>
