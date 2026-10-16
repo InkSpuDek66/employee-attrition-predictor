@@ -172,7 +172,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
                 aria-pressed={showPassword}
-                className="absolute inset-y-0 right-0 grid w-11 cursor-pointer place-items-center rounded-r-lg text-muted-fg transition-colors duration-150 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="absolute inset-y-0 right-0 grid w-11 cursor-pointer place-items-center rounded-r-lg text-muted-fg transition-colors duration-150 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <Icon name={showPassword ? 'eyeOff' : 'eye'} className="size-5" />
               </button>
@@ -204,7 +204,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
 
       {/* บัญชีทดลอง: พับเก็บไว้มุมซ้ายล่าง กดเพื่อเปิด แล้วกดบัญชีเพื่อกรอกให้ */}
       <details ref={demo} className="group fixed bottom-4 left-4 z-10 max-w-[calc(100vw-2rem)] text-sm">
-        <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-risk-mid/25 bg-risk-mid-soft px-4 font-medium text-risk-mid shadow-sm transition-colors duration-150 hover:bg-risk-mid-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 [&::-webkit-details-marker]:hidden">
+        <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-risk-mid/25 bg-risk-mid-soft px-4 font-medium text-risk-mid shadow-sm transition-colors duration-150 hover:bg-risk-mid-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
           <Icon name="info" className="size-4" />
           บัญชีทดลอง
           <Icon name="up" className="size-3.5 transition-transform duration-150 group-open:rotate-180" />
@@ -217,7 +217,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
                 <button
                   type="button"
                   onClick={() => (setUsername(a.username), setPassword(a.password), setProblem(null), (demo.current.open = false))}
-                  className="lift w-full cursor-pointer rounded-lg border border-line bg-card px-3 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="lift w-full cursor-pointer rounded-lg border border-line bg-card px-3 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                     <span className="font-medium text-fg">{a.role}</span>

@@ -29,11 +29,11 @@
   --color-muted: #edf3fa;
   --color-muted-fg: #56677d;
   --color-line: #dae4ef;
-  --color-risk-low: #15803d;
+  --color-risk-low: #13743a;
   --color-risk-low-soft: #f0fdf4;
-  --color-risk-mid: #a16207;
+  --color-risk-mid: #92570a;
   --color-risk-mid-soft: #fefce8;
-  --color-risk-high: #dc2626;
+  --color-risk-high: #c81e1e;
   --color-risk-high-soft: #fef2f2;
   /* สีเติมของแถบ/มาตรวัดระดับความเสี่ยง (สดกว่าสีตัวหนังสือด้านบน) ใช้ชุดเดียวกันทุกหน้า */
   --color-band-low: #22c55e;
@@ -390,12 +390,6 @@ input[type='range'] {
   transform-origin: center;
   animation: mascot-twinkle 1.8s ease-in-out infinite;
 }
-.mascot-shake {
-  animation: mascot-shake 0.5s ease-in-out infinite;
-}
-@keyframes mascot-shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-1px); }
   75% { transform: translateX(1px); }
 }
 .mascot-drip {

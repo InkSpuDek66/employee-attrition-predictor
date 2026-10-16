@@ -11,7 +11,7 @@ export function DownloadButton({ path, filename, children, onError }) {
     <button
       type="button"
       onClick={() => download(path, filename).catch((err) => onError(friendly(err)))}
-      className="lift inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-card px-4 py-2 text-left font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      className="lift inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-card px-4 py-2 text-left font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <Icon name="download" className="size-5 shrink-0" />
       {children}
@@ -26,7 +26,7 @@ export function DropZone({ busy, file, onFile, name }) {
       onDragOver={(e) => (e.preventDefault(), setDragging(true))}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => (e.preventDefault(), setDragging(false), onFile(e.dataTransfer.files[0]))}
-      className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors duration-150 focus-within:ring-2 focus-within:ring-accent/40 ${
+      className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors duration-150 focus-within:ring-2 focus-within:ring-accent ${
         dragging ? 'border-accent bg-accent-soft' : 'border-line hover:border-secondary hover:bg-muted'
       }`}
     >
@@ -65,7 +65,7 @@ function usePeek(n, unit = 'แถว') {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="mt-2 inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className="mt-2 inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <Icon name={open ? 'up' : 'down'} className="size-4" />
         {open ? 'ย่อ' : `ดูทั้งหมด (${n.toLocaleString()} ${unit})`}
@@ -447,7 +447,7 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
                           key={id}
                           type="button"
                           onClick={() => onPick(id)}
-                          className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
                           {employeeLabel(id, result.saved_names?.[id])}
                           <Icon name="right" className="size-4 text-muted-fg" />
@@ -466,7 +466,7 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
                   type="button"
                   onClick={askSave}
                   disabled={!ok || !canSave || saving}
-                  className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
+                  className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
                 >
                   {saving && <MascotLoader />}
                   {saving ? 'กำลังบันทึก…' : `บันทึกเข้าระบบ ${result.n_valid.toLocaleString()} คน`}
@@ -507,14 +507,14 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
             <button
               type="button"
               onClick={() => confirmBox.current.close()}
-              className="inline-flex h-10 cursor-pointer items-center rounded-lg border border-line px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="inline-flex h-10 cursor-pointer items-center rounded-lg border border-line px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               ยกเลิก กลับไปแก้ไฟล์
             </button>
             <button
               type="button"
               onClick={() => save(true)}
-              className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-action px-4 text-sm font-medium text-on-action hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30"
+              className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-action px-4 text-sm font-medium text-on-action hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent"
             >
               ใช่ บันทึก
             </button>

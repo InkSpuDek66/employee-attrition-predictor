@@ -88,14 +88,6 @@ function Face({ mood, girl }) {
         <path d={girl ? 'M45 82 Q53 72 61 82' : 'M45 83 Q53 76 61 83'} fill="none" {...o} strokeWidth="3" />
         <path d={girl ? 'M79 82 Q87 72 95 82' : 'M79 83 Q87 76 95 83'} fill="none" {...o} strokeWidth="3" />
       </>
-    ) : mood === 'High' ? (
-      // หลับตาแน่น > < + น้ำตาไหล
-      <>
-        <path d="M46 75 L58 81 L46 87" fill="none" {...o} strokeWidth="3" />
-        <path d="M94 75 L82 81 L94 87" fill="none" {...o} strokeWidth="3" />
-        <path d="M50 89 Q48 97 50 104" fill="none" stroke="#7cc4f5" strokeWidth="3.5" strokeLinecap="round" className="mascot-drip" />
-        <path d="M90 89 Q92 97 90 104" fill="none" stroke="#7cc4f5" strokeWidth="3.5" strokeLinecap="round" className="mascot-drip" style={{ animationDelay: '500ms' }} />
-      </>
     ) : (
       <g className="mascot-blink">
         {girl ? (
@@ -124,7 +116,8 @@ function Face({ mood, girl }) {
     ),
     Medium: <path d="M66 97.5 Q70 96.5 74 97.5" fill="none" {...o} strokeWidth="1.8" />, // เม้มปาก ครุ่นคิด
     NotFound: <path d="M65 98 q2.5 -2 5 0 t5 0" fill="none" {...o} strokeWidth="1.8" />,
-    High: <path d="M62 99 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" {...o} strokeWidth="1.8" />,
+    // เสี่ยงสูง = ตั้งใจพร้อมลุย (เดิมร้องไห้ ข้างชื่อพนักงานจริงดูเกินเหตุ critique 2026-10-16) ยิ้มปิดปากมุ่งมั่น
+    High: <path d="M63 97 Q70 101 77 97" fill="none" {...o} strokeWidth="2" />,
     Sorry: <path d="M65 98 Q70 95 75 98" fill="none" {...o} strokeWidth="1.8" />,
   }[mood]
   const brows = girl
@@ -134,7 +127,7 @@ function Face({ mood, girl }) {
         Low: ['M47 64 Q52 60.5 58 63', 'M82 63 Q88 60.5 93 64'],
         Medium: ['M47 64.5 Q52 62.5 57 64', 'M83 64 Q88 62.5 93 64.5'],
         NotFound: ['M47 63 Q52 61 57 63', 'M83 65 Q88 64 93 66'],
-        High: ['M47 66 Q52 64 57 61', 'M83 61 Q88 64 93 66'],
+        High: ['M47 62.5 Q52 62.5 58 65.5', 'M82 65.5 Q88 62.5 93 62.5'], // ปลายคิ้วด้านในต่ำลง = มุ่งมั่น
         Sorry: ['M47 65 Q52 64 57 61.5', 'M83 61.5 Q88 64 93 65'],
       }[mood]
     : {
@@ -143,7 +136,7 @@ function Face({ mood, girl }) {
         Low: ['M45 67 Q52 63 60 65.5', 'M80 65.5 Q88 63 95 67'],
         Medium: ['M45 68.5 Q52 66 60 67.5', 'M80 67.5 Q88 66 95 68.5'],
         NotFound: ['M45 68 Q52 65.5 60 67', 'M80 65 Q88 62.5 95 65'],
-        High: ['M46 70 Q53 68 60 64', 'M80 64 Q87 68 94 70'],
+        High: ['M45 65.5 Q52 65 60 69', 'M80 69 Q88 65 95 65.5'],
         Sorry: ['M46 69 Q53 68 60 65', 'M80 65 Q87 68 94 69'],
       }[mood]
   return (
@@ -154,7 +147,7 @@ function Face({ mood, girl }) {
       {eyes}
       {/* แก้มแดง + ขีดเขินสามขีด */}
       {[40, 100].map((x) => (
-        <g key={x} opacity={girl ? (mood === 'High' ? 0.35 : 0.75) : 0.5}>
+        <g key={x} opacity={girl ? 0.75 : 0.5}>
           <ellipse cx={x} cy="93" rx="7" ry="4.2" fill="#f9a8b8" />
           {girl && (
             <path d={`M${x - 4} 94.5 l2 -3 M${x} 94.5 l2 -3 M${x + 4} 94.5 l2 -3`} stroke="#f47b8e" strokeWidth="1.2" strokeLinecap="round" />
@@ -200,28 +193,7 @@ function Pose({ mood, suit }) {
       </>
     )
   }
-  if (mood === 'High') {
-    // สองมือกุมหัว + เส้นยุ่งเหนือหัว
-    return (
-      <g>
-        <g className="mascot-shake">
-          <Arm suit={suit} d="M56 120 Q34 104 32 82" />
-          <Arm suit={suit} d="M84 120 Q106 104 108 82" />
-          <Hand cx={31} cy={78} r={6.5} />
-          <Hand cx={109} cy={78} r={6.5} />
-        </g>
-        <path
-          d="M50 14 q4 -7 8 0 t8 0 t8 0 t8 0 t8 0 M56 6 l4 4 M84 6 l-4 4"
-          className="mascot-float stroke-risk-high"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </g>
-    )
-  }
-  // แขนซ้ายถือแฟ้ม (ทุกท่ายกเว้นเสี่ยงสูง)
+  // แขนซ้ายถือแฟ้ม (ทุกท่า)
   const folder = (
     <>
       <Arm suit={suit} d="M56 120 Q42 128 42 136" />
@@ -234,6 +206,20 @@ function Pose({ mood, suit }) {
       <Hand cx={41} cy={138} />
     </>
   )
+  if (mood === 'High') {
+    // ตั้งใจพร้อมลุย: ถือแฟ้ม + ชูกำปั้น "สู้ๆ" ระดับไหล่ (ไม่กุมหัว/ร้องไห้)
+    return (
+      <>
+        {folder}
+        <g className="mascot-point">
+          <Arm suit={suit} d="M84 120 Q104 114 106 96" />
+          <Hand cx={107} cy={92} r={6.8} />
+          <path d="M101 87.5 h11 M101 91.5 h11" stroke={LINE} strokeWidth="1.1" strokeLinecap="round" opacity="0.55" />
+          <path d="M117 82 l5 -3 M119 90 h6 M117 98 l5 3" stroke="#f2c14e" strokeWidth="2" strokeLinecap="round" />
+        </g>
+      </>
+    )
+  }
   if (mood === 'Low') {
     return (
       <>

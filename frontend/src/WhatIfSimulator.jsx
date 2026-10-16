@@ -3,7 +3,7 @@ import { featureLabel, JOB_LEVELS, SURVEY_NOTE } from './featureLabels'
 import { api, baht, BAND, employeeLabel, friendly, INCOME_RANGE_USD, incomeBounds, inputClass, parseIncomeBaht, toApiChanges, toastKind } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
-import { Alert, Card, CountUp, Field, Icon, RiskGauge, Segmented, Skeleton } from './ui'
+import { Alert, Card, CountUp, Field, Icon, RiskGauge, Segmented, Skeleton, UncalibratedNote } from './ui'
 
 // ฟีเจอร์ที่ HR ปรับได้จริงผ่านมาตรการ (ไม่ใส่ข้อมูลส่วนตัว เช่น อายุ เพศ สถานภาพ)
 const SAT = [[1, 'ต่ำ'], [2, 'กลาง'], [3, 'สูง'], [4, 'สูงมาก']]
@@ -203,8 +203,16 @@ function BenefitStat({ impact, money }) {
 }
 
 // ปัดก่อนแล้วค่อยเลือกสี/ข้อความ (เดิมดูจากค่าก่อนปัด: ขึ้น "ความเสี่ยงเพิ่มขึ้น +0" สีแดง ทั้งที่คะแนนเท่าเดิม)
-function DeltaBadge({ delta: raw, className = '' }) {
+// idle = ยังไม่ได้ปรับอะไร (เดิมขึ้น "ยังไม่เปลี่ยน 0" อ่านเหมือนจำลองแล้วไม่มีผล critique 2026-10-16)
+function DeltaBadge({ delta: raw, idle = false, className = '' }) {
   const delta = Math.round(raw * 100)
+  if (idle) {
+    return (
+      <div className={`rounded-lg bg-muted px-4 py-3 text-sm text-muted-fg ring-1 ring-line ${className}`}>
+        ยังไม่ได้ปรับ ลองกดมาตรการหรือปรับค่าทางซ้าย คะแนนหลังปรับจะเปลี่ยนตรงนี้
+      </div>
+    )
+  }
   const style =
     delta < 0
       ? 'bg-risk-low-soft text-risk-low ring-risk-low/15'
@@ -294,6 +302,21 @@ const PRESETS = [
   { label: 'ให้สิทธิ์ซื้อหุ้น', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
 ]
 const CONTROL = Object.fromEntries(GROUPS.flatMap((g) => g.controls.map((c) => [c.field, c])))
+// ปัจจัยใน SHAP ที่ไม่ใช่ช่องปรับตรงๆ → ช่องที่ปรับแล้วมีผล (OT ร่วมกับบ้านไกล = OT + ระยะทาง)
+const FEATURE_FIELDS = { OverTimeXDistance: ['OverTime', 'DistanceFromHome'] }
+const FOCUS_N = 3
+const PRESETS_SHOWN = 4
+
+// ช่องที่ควรลองก่อนของคนนี้: ปัจจัยที่บริษัทปรับได้และดันความเสี่ยงขึ้นมากสุด (จาก /shap) ไม่เกิน 3 ช่อง
+function focusFields(contributions) {
+  const out = []
+  for (const c of contributions) {
+    if (c.shap_value <= 0 || c.kind !== 'actionable') continue
+    for (const f of FEATURE_FIELDS[c.feature] ?? [c.feature]) if (CONTROL[f] && !out.includes(f)) out.push(f)
+    if (out.length >= FOCUS_N) break
+  }
+  return out.slice(0, FOCUS_N)
+}
 
 // ค่าที่คนอ่านเข้าใจ เช่น "ทำงานล่วงเวลา (OT): ไม่ทำ", "รายได้ต่อเดือน: 40,000 บาท"
 function describe(changes, rate) {
@@ -316,6 +339,19 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
   const [saved, setSaved] = useState([]) // ผลจำลองที่บันทึกไว้เทียบ (ต่อพนักงานหนึ่งคน สูงสุด 4)
   const [toast, setToast] = useState(null) // { n, kind } ข้อความเด้งตอนระดับความเสี่ยงหลังปรับเปลี่ยน (n เพิ่มทุกครั้ง ให้เล่นใหม่)
   const lastBand = useRef(null)
+  const [focus, setFocus] = useState({ id: null, fields: [] }) // ช่องที่ควรลองก่อน (ปัจจัยหลักของคนนี้จาก SHAP)
+  const [allPresets, setAllPresets] = useState(false)
+
+  // ปัจจัยหลักของคนนี้: ใช้ /shap เดียวกับหน้า "ทำไมถึงเสี่ยง" โหลดไม่ได้ = ไม่มีช่องแนะนำ (ทุกกลุ่มยังเปิดดูได้)
+  useEffect(() => {
+    if (!query) return
+    const ctrl = new AbortController()
+    api(`/shap/${query.id}?top_n=15`, { signal: ctrl.signal }).then(
+      (d) => setFocus({ id: query.id, fields: focusFields(d.contributions) }),
+      (err) => err.name !== 'AbortError' && setFocus({ id: query.id, fields: [] }),
+    )
+    return () => ctrl.abort()
+  }, [query])
 
   // โหลดพนักงานใหม่เมื่อเลือกจากช่องด้านบน
   useEffect(() => {
@@ -456,6 +492,24 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
   const afterScore = scoreOf(result.after)
   const nChanged = Object.keys(changes).length
   const alreadySaved = saved.some((s) => JSON.stringify(s.changes) === JSON.stringify(changes))
+  const focused = focus.id === loaded.id ? focus.fields : []
+  // มาตรการที่ตรงกับปัจจัยหลักขึ้นก่อน แสดง 4 อัน ที่เหลือกดดูเพิ่ม (เดิม 8 ปุ่มพร้อมกัน)
+  const hits = (p) => (Object.keys(p.apply(loaded.base)).some((k) => focused.includes(k)) ? 1 : 0)
+  const presets = [...PRESETS].sort((a, b) => hits(b) - hits(a))
+  const shownPresets = allPresets ? presets : presets.slice(0, PRESETS_SHOWN)
+  const renderControl = (c) =>
+    c.type === 'money' ? (
+      <MoneyControl key={c.field} {...c} rate={rate} base={loaded.base[c.field]} value={current(c.field)} onChange={(v) => setValue(c.field, v)} />
+    ) : (
+      <Control
+        key={c.field}
+        {...c}
+        {...(c.maxFrom && { max: Math.min(c.max, loaded.base[c.maxFrom]), hint: `ไม่เกินจำนวนปีที่อยู่บริษัทนี้ (${loaded.base[c.maxFrom]} ปี)` })}
+        base={loaded.base[c.field]}
+        value={current(c.field)}
+        onChange={(v) => setValue(c.field, v)}
+      />
+    )
 
   return (
     <div className="space-y-4">
@@ -472,7 +526,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 onClick={() => setChanges({})}
                 disabled={!nChanged}
                 title={nChanged ? undefined : 'ยังไม่ได้ปรับอะไร'}
-                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
+                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
               >
                 <Icon name="reset" className="size-4" />
                 กลับเป็นค่าเดิม
@@ -482,7 +536,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
             <div className="mb-6">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-fg">มาตรการสำเร็จรูป</div>
               <div className="flex flex-wrap gap-2">
-                {PRESETS.map((p) => {
+                {shownPresets.map((p) => {
                   const state = presetState(p)
                   return (
                     <button
@@ -492,7 +546,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                       disabled={state === 'noop'}
                       aria-pressed={state === 'applied'}
                       title={state === 'noop' ? 'พนักงานคนนี้เป็นแบบนี้อยู่แล้ว' : state === 'applied' ? 'กดอีกครั้งเพื่อยกเลิก' : undefined}
-                      className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                      className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         state === 'applied'
                           ? 'cursor-pointer border-accent bg-accent-soft text-accent'
                           : state === 'noop'
@@ -506,36 +560,47 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                     </button>
                   )
                 })}
+                {PRESETS.length > PRESETS_SHOWN && (
+                  <button
+                    type="button"
+                    onClick={() => setAllPresets((v) => !v)}
+                    aria-expanded={allPresets}
+                    className="inline-flex h-9 cursor-pointer items-center rounded-full px-3 text-sm font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    {allPresets ? 'ย่อ' : `มาตรการอื่น (${PRESETS.length - PRESETS_SHOWN})`}
+                  </button>
+                )}
               </div>
               <p className="mt-2 text-xs text-muted-fg">กดหลายอันได้ ผลรวมกัน · กดซ้ำเพื่อยกเลิก · ปรับละเอียดต่อได้ที่ช่องด้านล่าง</p>
             </div>
-            <div className="space-y-6">
-              {GROUPS.map((g) => (
-                <fieldset key={g.title}>
-                  <legend className="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-fg">
-                    <Icon name={g.icon} className="size-4 text-accent" />
-                    {g.title}
-                  </legend>
-                  {g.note && <p className="-mt-1 mb-3 text-xs text-muted-fg">{g.note}</p>}
-                  {/* 2 คอลัมน์ตลอด: ทุกกลุ่มลงตัวพอดี (ช่องยาวใช้ wide = เต็มแถว) ไม่เหลือเศษบนจอกว้าง */}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {g.controls.map((c) => (
-                      c.type === 'money' ? (
-                        <MoneyControl key={c.field} {...c} rate={rate} base={loaded.base[c.field]} value={current(c.field)} onChange={(v) => setValue(c.field, v)} />
-                      ) : (
-                        <Control
-                          key={c.field}
-                          {...c}
-                          {...(c.maxFrom && { max: Math.min(c.max, loaded.base[c.maxFrom]), hint: `ไม่เกินจำนวนปีที่อยู่บริษัทนี้ (${loaded.base[c.maxFrom]} ปี)` })}
-                          base={loaded.base[c.field]}
-                          value={current(c.field)}
-                          onChange={(v) => setValue(c.field, v)}
-                        />
-                      )
-                    ))}
-                  </div>
-                </fieldset>
-              ))}
+            {focused.length > 0 && (
+              <fieldset className="mb-6">
+                <legend className="mb-1 text-sm font-semibold text-fg">ลองปรับเรื่องเหล่านี้ก่อน</legend>
+                <p className="mb-3 text-xs text-muted-fg">ปัจจัยที่บริษัทปรับได้และดันความเสี่ยงของคนนี้ขึ้นมากที่สุด</p>
+                <div className="grid gap-3 sm:grid-cols-2">{focused.map((f) => renderControl({ ...CONTROL[f], wide: CONTROL[f].type === 'money' || CONTROL[f].wide }))}</div>
+              </fieldset>
+            )}
+            {/* กลุ่มอื่นพับไว้ (เดิมเปิดทุกช่องพร้อมกัน ~15 ช่อง) กลุ่มที่มีค่าปรับแล้วเปิดค้าง */}
+            <div className="divide-y divide-line rounded-xl border border-line">
+              {GROUPS.map((g) => {
+                const rest = g.controls.filter((c) => !focused.includes(c.field))
+                if (!rest.length) return null
+                const touched = rest.filter((c) => c.field in changes).length
+                return (
+                  <details key={g.title} open={touched > 0 || undefined} className="group">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+                      <Icon name={g.icon} className="size-4 text-accent" />
+                      {rest.length < g.controls.length ? `${g.title} (อื่นๆ)` : g.title}
+                      <span className="text-xs font-normal text-muted-fg">{touched ? `ปรับแล้ว ${touched}` : `${rest.length} รายการ`}</span>
+                      <Icon name="down" className="ml-auto size-4 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
+                    </summary>
+                    <div className="px-4 pb-4 pt-1">
+                      {g.note && <p className="mb-3 text-xs text-muted-fg">{g.note}</p>}
+                      <div className="grid gap-3 sm:grid-cols-2">{rest.map(renderControl)}</div>
+                    </div>
+                  </details>
+                )
+              })}
             </div>
           </Card>
 
@@ -560,7 +625,9 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 <BenefitStat impact={impact} money={money} />
               </div>
               {/* บอกที่มาของตัวเลข กันคนเข้าใจผิดว่าเป็นต้นทุนจริงของบริษัท (สูตรใน src/business_rules.py) */}
-              <div className="mt-3 space-y-1 rounded-lg bg-muted px-4 py-3 text-xs text-muted-fg">
+              <details className="mt-3 rounded-lg bg-muted text-xs text-muted-fg">
+                <summary className="cursor-pointer px-4 py-2.5 font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent">ดูที่มาของตัวเลข</summary>
+                <div className="space-y-1 px-4 pb-3">
                 <p>
                   <b className="text-fg">ต้นทุนหาคนแทน</b> = เงินเดือน {money(impact.monthly_income)} × 12 เดือน ×{' '}
                   {(impact.hiring_cost / (impact.monthly_income * 12)).toFixed(2)} (ตัวคูณของตำแหน่งระดับ {impact.job_level})
@@ -590,7 +657,8 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                     ` = ${money(impact.expected_loss)} − ${money(impact.expected_loss_after)} − ${money(impact.retain_cost)}`}
                 </p>
                 <p>ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท</p>
-              </div>
+                </div>
+              </details>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary-soft px-4 py-3 text-fg ring-1 ring-primary/50">
                 <span className="text-sm text-muted-fg">มูลค่าความเสี่ยง (คะแนน × ต้นทุนหาคนแทน)</span>
                 <span className="flex items-center gap-2 text-lg font-semibold tabular-nums">
@@ -621,7 +689,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
               <RiskGauge size="md" title="ก่อนปรับ" score={scoreOf(result.before)} band={result.before.risk_band} bandTh={result.before.risk_band_th} />
               <RiskGauge size="md" title="หลังปรับ" score={afterScore} band={result.after.risk_band} bandTh={result.after.risk_band_th} />
               <div aria-live="polite" className="space-y-3">
-                <DeltaBadge delta={delta} />
+                <DeltaBadge delta={delta} idle={!nChanged} />
                 <Drivers drivers={result.drivers} />
               </div>
               {/* DE-18: ผลของ WFH มาจากสูตรประมาณ (ระยะทาง × วันเข้าออฟฟิศ / 5) โมเดลไม่เคยเรียนเรื่องนี้ บอกไว้ใกล้ตัวเลข */}
@@ -636,7 +704,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 onClick={saveScenario}
                 disabled={!nChanged || alreadySaved || saved.length >= 4}
                 title={nChanged ? undefined : 'ปรับเงื่อนไขก่อน แล้วค่อยบันทึกไว้เทียบ'}
-                className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
+                className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
               >
                 <Icon name="list" className="size-4" />
                 {alreadySaved ? 'บันทึกแบบนี้ไว้แล้ว' : saved.length >= 4 ? 'บันทึกได้สูงสุด 4 แบบ' : 'บันทึกผลนี้ไว้เทียบ'}
@@ -652,7 +720,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                           <button
                             type="button"
                             onClick={() => setChanges(s.changes)}
-                            className="min-w-0 flex-1 cursor-pointer rounded-lg border border-line px-3 py-2 text-left transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                            className="min-w-0 flex-1 cursor-pointer rounded-lg border border-line px-3 py-2 text-left transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                           >
                             <span className="flex items-center gap-2">
                               <span className={`text-lg font-semibold tabular-nums ${BAND[s.band].text}`}>{Math.round(s.after * 100)}</span>
@@ -680,12 +748,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
                 </div>
               )}
               {/* คำเตือนเต็มอยู่หน้าภาพรวมแล้ว ตรงนี้ย่อเหลือบรรทัดเดียว (เดิมซ้ำทุกหน้า) */}
-              {result.warning && (
-                <p className="flex items-start gap-1.5 text-xs text-risk-mid">
-                  <Icon name="warning" className="size-4 shrink-0" />
-                  ยังไม่ปรับเทียบกับบริษัท ใช้ดูทิศทาง ไม่ใช่ตัวเลขยืนยัน
-                </p>
-              )}
+              {result.warning && <UncalibratedNote detail={result.warning} />}
               <p className="text-xs text-muted-fg">{result.note}</p>
             </div>
           </Card>
@@ -701,7 +764,7 @@ export default function WhatIfSimulator({ query, rate, who, tenant, onRisk, onDo
               <CountUp value={afterScore * 100} />
             </div>
           </div>
-          <DeltaBadge delta={delta} className="flex-1 py-2" />
+          <DeltaBadge delta={delta} idle={!nChanged} className="flex-1 py-2" />
         </div>
       </div>
     </div>

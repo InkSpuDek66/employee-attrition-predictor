@@ -53,7 +53,7 @@ function Status({ active, stale, onReset, resetting }) {
         type="button"
         onClick={onReset}
         disabled={resetting}
-        className="h-9 cursor-pointer rounded-lg border border-line bg-card px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-wait disabled:opacity-60"
+        className="h-9 cursor-pointer rounded-lg border border-line bg-card px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
       >
         {resetting ? 'กำลังยกเลิก…' : active ? 'ยกเลิกการปรับเทียบ' : 'ลบผลปรับเทียบเก่า'}
       </button>
@@ -291,7 +291,7 @@ export default function Calibrate({ who, onChanged }) {
               type="button"
               onClick={run}
               disabled={!file || busy}
-              className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
+              className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
             >
               {busy && <MascotLoader />}
               {busy ? 'กำลังตรวจไฟล์และปรับเทียบ…' : 'ปรับเทียบด้วยไฟล์นี้'}
@@ -363,7 +363,7 @@ export default function Calibrate({ who, onChanged }) {
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}
-              className="mt-3 h-9 w-full cursor-pointer rounded-lg border border-line text-sm font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="mt-3 h-9 w-full cursor-pointer rounded-lg border border-line text-sm font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {showAll ? 'ย่อเหลือล่าสุด' : `ดูทั้งหมด (${items.length.toLocaleString()} ครั้ง)`}
             </button>

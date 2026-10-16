@@ -66,13 +66,6 @@ function Face({ mood, kind }) {
         <path d="M46 82 Q53 73 60 82" fill="none" {...o} strokeWidth="3" />
         <path d="M80 82 Q87 73 94 82" fill="none" {...o} strokeWidth="3" />
       </>
-    ) : mood === 'High' ? (
-      <>
-        <path d="M47 75 L58 81 L47 87" fill="none" {...o} strokeWidth="3" />
-        <path d="M93 75 L82 81 L93 87" fill="none" {...o} strokeWidth="3" />
-        <path d="M50 89 Q48 97 50 104" fill="none" stroke="#7cc4f5" strokeWidth="3.5" strokeLinecap="round" className="mascot-drip" />
-        <path d="M90 89 Q92 97 90 104" fill="none" stroke="#7cc4f5" strokeWidth="3.5" strokeLinecap="round" className="mascot-drip" style={{ animationDelay: '500ms' }} />
-      </>
     ) : (
       <g className="mascot-blink">
         {[53, 87].map((cx) => (
@@ -90,7 +83,7 @@ function Face({ mood, kind }) {
     Low: null,
     Medium: 'M66 97.5 Q70 96.5 74 97.5', // เม้มปาก ครุ่นคิด
     NotFound: 'M64 98 q3 -2 6 0 t6 0',
-    High: 'M62 99 q2 -3 4 0 t4 0 t4 0 t4 0',
+    High: 'M63 97 Q70 101 77 97', // ตั้งใจพร้อมลุย ยิ้มปิดปาก (เดิมร้องไห้)
     Sorry: 'M65 99 Q70 96 75 99',
   }[mood]
 
@@ -109,8 +102,12 @@ function Face({ mood, kind }) {
         <path d="M62 50 l2 8 M70 48 v9 M78 50 l-2 8" stroke={FUR_DARK.cat} strokeWidth="2.6" strokeLinecap="round" />
       )}
       {eyes}
+      {mood === 'High' && (
+        // คิ้วเฉียงลงด้านใน = มุ่งมั่น
+        <path d="M45 68 L58 71 M95 68 L82 71" stroke={LINE} strokeWidth="2.4" strokeLinecap="round" />
+      )}
       {[38, 102].map((x) => (
-        <ellipse key={x} cx={x} cy="92" rx="6.5" ry="4" fill={PINK} opacity={mood === 'High' ? 0.35 : 0.7} />
+        <ellipse key={x} cx={x} cy="92" rx="6.5" ry="4" fill={PINK} opacity={0.7} />
       ))}
       {/* จมูก */}
       {kind === 'cat' ? (
@@ -146,25 +143,19 @@ function Pose({ mood, kind }) {
       </>
     )
   }
+  const rest = <Paw kind={kind} d="M54 120 Q52 132 56 140" end={[57, 141]} />
   if (mood === 'High') {
+    // ตั้งใจพร้อมลุย: ชูอุ้งเท้ากำหมัด "สู้ๆ" (เดิมกุมหัว + เส้นยุ่ง)
     return (
       <>
-        <g className="mascot-shake">
-          <Paw kind={kind} d="M52 118 Q34 104 33 82" end={[32, 78]} />
-          <Paw kind={kind} d="M88 118 Q106 104 107 82" end={[108, 78]} />
+        {rest}
+        <g className="mascot-point">
+          <Paw kind={kind} d="M86 120 Q104 112 106 96" end={[107, 92]} />
+          <path d="M117 82 l5 -3 M119 90 h6 M117 98 l5 3" stroke="#f2c14e" strokeWidth="2" strokeLinecap="round" />
         </g>
-        <path
-          d="M50 16 q4 -7 8 0 t8 0 t8 0 t8 0 t8 0 M56 8 l4 4 M84 8 l-4 4"
-          className="mascot-float stroke-risk-high"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
       </>
     )
   }
-  const rest = <Paw kind={kind} d="M54 120 Q52 132 56 140" end={[57, 141]} />
   if (mood === 'Low') {
     return (
       <>

@@ -1,6 +1,6 @@
 // ชิ้นส่วน UI ที่ SHAP Viewer กับ What-if Simulator ใช้ร่วมกัน
 import { MascotLoader, PointHint } from './mascot/Mascot'
-import { BAND, bandOf, HIGH, inputClass, invalidClass, LOW, THEME_NEXT, useCountUp } from './theme'
+import { BAND, bandOf, HIGH, inputClass, invalidClass, LOW, THEME_NEXT, UNCALIBRATED, useCountUp } from './theme'
 
 // ไอคอนเส้น (path จาก Heroicons outline, MIT) ไม่ต้องลง library เพิ่ม
 const ICONS = {
@@ -66,7 +66,7 @@ export function ThemeToggle({ mode, onToggle, className = '' }) {
       onClick={onToggle}
       aria-label={label}
       title={label}
-      className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className}`}
+      className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
     >
       <Icon name={THEME_ICON[mode]} className="size-5" />
     </button>
@@ -109,7 +109,7 @@ export function PrimaryButton({ loading, children, loadingText = 'กำลั�
   return (
     <button
       disabled={loading}
-      className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-wait disabled:opacity-60"
+      className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
     >
       {loading && <MascotLoader />}
       {loading ? loadingText : children}
@@ -133,6 +133,17 @@ export function Card({ title, subtitle, action, children, className = '' }) {
       )}
       {children}
     </section>
+  )
+}
+
+// คำเตือน "ยังไม่ปรับเทียบ" ใช้ข้อความเดียวกันทุกหน้า (เดิม 4 แบบ คนเลยเลิกอ่าน critique 2026-10-16)
+// ข้อความเต็มจาก backend อยู่ใน title ชี้ค้างแล้วเห็น
+export function UncalibratedNote({ detail }) {
+  return (
+    <p className="flex items-start gap-1.5 text-xs text-risk-mid" title={detail}>
+      <Icon name="warning" className="size-4 shrink-0" />
+      {UNCALIBRATED}
+    </p>
   )
 }
 
@@ -236,7 +247,7 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
             aria-checked={active}
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(v)}
-            className={`flex-1 cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+            className={`flex-1 cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               size === 'sm' ? 'h-8' : 'h-10'
             } ${active ? 'bg-card text-accent ring-1 ring-line' : 'text-muted-fg hover:text-fg'}`}
           >

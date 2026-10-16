@@ -253,7 +253,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 aria-current={active ? 'page' : undefined}
-                className={`relative flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-xs font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-left lg:text-sm ${
+                className={`relative flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-xs font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-left lg:text-sm ${
                   active ? 'bg-primary-soft text-fg' : 'text-muted-fg hover:bg-muted hover:text-fg'
                 }`}
               >
@@ -288,25 +288,36 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
         {/* หัวเพจ (ยกเว้นภาพรวมที่มีหัวของตัวเอง): ผู้ช่วยพูดหัวข้อ = คำถามของ HR ท่า/คำพูดเปลี่ยนตามความเสี่ยงของคนที่ดูอยู่
             ช่องรหัสพนักงานอยู่ในหัวเพจเฉพาะแท็บรายคน (ภาพรวม/นำเข้า เลือกคนจากรายชื่อแทน) */}
         <header
-          className={`hero-sky -mx-4 mb-6 flex-col gap-5 px-4 pb-5 pt-5 print:hidden sm:mx-0 sm:rounded-3xl sm:border sm:border-line sm:px-7 xl:flex-row xl:items-end xl:justify-between ${
+          className={`hero-sky -mx-4 mb-6 flex-col px-4 print:hidden sm:mx-0 sm:rounded-3xl sm:border sm:border-line sm:px-7 xl:flex-row xl:justify-between ${
+            PER_EMPLOYEE.includes(tab) ? 'gap-3 py-3 xl:items-center' : 'gap-5 py-5 xl:items-end'
+          } ${
             tab === 'overview' ? 'hidden' : 'flex'
           }`}
         >
-          <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="md">
-            <p className="text-sm text-muted-fg">{current.label}</p>
-            <h1 className="mt-1.5 text-balance text-2xl font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2rem]">{current.hint}</h1>
-            <p className="mt-2 text-sm text-fg/80" aria-live="polite">
-              <span className="font-medium">{line.text}</span> {line.sub}
-              {risk[tab]?.band && !say && (
-                <span className="tabular-nums text-muted-fg"> · พนักงาน #{risk[tab].id} {risk[tab].label} {Math.round(risk[tab].score * 100)}</span>
-              )}
-            </p>
-          </SpeakingMascot>
+          {PER_EMPLOYEE.includes(tab) ? (
+            // หน้ารายคน: หัวเตี้ย หัวข้อ + คำพูดสั้นของผู้ช่วยในบรรทัดเดียว
+            <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="sm">
+              <h1 className="text-balance text-xl font-semibold leading-snug tracking-tight text-fg sm:text-2xl">{current.hint}</h1>
+              <p className="mt-0.5 text-sm text-fg/80" aria-live="polite">
+                <span className="font-medium">{line.text}</span>
+                <span className="hidden sm:inline"> {line.sub}</span>
+                {risk[tab]?.band && !say && <span className="tabular-nums text-muted-fg"> · #{risk[tab].id} คะแนน {Math.round(risk[tab].score * 100)}</span>}
+              </p>
+            </SpeakingMascot>
+          ) : (
+            <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="md">
+              <p className="text-sm text-muted-fg">{current.label}</p>
+              <h1 className="mt-1.5 text-balance text-2xl font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2rem]">{current.hint}</h1>
+              <p className="mt-2 text-sm text-fg/80" aria-live="polite">
+                <span className="font-medium">{line.text}</span> {line.sub}
+              </p>
+            </SpeakingMascot>
+          )}
           {PER_EMPLOYEE.includes(tab) && (
             <form
               ref={headerForm}
               onSubmit={submit}
-              className="grid gap-3 rounded-xl border border-line bg-card/90 p-3 sm:max-w-md sm:grid-cols-[1fr_auto] sm:items-end xl:w-[22rem] xl:shrink-0"
+              className="grid gap-2 sm:max-w-md sm:grid-cols-[1fr_auto] sm:items-end xl:w-[24rem] xl:shrink-0"
             >
               <Field label="รหัสหรือชื่อพนักงาน" icon="user">
                 <EmployeeSearch value={findText} onChange={setFindText} onPick={pick} />
@@ -330,7 +341,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
                         disabled={current}
                         aria-current={current ? 'true' : undefined}
                         title={employeeLabel(r.id, r.name)}
-                        className={`h-6 rounded-md border px-2 font-medium tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`h-6 rounded-md border px-2 font-medium tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                           current
                             ? 'cursor-default border-transparent bg-primary-soft text-on-primary dark:text-fg'
                             : 'cursor-pointer border-line bg-card text-fg hover:border-accent/40 hover:text-accent'
@@ -368,7 +379,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
               </label>
               <button
                 disabled={!!pending[tab]}
-                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30 disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
               >
                 {pending[tab] ? <MascotLoader /> : 'โหลด'}
               </button>
@@ -432,7 +443,7 @@ function Workspace({ user, settings, onLogout, dark, themeMode, onToggleTheme })
           aria-label="กลับขึ้นด้านบน"
           title="กลับขึ้นด้านบน"
           // What-if มีแถบคะแนนติดขอบล่างบนมือถือ ยกปุ่มขึ้นไปเหนือแถบ
-          className={`fade-up fixed right-4 z-20 grid size-11 cursor-pointer place-items-center rounded-full border border-line bg-card/95 text-fg shadow-md backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:hidden print:hidden ${
+          className={`fade-up fixed right-4 z-20 grid size-11 cursor-pointer place-items-center rounded-full border border-line bg-card/95 text-fg shadow-md backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden print:hidden ${
             tab === 'whatif' ? 'bottom-24' : 'bottom-5'
           }`}
         >
@@ -452,7 +463,7 @@ function LogoutButton({ user, onLogout, className = '' }) {
       onClick={onLogout}
       aria-label={label}
       title={label}
-      className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className}`}
+      className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
     >
       <Icon name="logout" className="size-5" />
     </button>

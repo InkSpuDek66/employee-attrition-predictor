@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { featureLabel, featurePhrase, featureValue, JOB_LEVELS } from './featureLabels'
 import { AssistantHint, SorryState, SpeakingMascot } from './mascot/Mascot'
-import { api, baht, BAND, bahtShort, csvCell, employeeLabel, friendly, inputClass, useApi } from './theme'
+import { api, baht, BAND, bahtShort, csvCell, employeeLabel, friendly, inputClass, UNCALIBRATED, useApi } from './theme'
 import { Alert, Card, CountUp, Icon, Segmented, Skeleton } from './ui'
 
 const shownScore = (e) => e.calibrated_risk_score ?? e.risk_score
@@ -48,7 +48,7 @@ export function CsvButton({ department, onDone = () => {} }) {
       onClick={go}
       disabled={state === 'busy'}
       title={state && state !== 'busy' ? state : 'พนักงานเสี่ยงสูงสุด 100 คน'}
-      className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-wait disabled:opacity-60"
+      className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
     >
       <Icon name="down" className="size-4" />
       {state === 'busy' ? 'กำลังเตรียม…' : state ? 'ลองใหม่' : 'CSV'}
@@ -82,7 +82,7 @@ export function TopRiskList({ n = 10, department = '', q = '', rate, onPick, onM
             <button
               type="button"
               onClick={() => onPick(e.employee_id)}
-              className={`lift flex w-full cursor-pointer gap-3 rounded-lg px-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+              className={`lift flex w-full cursor-pointer gap-3 rounded-lg px-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 rate ? 'items-start py-3' : 'items-center py-2.5'
               }`}
             >
@@ -119,12 +119,12 @@ export function TopRiskList({ n = 10, department = '', q = '', rate, onPick, onM
         </span>
         <span className="flex gap-2">
           {n > 10 && (
-            <button type="button" onClick={onLess} className="h-9 cursor-pointer rounded-lg border border-line px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
+            <button type="button" onClick={onLess} className="h-9 cursor-pointer rounded-lg border border-line px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
               ย่อเหลือ 10 คน
             </button>
           )}
           {total > employees.length && (
-            <button type="button" onClick={onMore} disabled={loading} className="h-9 cursor-pointer rounded-lg border border-line px-3 font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-wait">
+            <button type="button" onClick={onMore} disabled={loading} className="h-9 cursor-pointer rounded-lg border border-line px-3 font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait">
               แสดงเพิ่มอีก {Math.min(LIST_STEP, total - employees.length).toLocaleString()} คน
             </button>
           )}
@@ -138,16 +138,12 @@ export function TopRiskList({ n = 10, department = '', q = '', rate, onPick, onM
 const LIST_STEP = 20
 
 // หน้าว่าง: ผู้ช่วยบอกวิธีใช้ + รายชื่อเสี่ยงสูงสุดให้กดเลือกได้เลย ไม่ต้องรู้รหัส
-export function EmptyPicker({ who, title, children, onPick }) {
+// คำแนะนำอยู่ในหัวการ์ดรายชื่อเลย (เดิมเป็นกล่องแยกด้านบน กินที่ครึ่งจอแต่มีแค่สองบรรทัด)
+export function EmptyPicker({ title, children, onPick }) {
   return (
-    <div className="space-y-4">
-      <AssistantHint who={who} title={title}>
-        {children}
-      </AssistantHint>
-      <Card icon="user" title="หรือเลือกจากพนักงานเสี่ยงสูงสุด" subtitle="กดที่แถวเพื่อเริ่มได้เลย">
-        <TopRiskList n={5} onPick={onPick} />
-      </Card>
-    </div>
+    <Card title={title} subtitle={<>{children} หรือกดเลือกจากพนักงานเสี่ยงสูงสุดด้านล่าง</>}>
+      <TopRiskList n={5} onPick={onPick} />
+    </Card>
   )
 }
 
@@ -227,7 +223,7 @@ function NoEmployees({ who, onImport }) {
         <button
           type="button"
           onClick={onImport}
-          className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent/30"
+          className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent"
         >
           <Icon name="upload" className="size-4" />
           ไปนำเข้าข้อมูล
@@ -295,7 +291,7 @@ export default function Overview({ greeting, rate, who, onPick, onImport, onCsv 
                 type="button"
                 onClick={() => setFullBaht((v) => !v)}
                 aria-pressed={fullBaht}
-                className="cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
               </button>
@@ -326,7 +322,7 @@ export default function Overview({ greeting, rate, who, onPick, onImport, onCsv 
       {/* UX-17: หน้าแรกที่มีตัวเลขเยอะสุดต้องบอกข้อจำกัดเหมือนหน้า SHAP / What-if */}
       {(s.warning || s.data_note) && (
         <Alert tone="warning">
-          {[s.warning, s.data_note].filter(Boolean).join(' · ')}
+          {[s.warning && `${UNCALIBRATED} (ผู้ดูแลระบบปรับเทียบได้ที่แท็บ “ปรับเทียบโมเดล”)`, s.data_note].filter(Boolean).join(' · ')}
         </Alert>
       )}
 
@@ -408,7 +404,7 @@ export default function Overview({ greeting, rate, who, onPick, onImport, onCsv 
                       type="button"
                       onClick={(e) => (e.stopPropagation(), setDepartment(d.department))}
                       aria-pressed={d.department === department}
-                      className="cursor-pointer rounded text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                      className="cursor-pointer rounded text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {d.department}
                     </button>

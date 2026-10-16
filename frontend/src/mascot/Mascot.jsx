@@ -7,6 +7,7 @@ import Kit from './Kit'
 import PetCharacter from './PetCharacter'
 import { loadMascot, MASCOTS } from '../theme'
 import { mascotLine } from './line'
+import { Icon } from '../ui'
 
 
 const CHARACTERS = {
@@ -82,15 +83,18 @@ export function PointHint({ children, align = 'left', who, pet, partner, role = 
 // mood = ท่าของตัวการ์ตูน (ตามความเสี่ยงของคนที่ดูอยู่) replay = เปลี่ยนค่าแล้วเล่นท่าเข้าใหม่ size = 'lg' หน้าภาพรวม | 'md' หน้าอื่น
 export function SpeakingMascot({ who, mood = 'none', replay, size = 'lg', children }) {
   const Character = CHARACTERS[who]
+  // sm = หน้าทำงานรายคน (SHAP/What-if): แถวเดียวเตี้ยๆ ทุกขนาดจอ ไม่ดันเนื้อหาลงไปใต้จอ (critique 2026-10-16)
+  const box = {
+    lg: { row: 'flex-col items-center gap-3 sm:flex-row sm:items-end sm:gap-5', char: 'w-24 sm:w-40', bubble: 'px-6 py-5 sm:mb-6 sm:px-8 sm:py-6', tail: 'side' },
+    md: { row: 'flex-col items-center gap-3 sm:flex-row sm:items-end sm:gap-5', char: 'w-20 sm:w-28', bubble: 'px-5 py-4 sm:mb-3 sm:px-7 sm:py-5', tail: 'side' },
+    sm: { row: 'flex-row items-center gap-3', char: 'w-14 sm:w-16', bubble: 'px-4 py-3 sm:px-5', tail: 'left' },
+  }[size]
   return (
-    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-end sm:gap-5">
-      <div className={`shrink-0 [&_svg]:h-auto [&_svg]:w-full ${size === 'lg' ? 'w-24 sm:w-40' : 'w-20 sm:w-28'}`} aria-hidden="true">
+    <div className={`flex min-w-0 ${box.row}`}>
+      <div className={`shrink-0 [&_svg]:h-auto [&_svg]:w-full ${box.char}`} aria-hidden="true">
         <Character key={`${who}-${mood}-${replay ?? ''}`} mood={mood} />
       </div>
-      <Bubble
-        tail="side"
-        className={`w-full max-w-3xl shadow-[0_18px_40px_-24px_rgb(30_70_140/0.35)] ${size === 'lg' ? 'px-6 py-5 sm:mb-6 sm:px-8 sm:py-6' : 'px-5 py-4 sm:mb-3 sm:px-7 sm:py-5'}`}
-      >
+      <Bubble tail={box.tail} className={`w-full min-w-0 max-w-3xl shadow-[0_18px_40px_-24px_rgb(30_70_140/0.35)] ${box.bubble}`}>
         {children}
       </Bubble>
     </div>
@@ -99,13 +103,13 @@ export function SpeakingMascot({ who, mood = 'none', replay, size = 'lg', childr
 
 // หน้าว่างก่อนเลือกพนักงาน: ผู้ช่วยที่เลือกไว้โบกมือ + บอกว่าต้องทำอะไร
 export function AssistantHint({ title, children }) {
+  // ตัวการ์ตูนพูดอยู่ที่หัวเพจแล้ว ตรงนี้เหลือแถบคำแนะนำเตี้ยๆ (เดิมเป็นกล่องเส้นประใหญ่ กินที่แต่เนื้อหาน้อย)
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-secondary px-6 py-10 sm:flex-row sm:justify-center sm:gap-6">
-      {/* ตัวการ์ตูนอยู่ที่หัวเพจแล้ว (ไม่ให้ขึ้นสองตัว) เหลือแค่กล่องคำพูด */}
-      <Bubble tail="none" className="max-w-md text-left">
-        <div className="font-semibold text-fg">{title}</div>
-        <p className="mt-1 text-sm text-muted-fg">{children}</p>
-      </Bubble>
+    <div className="flex items-start gap-3 rounded-xl border border-line bg-card/70 px-4 py-3">
+      <Icon name="info" className="mt-0.5 size-5 shrink-0 text-accent" />
+      <p className="text-sm text-muted-fg">
+        <span className="font-semibold text-fg">{title}</span> {children}
+      </p>
     </div>
   )
 }
@@ -194,7 +198,7 @@ export default function Mascot({ risk, who, onChoose, say, idle, chooserOnly = f
         onClick={() => onChoose(MASCOTS[(MASCOTS.indexOf(who) + 1) % MASCOTS.length])}
         title="กดเพื่อเปลี่ยนตัวการ์ตูน"
         aria-label="เปลี่ยนตัวการ์ตูน"
-        className="cursor-pointer rounded-xl p-1 transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className="cursor-pointer rounded-xl p-1 transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         {/* key: เปลี่ยนระดับ/ตัวการ์ตูนแล้วเล่นท่าเข้าใหม่ */}
         <Character key={`${who}-${mood}-${say?.n ?? 0}`} mood={mood} />
@@ -225,7 +229,7 @@ export default function Mascot({ risk, who, onChoose, say, idle, chooserOnly = f
                 aria-label={LABELS[k]}
                 title={LABELS[k]}
                 onClick={() => onChoose(k)}
-                className={`size-10 cursor-pointer overflow-hidden rounded-full bg-muted transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                className={`size-10 cursor-pointer overflow-hidden rounded-full bg-muted transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   who === k ? 'ring-2 ring-accent ring-offset-2 ring-offset-card' : 'opacity-60 hover:opacity-100'
                 }`}
               >

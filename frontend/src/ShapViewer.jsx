@@ -5,7 +5,7 @@ import Logo from '../logo/Logo'
 import { api, baht, bandOf, employeeLabel, friendly, loadSession, useApi } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
-import { Card, Icon, RiskGauge, Segmented, Skeleton } from './ui'
+import { Card, Icon, RiskGauge, Segmented, Skeleton, UncalibratedNote } from './ui'
 
 const TOP_N = [5, 10, 15, 20].map((n) => [n, `${n}`])
 
@@ -235,7 +235,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
             <button
               type="button"
               onClick={() => printReport(setPrintedAt)}
-              className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 print:hidden"
+              className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent print:hidden"
             >
               <Icon name="download" className="size-4" />
               พิมพ์ / บันทึก PDF
@@ -250,12 +250,7 @@ export default function ShapViewer({ query, rate, who, onRisk, onDone, onPick })
           </div>
 
           <Summary ups={ups} downs={downs} band={bandOf(score)} />
-          {data.warning && (
-            <p className="flex items-start gap-1.5 text-xs text-risk-mid">
-              <Icon name="warning" className="size-4 shrink-0" />
-              ยังไม่ปรับเทียบกับบริษัท ใช้ SHAP ดูทิศทางของปัจจัย ไม่ใช่ตัวเลขยืนยัน
-            </p>
-          )}
+          {data.warning && <UncalibratedNote detail={data.warning} />}
 
           <Card
             icon="chart"

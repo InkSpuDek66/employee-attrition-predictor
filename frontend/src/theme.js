@@ -32,7 +32,7 @@ export const toApiChanges = (changes) =>
   'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
 
 export const inputClass =
-  'h-11 w-full rounded-lg border border-line bg-card px-3 text-fg outline-none transition-colors duration-200 placeholder:text-muted-fg/60 hover:border-secondary focus-visible:border-accent focus-visible:ring-3 focus-visible:ring-accent/20'
+  'h-11 w-full rounded-lg border border-line bg-card px-3 text-fg outline-none transition-colors duration-200 placeholder:text-muted-fg hover:border-secondary focus-visible:border-accent focus-visible:ring-3 focus-visible:ring-accent/20'
 
 export const BAND = {
   Low: { th: 'ต่ำ', text: 'text-risk-low', pill: 'bg-risk-low-soft text-risk-low ring-risk-low/15' },
@@ -48,6 +48,9 @@ export const toastKind = (from, to) =>
   from === to ? null : BAND_RANK[to] < BAND_RANK[from] ? (to === 'Low' ? 'low' : 'midDown') : to === 'High' ? 'high' : 'midUp'
 
 // ผู้ช่วยในหน้า (mascot/Mascot.jsx) ลำดับนี้ใช้ทั้งปุ่มเลือกและหน้าขอโทษ ตัวที่เลือกจำใน localStorage
+// คำเตือนยังไม่ปรับเทียบ ข้อความเดียวทุกหน้า (ui.jsx: UncalibratedNote, หน้าภาพรวม)
+export const UNCALIBRATED = 'ยังไม่ปรับเทียบกับบริษัท: คะแนนใช้จัดลำดับว่าใครเสี่ยงกว่า ไม่ใช่โอกาสลาออกจริง'
+
 export const MASCOTS = ['joy', 'kit', 'cat', 'dog']
 const OLD_MASCOT_KEYS = { chibiGirl: 'joy', chibiBoy: 'kit' } // ชื่อรุ่นก่อนที่อาจจำไว้ในเบราว์เซอร์
 
