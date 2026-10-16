@@ -172,7 +172,7 @@ function Control({ field, type, options, base, value, onChange, unit, wide, hint
 }
 
 function Stat({ label, value, tone, sub }) {
-  const tones = { red: 'text-risk-high', blue: 'text-accent', green: 'text-risk-low', muted: 'text-muted-fg' }
+  const tones = { red: 'text-risk-high', blue: 'text-accent', green: 'text-risk-low', muted: 'text-muted-fg', amber: 'text-risk-mid' }
   return (
     <div className="rounded-lg border border-line bg-canvas p-4">
       <div className="text-xs font-medium text-muted-fg">{label}</div>
@@ -186,18 +186,22 @@ function Stat({ label, value, tone, sub }) {
 // ยังไม่ปรับเทียบ: คะแนนตันใกล้ 100 มาตรการขยับได้ไม่กี่คะแนน ผลจึงติดลบแทบทุกครั้ง ไม่ได้แปลว่าไม่คุ้มจริง
 // จึงไม่ตัดสินเขียว/แดง บอกแค่ความเสี่ยงที่ลดได้เทียบต้นทุน (critique 2026-10-16 รอบ 5)
 // มาตรการที่ยังไม่มีต้นทุนในระบบ (uncosted) = ตัวเลขดูดีเกินจริง ขึ้นสีเหลือง
-function MoneyVerdict({ impact, money }) {
+// points = ผลต่างของคะแนนที่แสดง (ปัดแล้ว) ให้ตรงกับเกจก่อน/หลัง (critique รอบ 7: 99 -> 97 แต่ป้ายบอกลด 3)
+function MoneyVerdict({ impact, money, points }) {
   if (impact.expected_benefit == null) return null
+  if (points === 0) {
+    return (
+      <p className="rounded-lg border border-line p-3 text-xs text-muted-fg" aria-live="polite">
+        คะแนนที่แสดงไม่เปลี่ยน มูลค่าความเสี่ยงจึงไม่ต่างกัน ต้นทุนของสิ่งที่ปรับ {costText(impact, money)}
+      </p>
+    )
+  }
   const reduced = impact.expected_loss - impact.expected_loss_after
   // มาตรการที่ระบบยังไม่มีต้นทุน (หุ้น งดเดินทาง WFH) ห้ามโชว์ "0 บาท" อ่านเหมือนได้ฟรี (critique รอบ 6)
   const partial = impact.uncosted?.length > 0
-  const cost = partial
-    ? impact.retain_cost > 0
-      ? `${money(impact.retain_cost)} + ยังไม่ครบ`
-      : 'ยังไม่มีตัวเลข'
-    : money(impact.retain_cost)
+  const cost = costText(impact, money)
   const verdict = impact.warning
-    ? { tone: 'text-fg', text: 'ยังไม่ปรับเทียบ จึงยังบอกไม่ได้ว่าคุ้มไหม ใช้เทียบว่ามาตรการไหนลดความเสี่ยงได้มากกว่า' }
+    ? { tone: 'text-fg', text: 'ยังบอกไม่ได้ว่าคุ้มไหม (ยังไม่ปรับเทียบ) ใช้เทียบว่ามาตรการไหนลดคะแนนได้มากกว่า' }
     : partial
       ? null // คำเตือนต้นทุนไม่ครบอยู่บรรทัดล่างแล้ว ไม่ตัดสินคุ้ม/ไม่คุ้มจากต้นทุนที่ขาด
       : impact.expected_benefit >= 0
@@ -206,19 +210,32 @@ function MoneyVerdict({ impact, money }) {
   return (
     <div className="rounded-lg border border-line p-3 text-sm" aria-live="polite">
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-        <dt className="text-muted-fg">{reduced < 0 ? 'มูลค่าความเสี่ยงที่เพิ่มขึ้น' : 'มูลค่าความเสี่ยงที่ลดได้'}</dt>
-        <dd className="text-right font-semibold tabular-nums text-fg">{money(Math.abs(reduced))}</dd>
+        {/* ต้นทุนไม่ครบ = ไม่โชว์บาทที่ลดได้ (เทียบกับต้นทุนที่ขาดแล้วดูเหมือนได้ฟรี) บอกเป็นคะแนนแทน */}
+        <dt className="text-muted-fg">{points > 0 ? 'คะแนนเพิ่มขึ้น' : 'คะแนนลดลง'}</dt>
+        <dd className="text-right font-semibold tabular-nums text-fg">{Math.abs(points)} คะแนน</dd>
+        {!partial && (
+          <>
+            <dt className="text-muted-fg">{reduced < 0 ? 'มูลค่าความเสี่ยงที่เพิ่มขึ้น' : 'มูลค่าความเสี่ยงที่ลดได้'}</dt>
+            <dd className="text-right font-semibold tabular-nums text-fg">{money(Math.abs(reduced))}</dd>
+          </>
+        )}
         <dt className="text-muted-fg">ต้นทุนมาตรการ (1 ปี)</dt>
         <dd className={`text-right font-semibold tabular-nums ${partial ? 'text-risk-mid' : 'text-fg'}`}>{cost}</dd>
       </dl>
       {verdict && <p className={`mt-2 border-t border-line pt-2 text-xs ${verdict.tone}`}>{verdict.text}</p>}
       {partial && (
         <p className="mt-2 border-t border-line pt-2 text-xs text-risk-mid">
-          คิดต้นทุนไม่ครบ: ระบบยังไม่มีค่าใช้จ่ายของ {impact.uncosted.map(featureLabel).join(', ')} ถ้ามีค่าใช้จ่ายจริง ผลจะน้อยกว่านี้
+          ต้องประเมินค่าใช้จ่ายของ {impact.uncosted.map(featureLabel).join(', ')} เอง ระบบยังไม่มีตัวเลข จึงไม่คิดเป็นบาท
         </p>
       )}
     </div>
   )
+}
+
+// ต้นทุนของสิ่งที่ปรับ ใช้ข้อความเดียวกันทุกที่ (สรุปข้างคะแนน การ์ดต้นทุน ที่มาของตัวเลข)
+function costText(impact, money) {
+  if (!impact.uncosted?.length) return money(impact.retain_cost)
+  return impact.retain_cost > 0 ? `${money(impact.retain_cost)} + ยังไม่มีตัวเลขบางส่วน` : 'ยังไม่มีตัวเลข'
 }
 
 // ปัดก่อนแล้วค่อยเลือกสี/ข้อความ (เดิมดูจากค่าก่อนปัด: ขึ้น "ความเสี่ยงเพิ่มขึ้น +0" สีแดง ทั้งที่คะแนนเท่าเดิม)
@@ -228,7 +245,7 @@ function DeltaBadge({ delta: raw, idle = false, className = '' }) {
   if (idle) {
     return (
       <div className={`rounded-lg bg-muted px-4 py-3 text-sm text-muted-fg ring-1 ring-line ${className}`}>
-        ยังไม่ได้ปรับ ลองกดมาตรการหรือปรับค่าทางซ้าย คะแนนหลังปรับจะเปลี่ยนตรงนี้
+        ยังไม่ได้ปรับ ลองกดมาตรการหรือปรับค่าในส่วน "ปรับเงื่อนไข" คะแนนหลังปรับจะเปลี่ยนตรงนี้
       </div>
     )
   }
@@ -476,7 +493,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   }
 
   function saveScenario() {
-    setSaved((s) => [...s, { key: Date.now(), changes, after: scoreOf(result.after), band: result.after.risk_band, delta: result.delta ?? 0 }])
+    setSaved((s) => [...s, { key: Date.now(), changes, after: scoreOf(result.after), band: result.after.risk_band, delta }])
   }
 
   function setValue(field, raw) {
@@ -512,7 +529,8 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   }
 
   const current = (field) => changes[field] ?? loaded.base[field]
-  const delta = result.delta ?? 0
+  // ผลต่างจากคะแนนที่แสดงบนเกจ (ปัดแล้ว) ไม่ใช่ค่าก่อนปัด ไม่งั้น 99 -> 97 จะขึ้นว่าลด 3
+  const delta = (Math.round(scoreOf(result.after) * 100) - Math.round(scoreOf(result.before) * 100)) / 100
   const afterScore = scoreOf(result.after)
   const nChanged = Object.keys(changes).length
   const alreadySaved = saved.some((s) => JSON.stringify(s.changes) === JSON.stringify(changes))
@@ -640,8 +658,8 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 />
                 <Stat
                   label="ต้นทุนมาตรการที่ปรับ (1 ปี)"
-                  value={!impact.costed_from_changes ? '—' : impact.uncosted?.length && !impact.retain_cost ? 'ยังไม่มีตัวเลข' : money(impact.retain_cost)}
-                  tone={impact.costed_from_changes ? 'blue' : 'muted'}
+                  value={impact.costed_from_changes ? costText(impact, money) : '—'}
+                  tone={!impact.costed_from_changes ? 'muted' : impact.uncosted?.length ? 'amber' : 'blue'}
                   sub={
                     !impact.costed_from_changes
                       ? 'ลองกดมาตรการหรือปรับค่าก่อน'
@@ -657,7 +675,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 <div className="space-y-1 px-4 pb-3">
                 <p>
                   <b className="text-fg">ต้นทุนหาคนแทน</b> = เงินเดือน {money(impact.monthly_income)} × 12 เดือน ×{' '}
-                  {(impact.hiring_cost / (impact.monthly_income * 12)).toFixed(2)} (ตัวคูณของตำแหน่งระดับ {impact.job_level})
+                  {(impact.hiring_cost / (impact.monthly_income * 12)).toFixed(2)} (ตัวคูณของ{' '}{JOB_LEVELS[impact.job_level] ?? `ระดับ ${impact.job_level}`})
                   {impact.include_severance && ` + ค่าชดเชย ${impact.severance_days} วัน (${money(impact.severance_pay)})`}
                 </p>
                 {impact.costed_from_changes && (
@@ -665,7 +683,11 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     <b className="text-fg">ต้นทุนมาตรการ</b> ={' '}
                     {impact.measures.length
                       ? impact.measures.map((m) => `${m.label} ${money(m.cost)}`).join(' + ')
-                      : 'ไม่มีมาตรการที่มีค่าใช้จ่าย'}
+                      : impact.uncosted?.length
+                        ? 'ยังไม่มีตัวเลข'
+                        : 'ไม่มีมาตรการที่มีค่าใช้จ่าย'}
+                    {impact.measures.length > 0 && impact.uncosted?.length > 0 && ' + ยังไม่มีตัวเลข'}
+                    {impact.uncosted?.length > 0 && ` (ของ ${impact.uncosted.map(featureLabel).join(', ')})`}
                   </p>
                 )}
                 <p>
@@ -704,7 +726,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     หรือใช้มาตรการอื่นร่วมด้วย
                   </p>
                 )}
-                <MoneyVerdict impact={impact ?? {}} money={money} />
+                <MoneyVerdict impact={impact ?? {}} money={money} points={Math.round(delta * 100)} />
               </div>
               {/* DE-18: ผลของ WFH มาจากสูตรประมาณ (ระยะทาง × วันเข้าออฟฟิศ / 5) โมเดลไม่เคยเรียนเรื่องนี้ บอกไว้ใกล้ตัวเลข */}
               {'OfficeDaysPerWeek' in result.changes_applied && (

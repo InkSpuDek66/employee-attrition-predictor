@@ -9,7 +9,7 @@ import { Card, Icon, RiskGauge, Segmented, Skeleton, UncalibratedNote } from './
 
 const TOP_N = [5, 10, 15, 20].map((n) => [n, `${n}`])
 
-function Driver({ tone, title, row, count }) {
+function Driver({ tone, title, row, count, topN }) {
   const up = tone === 'up'
   return (
     <div className="rounded-xl border border-line bg-card p-5">
@@ -19,9 +19,9 @@ function Driver({ tone, title, row, count }) {
         </span>
         {title}
       </div>
-      <div className="mt-3 text-lg font-semibold text-fg">{row?.label ?? 'ไม่มี'}</div>
-      <div className="text-sm text-muted-fg">{row ? row.phrase : '—'}</div>
-      <div className="mt-3 text-xs text-muted-fg">ทั้งหมด {count} ปัจจัยในรายการ</div>
+      <div className="mt-3 text-lg font-semibold text-fg">{row?.label ?? `ไม่มีใน ${topN} ปัจจัยหลัก`}</div>
+      <div className="text-sm text-muted-fg">{row ? row.phrase : 'เพิ่มจำนวนปัจจัยที่แสดงในกราฟด้านล่างเพื่อดูเพิ่ม'}</div>
+      {row && <div className="mt-3 text-xs text-muted-fg">ทั้งหมด {count} ปัจจัยใน {topN} อันดับแรก</div>}
     </div>
   )
 }
@@ -245,8 +245,8 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick }) {
 
         <div className="min-w-0 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Driver tone="up" title="ปัจจัยที่ดันให้เสี่ยงมากที่สุด" row={ups[0]} count={ups.length} />
-            <Driver tone="down" title="ปัจจัยที่ช่วยให้อยู่ต่อมากที่สุด" row={downs[0]} count={downs.length} />
+            <Driver tone="up" title="ปัจจัยที่ดันให้เสี่ยงมากที่สุด" row={ups[0]} count={ups.length} topN={topN} />
+            <Driver tone="down" title="ปัจจัยที่ช่วยให้อยู่ต่อมากที่สุด" row={downs[0]} count={downs.length} topN={topN} />
           </div>
 
           <Summary ups={ups} downs={downs} band={bandOf(score)} />

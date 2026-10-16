@@ -90,6 +90,7 @@ def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     X = ms.to_features(pd.DataFrame([base, changed]), ms.company_income(tenant))
     sv = ms.explainer()(X).values
     diff = pd.Series(sv[1] - sv[0], index=X.columns).groupby(cs.feature_group).sum()
+    diff = diff[[cs.factor_kind(f) not in ("personal", "unexplained") for f in diff.index]]  # ไม่ยกเป็นเหตุผล (UX-06/07)
     top = diff[diff.abs() > 1e-4].abs().sort_values(ascending=False).index[:MAX_DRIVERS]
     return [Driver(feature=f, change=float(diff[f])) for f in top]
 
