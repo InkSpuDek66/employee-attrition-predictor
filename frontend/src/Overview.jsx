@@ -263,7 +263,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
   const deptOptions = [['', 'ทั้งบริษัท'], ...departments.map((d) => [d.department, d.department])]
   // แผนกที่ควรดูก่อน = คนเสี่ยงสูงมากสุด (เดิมเรียงตามมูลค่าความเสี่ยงรวม แผนกที่ไม่มีคนเสี่ยงสูงแต่เงินเดือนสูงขึ้นมาก่อน)
   const byHighRisk = [...departments].sort((a, b) => b.risk_bands.High - a.risk_bands.High || b.mean_risk_score - a.mean_risk_score)
-  const manyDepartments = departments.length > 8
+  const manyDepartments = departments.length > 4 // เกิน 4 ตัวเลือกเรียงปุ่มแล้วเลือกยาก (critique รอบ 6) ใช้ช่องเลือก
   const maxShare = Math.max(...s.top_factors.map((f) => f.share), 1e-9)
   const high = s.risk_bands.High
   const where = department || 'ตอนนี้'
@@ -302,15 +302,13 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
             <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.high_risk_replacement_cost)}>
               <CountUp value={s.high_risk_replacement_cost} format={money} />
             </div>
-            <p className="mt-1 text-xs text-muted-fg">
-              ต้นทุนหาคนแทน (ประมาณการ ไม่ใช่ยอดจริง) · มูลค่าความเสี่ยงรวมทั้งบริษัท {bahtShort(s.expected_loss_total)}
-            </p>
+            <p className="mt-1 text-xs text-muted-fg">ต้นทุนหาคนแทนโดยประมาณ ไม่ใช่ยอดจริง</p>
           </div>
         </div>
       </section>
 
       {/* มือถือ หรือแผนกเยอะ (ปุ่มเรียงหลายแถว) = ช่องเลือกแบบเลื่อนลง */}
-      <select aria-label="เลือกแผนก" value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputClass} ${manyDepartments ? '' : 'sm:hidden'}`}>
+      <select aria-label="เลือกแผนก" value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputClass} sm:max-w-xs ${manyDepartments ? '' : 'sm:hidden'}`}>
         {deptOptions.map(([v, text]) => (
           <option key={v} value={v}>
             {text}
@@ -415,7 +413,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                     </button>
                   </td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{d.n_employees.toLocaleString()}</td>
-                  <td className="px-2 py-2.5 text-right tabular-nums text-risk-high">{d.risk_bands.High}</td>
+                  <td className={`px-2 py-2.5 text-right tabular-nums ${d.risk_bands.High ? 'font-semibold text-risk-high' : 'text-muted-fg'}`}>{d.risk_bands.High}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{Math.round(d.mean_risk_score * 100)}</td>
                   <td className="whitespace-nowrap px-5 py-2.5 text-right tabular-nums sm:px-6" title={baht(d.high_risk_replacement_cost)}>
                     {(d.high_risk_replacement_cost / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

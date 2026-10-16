@@ -5,7 +5,7 @@ import { accountProblem, api, focusField, serverProblem, useApi } from './theme'
 import { Alert, Card, CheckedField, Icon, PrimaryButton, Segmented, Skeleton } from './ui'
 
 const ROLE = { admin: 'ผู้ดูแลระบบ', hr: 'ฝ่ายบุคคล' }
-const CAN = { hr: 'ดูภาพรวม SHAP What-if และตรวจไฟล์นำเข้าได้', admin: 'ทำได้ทุกอย่าง + บันทึกไฟล์นำเข้า ปรับเทียบ เพิ่มบัญชี' }
+const CAN = { hr: 'ดูภาพรวม ทำไมถึงเสี่ยง ลองปรับเงื่อนไข และตรวจไฟล์นำเข้าได้', admin: 'ทำได้ทุกอย่าง + บันทึกไฟล์นำเข้า ปรับเทียบ เพิ่มบัญชี' }
 const EMPTY = { name: '', username: '', password: '', confirm: '', role: 'hr' }
 
 export default function Users() {

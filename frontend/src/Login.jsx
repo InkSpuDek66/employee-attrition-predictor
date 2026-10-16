@@ -7,7 +7,7 @@ import { accountProblem, api, focusField, friendly, inputClass, invalidClass, se
 import { Alert, CheckedField, Field, Icon, PrimaryButton, ThemeToggle } from './ui'
 
 const DEMO_ACCOUNTS = [
-  { username: 'hr_demo', password: 'hr-demo-1234', role: 'ฝ่ายบุคคล', can: 'ดูภาพรวม, SHAP, What-if, ตรวจไฟล์นำเข้า' },
+  { username: 'hr_demo', password: 'hr-demo-1234', role: 'ฝ่ายบุคคล', can: 'ดูภาพรวม, ทำไมถึงเสี่ยง, ลองปรับเงื่อนไข, ตรวจไฟล์นำเข้า' },
   { username: 'admin_demo', password: 'admin-demo-1234', role: 'ผู้ดูแลระบบ', can: 'ทุกอย่างของ HR + บันทึกไฟล์นำเข้า + ปรับเทียบโมเดล' },
   // บริษัทที่เริ่มจากว่าง: ไม่เห็นข้อมูล IBM ลองนำเข้าพนักงานของบริษัทเองได้
   { username: 'newco_admin', password: 'newco-admin-1234', role: 'ผู้ดูแลระบบ · บริษัทใหม่', can: 'เริ่มจากว่าง ลองนำเข้าพนักงานของบริษัทเอง (ไม่เห็นข้อมูล IBM)' },

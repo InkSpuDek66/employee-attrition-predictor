@@ -189,25 +189,33 @@ function Stat({ label, value, tone, sub }) {
 function MoneyVerdict({ impact, money }) {
   if (impact.expected_benefit == null) return null
   const reduced = impact.expected_loss - impact.expected_loss_after
+  // มาตรการที่ระบบยังไม่มีต้นทุน (หุ้น งดเดินทาง WFH) ห้ามโชว์ "0 บาท" อ่านเหมือนได้ฟรี (critique รอบ 6)
   const partial = impact.uncosted?.length > 0
+  const cost = partial
+    ? impact.retain_cost > 0
+      ? `${money(impact.retain_cost)} + ยังไม่ครบ`
+      : 'ยังไม่มีตัวเลข'
+    : money(impact.retain_cost)
   const verdict = impact.warning
     ? { tone: 'text-fg', text: 'ยังไม่ปรับเทียบ จึงยังบอกไม่ได้ว่าคุ้มไหม ใช้เทียบว่ามาตรการไหนลดความเสี่ยงได้มากกว่า' }
     : partial
-      ? { tone: 'text-risk-mid', text: 'คิดต้นทุนไม่ครบ ผลจริงจะน้อยกว่านี้' }
+      ? null // คำเตือนต้นทุนไม่ครบอยู่บรรทัดล่างแล้ว ไม่ตัดสินคุ้ม/ไม่คุ้มจากต้นทุนที่ขาด
       : impact.expected_benefit >= 0
         ? { tone: 'text-risk-low', text: `คุ้ม: ความเสี่ยงที่ลดได้มากกว่าต้นทุน ${money(impact.expected_benefit)}` }
         : { tone: 'text-risk-high', text: `ยังไม่คุ้ม: ต้นทุนสูงกว่าความเสี่ยงที่ลดได้ ${money(-impact.expected_benefit)}` }
   return (
     <div className="rounded-lg border border-line p-3 text-sm" aria-live="polite">
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-        <dt className="text-muted-fg">มูลค่าความเสี่ยงที่ลดได้</dt>
-        <dd className="text-right font-semibold tabular-nums text-fg">{money(reduced)}</dd>
+        <dt className="text-muted-fg">{reduced < 0 ? 'มูลค่าความเสี่ยงที่เพิ่มขึ้น' : 'มูลค่าความเสี่ยงที่ลดได้'}</dt>
+        <dd className="text-right font-semibold tabular-nums text-fg">{money(Math.abs(reduced))}</dd>
         <dt className="text-muted-fg">ต้นทุนมาตรการ (1 ปี)</dt>
-        <dd className="text-right font-semibold tabular-nums text-fg">{money(impact.retain_cost)}</dd>
+        <dd className={`text-right font-semibold tabular-nums ${partial ? 'text-risk-mid' : 'text-fg'}`}>{cost}</dd>
       </dl>
-      <p className={`mt-2 border-t border-line pt-2 text-xs ${verdict.tone}`}>{verdict.text}</p>
+      {verdict && <p className={`mt-2 border-t border-line pt-2 text-xs ${verdict.tone}`}>{verdict.text}</p>}
       {partial && (
-        <p className="mt-1 text-xs text-risk-mid">ยังไม่มีตัวเลขค่าใช้จ่ายของ: {impact.uncosted.map(featureLabel).join(', ')}</p>
+        <p className="mt-2 border-t border-line pt-2 text-xs text-risk-mid">
+          คิดต้นทุนไม่ครบ: ระบบยังไม่มีค่าใช้จ่ายของ {impact.uncosted.map(featureLabel).join(', ')} ถ้ามีค่าใช้จ่ายจริง ผลจะน้อยกว่านี้
+        </p>
       )}
     </div>
   )
@@ -354,7 +362,6 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   const [changes, setChanges] = useState({})
   const [result, setResult] = useState(null)
   const [impact, setImpact] = useState(null)
-  const [retention, setRetention] = useState('')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState([]) // ผลจำลองที่บันทึกไว้เทียบ (ต่อพนักงานหนึ่งคน สูงสุด 4)
   const [toast, setToast] = useState(null) // { n, kind } ข้อความเด้งตอนระดับความเสี่ยงหลังปรับเปลี่ยน (n เพิ่มทุกครั้ง ให้เล่นใหม่)
@@ -386,7 +393,6 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
         setResult(res)
         lastBand.current = res.after.risk_band
         onRisk({ id: query.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
-        setRetention('')
         setError('')
       },
       (err) => {
@@ -437,12 +443,11 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
     if (!loaded?.base) return
     const ctrl = new AbortController()
     const params = new URLSearchParams()
-    if (retention) params.set('retention', retention)
     if (riskAfter != null) params.set('risk_after', riskAfter)
     if (applied) params.set('changes', applied)
     api(`/financial-impact/${loaded.id}?${params}`, { signal: ctrl.signal }).then(setImpact, (err) => err.name !== 'AbortError' && setError(friendly(err)))
     return () => ctrl.abort()
-  }, [loaded, retention, riskAfter, applied])
+  }, [loaded, riskAfter, applied])
 
   // ค่าเท่าค่าเดิมไหม (เงินเดือนเทียบเป็นบาทปัดเต็ม เพราะในหน้าเก็บทศนิยม)
   const isBase = (field, v) =>
@@ -463,7 +468,6 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
     if (presetState(p) === 'applied') {
       return setChanges((c) => Object.fromEntries(Object.entries(c).filter(([k]) => !(k in patch))))
     }
-    if (p.retention) setRetention(p.retention)
     setChanges((c) => {
       const next = { ...c, ...patch }
       for (const k of Object.keys(patch)) if (isBase(k, next[k])) delete next[k]
@@ -628,10 +632,15 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
             <Card icon="money" title="ต้นทุน: ดูแลต่อ หรือ หาคนแทน" subtitle="ประมาณการ คิดจากข้อมูลเดิมของพนักงาน">
               {/* ผลคุ้ม/ไม่คุ้มอยู่ข้างคะแนนด้านขวา (MoneyVerdict) ตรงนี้เป็นตัวเลขประกอบ */}
               <div className="grid gap-3 sm:grid-cols-2">
-                <Stat label="ต้นทุนถ้าต้องหาคนแทน" value={money(impact.replacement_cost)} tone="red" />
+                <Stat
+                  label="ต้นทุนถ้าต้องหาคนแทน"
+                  value={money(impact.replacement_cost)}
+                  tone="muted"
+                  sub="ใช้คูณกับคะแนนเป็นมูลค่าความเสี่ยง เทียบกับต้นทุนมาตรการตรงๆ ไม่ได้"
+                />
                 <Stat
                   label="ต้นทุนมาตรการที่ปรับ (1 ปี)"
-                  value={impact.costed_from_changes ? money(impact.retain_cost) : '—'}
+                  value={!impact.costed_from_changes ? '—' : impact.uncosted?.length && !impact.retain_cost ? 'ยังไม่มีตัวเลข' : money(impact.retain_cost)}
                   tone={impact.costed_from_changes ? 'blue' : 'muted'}
                   sub={
                     !impact.costed_from_changes
@@ -689,6 +698,12 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
               <div aria-live="polite" className="space-y-3">
                 <DeltaBadge delta={delta} idle={!nChanged} />
                 <Drivers drivers={result.drivers} changed={result.changes_applied} />
+                {'JobLevel' in result.changes_applied && Math.round(delta * 100) >= 0 && (
+                  <p className="rounded-lg bg-risk-mid-soft px-3 py-2 text-xs text-risk-mid">
+                    โมเดลเห็นว่าเลื่อนตำแหน่งไม่ช่วยลดความเสี่ยงของคนนี้ (ตำแหน่งสูงขึ้นมักงานหนักขึ้น) ลองคุยถามก่อนว่าอยากเติบโตแบบไหน
+                    หรือใช้มาตรการอื่นร่วมด้วย
+                  </p>
+                )}
                 <MoneyVerdict impact={impact ?? {}} money={money} />
               </div>
               {/* DE-18: ผลของ WFH มาจากสูตรประมาณ (ระยะทาง × วันเข้าออฟฟิศ / 5) โมเดลไม่เคยเรียนเรื่องนี้ บอกไว้ใกล้ตัวเลข */}

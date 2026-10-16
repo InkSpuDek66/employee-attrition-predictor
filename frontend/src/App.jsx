@@ -24,7 +24,7 @@ const Users = lazy(() => import('./Users'))
 // ต้อง login ก่อน (Login.jsx) บริษัทมาจากผู้ใช้ ไม่ให้พิมพ์เอง (SEC-02)
 const TABS = [
   { id: 'overview', icon: 'chart', label: 'ภาพรวมบริษัท', short: 'ภาพรวม', hint: 'ใครเสี่ยงลาออก และเพราะอะไร' },
-  { id: 'shap', icon: 'search', label: 'ทำไมถึงเสี่ยง', short: 'เหตุผล', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
+  { id: 'shap', icon: 'search', label: 'ทำไมถึงเสี่ยง', short: 'ทำไมเสี่ยง', hint: 'ทำไมพนักงานคนนี้ถึงเสี่ยง', Component: ShapViewer },
   { id: 'whatif', icon: 'sliders', label: 'ลองปรับเงื่อนไข', short: 'ลองปรับ', hint: 'ถ้าปรับเงื่อนไข ความเสี่ยงจะเปลี่ยนไหม', Component: WhatIfSimulator },
   { id: 'calibrate', icon: 'scale', label: 'ปรับเทียบโมเดล', short: 'ปรับเทียบ', hint: 'ปรับคะแนนให้ตรงกับอัตราลาออกจริงของบริษัท', admin: true },
   { id: 'import', icon: 'upload', label: 'นำเข้าข้อมูล', short: 'นำเข้า', hint: 'อัปโหลดรายชื่อพนักงานของบริษัท' },
@@ -122,6 +122,19 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
   // handler คงที่ต่อแท็บ ใส่ใน deps ของ effect ได้โดยไม่ทำให้โหลดซ้ำ
   // โหลดสำเร็จ (มี band) = จำไว้ในรายการที่เพิ่งดู รหัสที่พิมพ์ผิด/โหลดไม่ได้ไม่ถูกจำ
   const [recent, setRecent] = useState(() => loadRecent(tenant))
+  // ลำดับความเสี่ยงทั้งบริษัท (เรียงแบบเดียวกับ "ควรคุยกับใครก่อน") ไว้กดคนก่อนหน้า/ถัดไปในหน้ารายคน (critique รอบ 6)
+  // โหลดครั้งเดียวต่อเวอร์ชันข้อมูล บริษัทใหญ่เกิน 2,000 คนเลื่อนได้แค่ 2,000 อันดับแรก
+  const [ranking, setRanking] = useState({ version: -1, ids: [] })
+  const perEmployee = PER_EMPLOYEE.includes(wantedTab)
+  useEffect(() => {
+    if (!perEmployee || ranking.version === dataVersion) return
+    const ctrl = new AbortController()
+    api('/company-summary/top-employees?n=2000', { signal: ctrl.signal }).then(
+      (d) => setRanking({ version: dataVersion, ids: d.employees.map((e) => e.employee_id) }),
+      () => {},
+    )
+    return () => ctrl.abort()
+  }, [perEmployee, dataVersion, ranking.version])
   useEffect(() => saveRecent(tenant, recent), [tenant, recent])
   const onRisk = useMemo(
     () =>
@@ -300,7 +313,9 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
               <p className="mt-0.5 text-sm text-fg/80" aria-live="polite">
                 <span className="font-medium">{line.text}</span>
                 <span className="hidden sm:inline"> {line.sub}</span>
-                {risk[tab]?.band && !say && <span className="tabular-nums text-muted-fg"> · #{risk[tab].id} คะแนน {Math.round(risk[tab].score * 100)}</span>}
+                {risk[tab]?.band && !say && (
+                  <span className="tabular-nums text-muted-fg"> · #{risk[tab].id} {risk[tab].label} {Math.round(risk[tab].score * 100)}</span>
+                )}
               </p>
             </SpeakingMascot>
           ) : (
@@ -324,6 +339,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
               <PrimaryButton loading={!!pending[tab]}>
                 โหลด <Icon name="right" className="size-4" />
               </PrimaryButton>
+              <StepButtons ids={ranking.ids} current={query?.id} onPick={pick} />
               {recent.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 text-xs sm:col-span-2">
                   <span className="mr-0.5 flex items-center gap-1 text-muted-fg">
@@ -448,6 +464,28 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
           <Icon name="up" className="size-5" />
         </button>
       )}
+    </div>
+  )
+}
+
+// คนก่อนหน้า/ถัดไปตามลำดับความเสี่ยง (ไล่คุยทีละคนจากรายชื่อหน้าแรก ไม่ต้องกลับไปหน้าภาพรวม)
+function StepButtons({ ids, current, onPick }) {
+  const i = ids.indexOf(current)
+  if (i < 0) return null
+  const step = (d) => ids[i + d] !== undefined && onPick(ids[i + d])
+  const cls =
+    'inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-line bg-card px-2.5 text-xs font-medium text-fg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:border-line disabled:hover:text-fg'
+  return (
+    <div className="flex items-center gap-2 sm:col-span-2">
+      <button type="button" className={cls} onClick={() => step(-1)} disabled={i === 0} aria-label="คนก่อนหน้า (เสี่ยงมากกว่า)">
+        <Icon name="left" className="size-3.5" /> คนก่อนหน้า
+      </button>
+      <span className="text-xs tabular-nums text-muted-fg">
+        อันดับ {(i + 1).toLocaleString()} จาก {ids.length.toLocaleString()} ตามความเสี่ยง
+      </span>
+      <button type="button" className={cls} onClick={() => step(1)} disabled={i === ids.length - 1} aria-label="คนถัดไป (เสี่ยงน้อยกว่า)">
+        คนถัดไป <Icon name="right" className="size-3.5" />
+      </button>
     </div>
   )
 }
