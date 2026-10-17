@@ -251,7 +251,7 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(v)}
             className={`flex-1 cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-              size === 'sm' ? 'h-8' : 'h-10'
+              size === 'sm' ? 'h-10 sm:h-8' : 'h-10'
             } ${active ? 'bg-action font-semibold text-on-action shadow-sm' : 'text-muted-fg hover:bg-card hover:text-fg'}`}
           >
             {text}

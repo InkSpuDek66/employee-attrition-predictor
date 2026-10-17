@@ -21,7 +21,7 @@ function Driver({ tone, title, row, count, topN }) {
       </div>
       <div className="mt-3 text-lg font-semibold text-fg">{row?.label ?? `ไม่มีใน ${topN} ปัจจัยหลัก`}</div>
       <div className="text-sm text-muted-fg">{row ? row.phrase : 'เพิ่มจำนวนปัจจัยที่แสดงในกราฟด้านล่างเพื่อดูเพิ่ม'}</div>
-      {row && <div className="mt-3 text-xs text-muted-fg">ทั้งหมด {count} ปัจจัยใน {topN} อันดับแรก</div>}
+      {row && <div className="mt-3 text-xs text-muted-fg">{up ? 'ดันให้เสี่ยงขึ้น' : 'ช่วยให้อยู่ต่อ'} {count} จาก {topN} ปัจจัยหลัก</div>}
     </div>
   )
 }
@@ -46,7 +46,7 @@ function Summary({ ups, downs, band }) {
           <Icon name="info" className="size-5" />
         </div>
         <div className="space-y-1.5 text-sm leading-relaxed">
-          <p className="font-semibold text-fg">สรุปสั้นๆ</p>
+          <p className="font-semibold text-fg">สรุป</p>
           {ups.length > 0 && (
             <p className="text-fg">
               {band === 'Low' ? 'แม้ความเสี่ยงต่ำ แต่สิ่งที่ควรจับตาคือ ' : 'ปัจจัยที่ดันคะแนนความเสี่ยงของคนนี้ขึ้นมากที่สุดคือ '}
@@ -179,8 +179,8 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
 
   if (!query) {
     return (
-      <EmptyPicker who={who} title="เลือกพนักงานเพื่อเริ่มได้เลย" onPick={onPick}>
-        ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” เดี๋ยวเราบอกคะแนนความเสี่ยงและปัจจัยที่ทำให้คนนี้เสี่ยงลาออกให้
+      <EmptyPicker who={who} title="เลือกพนักงานเพื่อดูปัจจัยความเสี่ยง" onPick={onPick}>
+        ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” ระบบจะแสดงคะแนนความเสี่ยงและปัจจัยที่ทำให้พนักงานคนนี้เสี่ยงลาออก
       </EmptyPicker>
     )
   }
@@ -204,8 +204,17 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
     if (data.commute && c.feature === 'OverTimeXDistance' && c.value > 0) return commuteText(data.commute, c.value)
     return featureValue(c.feature, c.value)
   }
-  const rows = data.contributions.map((c) => ({ ...c, label: featureLabel(c.feature), shown: shownValue(c) }))
+  let rows = data.contributions.map((c) => ({ ...c, label: featureLabel(c.feature), shown: shownValue(c) }))
     .map((r) => ({ ...r, phrase: featurePhrase(r.feature, r.value, r.shown) }))
+  // "ทำ OT ร่วมกับบ้านไกล" กับ "ทำงานล่วงเวลา (OT)" เป็นเรื่องเดียวกัน แท่งแยกดูเหมือนนับซ้ำ (critique รอบ 13)
+  // รวม SHAP เข้าแท่ง OT (ค่า SHAP บวกกันได้) ประโยคใช้ของผลร่วมเพราะบอกระยะทางด้วย
+  const ix = rows.find((r) => r.feature === 'OverTimeXDistance')
+  const ot = rows.find((r) => r.feature === 'OverTime')
+  if (ix && ot) {
+    ot.shap_value += ix.shap_value
+    if (ix.value > 0) ot.phrase = ix.phrase
+    rows = rows.filter((r) => r !== ix).sort((a, b) => Math.abs(b.shap_value) - Math.abs(a.shap_value))
+  }
   const maxAbs = Math.max(...rows.map((r) => Math.abs(r.shap_value)), 1e-9)
   const ups = rows.filter((r) => r.shap_value > 0 && isReason(r))
   const downs = rows.filter((r) => r.shap_value <= 0 && isReason(r))
@@ -254,8 +263,8 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
 
         <div className="min-w-0 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Driver tone="up" title="ปัจจัยที่ดันให้เสี่ยงมากที่สุด" row={ups[0]} count={ups.length} topN={topN} />
-            <Driver tone="down" title="ปัจจัยที่ช่วยให้อยู่ต่อมากที่สุด" row={downs[0]} count={downs.length} topN={topN} />
+            <Driver tone="up" title="ปัจจัยที่ดันให้เสี่ยงมากที่สุด" row={ups[0]} count={ups.length} topN={rows.length} />
+            <Driver tone="down" title="ปัจจัยที่ช่วยให้อยู่ต่อมากที่สุด" row={downs[0]} count={downs.length} topN={rows.length} />
           </div>
 
           <Summary ups={ups} downs={downs} band={bandOf(score)} />

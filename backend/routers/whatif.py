@@ -107,7 +107,9 @@ def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     floor = max(0.05, 0.2 * diff.abs().max()) if len(diff) else 0
     moved = {k for k in changed if changed[k] != base.get(k)}
     keep = (diff.abs() >= floor) | (diff.index.isin(list(moved)) & (diff.abs() >= 0.05))
-    top = diff[keep].abs().sort_values(ascending=False).index[:MAX_DRIVERS]
+    # ปัจจัยที่ HR ปรับเองไม่ถูกตัดด้วย MAX_DRIVERS (กด 4 มาตรการแล้วแถวขึ้นเงินเดือนไม่มีเหตุผลรองรับ critique รอบ 13)
+    ordered = diff[keep].abs().sort_values(ascending=False).index
+    top = [f for i, f in enumerate(ordered) if i < MAX_DRIVERS or f in moved]
     return [Driver(feature=f, change=float(diff[f])) for f in top]
 
 

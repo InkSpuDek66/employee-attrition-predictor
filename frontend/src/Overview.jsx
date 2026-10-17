@@ -54,7 +54,7 @@ export function CsvButton({ department, onDone = () => {} }) {
       onClick={go}
       disabled={state === 'busy'}
       title={state && state !== 'busy' ? state : 'พนักงานเสี่ยงสูงสุด 100 คน'}
-      className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+      className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
     >
       <Icon name="download" className="size-4" />
       {state === 'busy' ? 'กำลังเตรียม…' : state ? 'ลองใหม่' : 'CSV'}
@@ -96,7 +96,7 @@ export function TopRiskList({ n = 10, department = '', q = '', reasons = false, 
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-fg">{employeeLabel(e.employee_id, e.name)}</span>
                 {!compact && (
-                  <span className="block truncate text-xs text-muted-fg">
+                  <span className="line-clamp-2 block text-xs text-muted-fg">
                     {e.job_role} · {e.department} · {JOB_LEVELS[e.job_level] ?? `ระดับ ${e.job_level}`}
                   </span>
                 )}
@@ -122,12 +122,12 @@ export function TopRiskList({ n = 10, department = '', q = '', reasons = false, 
         </span>
         <span className="flex gap-2">
           {n > 10 && (
-            <button type="button" onClick={onLess} className="h-9 cursor-pointer rounded-lg border border-line px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+            <button type="button" onClick={onLess} className="h-10 cursor-pointer rounded-lg border border-line px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
               ย่อเหลือ 10 คน
             </button>
           )}
           {total > employees.length && (
-            <button type="button" onClick={onMore} disabled={loading} className="h-9 cursor-pointer rounded-lg border border-line px-3 font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait">
+            <button type="button" onClick={onMore} disabled={loading} className="h-10 cursor-pointer rounded-lg border border-line px-3 font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait">
               แสดงเพิ่มอีก {Math.min(LIST_STEP, total - employees.length).toLocaleString()} คน
             </button>
           )}
@@ -144,7 +144,7 @@ const LIST_STEP = 20
 // คำแนะนำอยู่ในหัวการ์ดรายชื่อเลย (เดิมเป็นกล่องแยกด้านบน กินที่ครึ่งจอแต่มีแค่สองบรรทัด)
 export function EmptyPicker({ title, children, onPick }) {
   return (
-    <Card title={title} subtitle={<>{children} หรือกดเลือกจากพนักงานเสี่ยงสูงสุดด้านล่าง</>}>
+    <Card title={title} subtitle={<>{children} หรือเลือกจากรายชื่อพนักงานที่เสี่ยงสูงสุดด้านล่าง</>}>
       <TopRiskList n={5} onPick={onPick} />
     </Card>
   )
@@ -296,7 +296,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                 type="button"
                 onClick={() => setFullBaht((v) => !v)}
                 aria-pressed={fullBaht}
-                className="cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="-my-2 cursor-pointer rounded-md px-1.5 py-2.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
               </button>
@@ -410,7 +410,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                       type="button"
                       onClick={(e) => (e.stopPropagation(), setDepartment(d.department))}
                       aria-pressed={d.department === department}
-                      className="cursor-pointer rounded text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      className="-my-2.5 cursor-pointer rounded py-2.5 text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {d.department}
                     </button>

@@ -131,7 +131,7 @@ function MoneyControl({ field, base, value, onChange }) {
         </div>
       </div>
       {/* ระบบเทียบอันดับเงินเดือนกับคนอื่นในบริษัท (ไม่ใช่ตัวเลขเงินตรงๆ) จึงบอกไว้ ขึ้นเงินเดือนแล้วจะเห็นผลเท่าที่อันดับขยับ */}
-      <p className="mt-2 text-xs text-muted-fg">พิมพ์ตัวเลขแล้วกด Enter หรือลากแถบก็ได้ · ระบบดูว่าเงินเดือนนี้มากหรือน้อยเมื่อเทียบกับคนอื่นในบริษัท</p>
+      <p className="mt-2 text-xs text-muted-fg">พิมพ์ตัวเลขแล้วกด Enter หรือลากแถบ · ระบบดูว่าเงินเดือนนี้มากหรือน้อยเมื่อเทียบกับคนอื่นในบริษัท</p>
     </div>
   )
 }
@@ -231,12 +231,16 @@ function MoneyVerdict({ impact, money, points, before }) {
       {verdict && <p className={`mt-2 border-t border-line pt-2 text-xs ${verdict.tone}`}>{verdict.text}</p>}
       {partial && (
         <p className="mt-2 border-t border-line pt-2 text-xs text-risk-mid">
-          ต้องประเมินค่าใช้จ่ายของ {impact.uncosted.map(featureLabel).join(', ')} เอง ระบบยังไม่มีตัวเลข จึงไม่คิดเป็นบาท
+          ต้องประเมินค่าใช้จ่ายของ {impact.uncosted.map(uncostedLabel).join(', ')} เอง ระบบยังไม่มีตัวเลข จึงไม่คิดเป็นบาท
         </p>
       )}
     </div>
   )
 }
+
+// ชื่อในรายการ "ยังไม่มีตัวเลข" ให้ตรงกับปุ่มมาตรการ (เดิมใช้ชื่อช่อง เช่น "เข้าออฟฟิศ (วัน/สัปดาห์)" ขณะที่ปุ่มเขียน "ให้ WFH")
+const UNCOSTED_LABEL = { OfficeDaysPerWeek: 'ให้ WFH', BusinessTravel: 'งดงานนอกสถานที่' }
+const uncostedLabel = (f) => UNCOSTED_LABEL[f] ?? featureLabel(f)
 
 // ต้นทุนของแต่ละแถวใน "แต่ละมาตรการช่วยได้เท่าไหร่": จับ measure จาก backend (business_rules.plan_cost) กับฟีเจอร์ของแถว
 // measure เดียวใช้ร่วมหลายแถวได้ (เลื่อนตำแหน่ง + อบรม = training_and_promotion_track ก้อนเดียว) แถวหลังบอกว่ารวมไปแล้ว
@@ -252,9 +256,9 @@ function rowCosts(rows, impact, money) {
     const fresh = ms.filter((m) => !claimed.has(m.key))
     ms.forEach((m) => claimed.add(m.key))
     const unknown = r.keys.some((k) => impact?.uncosted?.includes(k))
-    if (fresh.length) return money(fresh.reduce((t, m) => t + m.cost, 0)) + (unknown ? ' + ยังไม่มีตัวเลข' : '')
-    if (ms.length) return 'รวมอยู่ในต้นทุนรายการด้านบนแล้ว'
-    return unknown ? 'ยังไม่มีตัวเลข' : 'ไม่มีต้นทุน'
+    if (fresh.length) return { paid: true, text: money(fresh.reduce((t, m) => t + m.cost, 0)) + (unknown ? ' + ยังไม่มีตัวเลข' : '') }
+    if (ms.length) return { text: 'รวมอยู่ในต้นทุนรายการด้านบนแล้ว' }
+    return { paid: unknown, text: unknown ? 'ยังไม่มีตัวเลข' : 'ไม่มีต้นทุน' }
   })
 }
 
@@ -326,10 +330,10 @@ function Drivers({ drivers, changed }) {
 // ลดลง = ประกายฉลอง, เพิ่มขึ้น = ป้ายเตือนสั่นนิดๆ (ป้ายพื้นอ่อน + ตัวหนังสือสีระดับ อ่านได้ทั้งโหมดมืด/สว่าง)
 const SPARKS = [[-70, -50], [70, -55], [-90, 10], [90, 5], [-50, 60], [55, 65], [0, -80], [0, 80]]
 const BAND_TOAST = {
-  low: { text: 'เยี่ยมเลย! ลดเหลือระดับต่ำ', icon: 'check', pill: 'bg-risk-low-soft text-risk-low ring-risk-low/30', sparks: ['fill-risk-low', 'fill-risk-mid', 'fill-accent'] },
-  midDown: { text: 'ดีขึ้นแล้ว! ลดเหลือระดับปานกลาง', icon: 'down', pill: 'bg-risk-mid-soft text-risk-mid ring-risk-mid/30', sparks: ['fill-risk-mid', 'fill-accent'] },
-  midUp: { text: 'ระวัง! เพิ่มเป็นระดับปานกลาง', icon: 'warning', pill: 'bg-risk-mid-soft text-risk-mid ring-risk-mid/30', warn: true },
-  high: { text: 'ระวัง! ความเสี่ยงเพิ่มเป็นระดับสูง', icon: 'warning', pill: 'bg-risk-high-soft text-risk-high ring-risk-high/30', warn: true },
+  low: { text: 'ความเสี่ยงลดลงเป็นระดับต่ำ', icon: 'check', pill: 'bg-risk-low-soft text-risk-low ring-risk-low/30', sparks: ['fill-risk-low', 'fill-risk-mid', 'fill-accent'] },
+  midDown: { text: 'ความเสี่ยงลดลงเป็นระดับปานกลาง', icon: 'down', pill: 'bg-risk-mid-soft text-risk-mid ring-risk-mid/30', sparks: ['fill-risk-mid', 'fill-accent'] },
+  midUp: { text: 'ความเสี่ยงเพิ่มขึ้นเป็นระดับปานกลาง', icon: 'warning', pill: 'bg-risk-mid-soft text-risk-mid ring-risk-mid/30', warn: true },
+  high: { text: 'ความเสี่ยงเพิ่มขึ้นเป็นระดับสูง', icon: 'warning', pill: 'bg-risk-high-soft text-risk-high ring-risk-high/30', warn: true },
 }
 
 function BandToast({ kind }) {
@@ -579,8 +583,8 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
 
   if (!query) {
     return (
-      <EmptyPicker who={who} tenant={tenant} title="มาลองจำลองกันเถอะ" onPick={onPick}>
-        ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” จากนั้นลองปรับเงินเดือน OT หรือความพึงพอใจ เดี๋ยวเราคำนวณความเสี่ยงใหม่ให้ทันที
+      <EmptyPicker who={who} tenant={tenant} title="เลือกพนักงานเพื่อเริ่มจำลอง" onPick={onPick}>
+        ใส่รหัสพนักงานด้านบนแล้วกด “โหลด” จากนั้นปรับเงินเดือน OT หรือความพึงพอใจ ระบบจะคำนวณความเสี่ยงใหม่ทันที
       </EmptyPicker>
     )
   }
@@ -661,7 +665,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                       disabled={state === 'noop'}
                       aria-pressed={state === 'applied'}
                       title={state === 'noop' ? 'พนักงานคนนี้เป็นแบบนี้อยู่แล้ว' : state === 'applied' ? 'กดอีกครั้งเพื่อยกเลิก' : undefined}
-                      className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                      className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 sm:h-9 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         state === 'applied'
                           ? 'cursor-pointer border-accent bg-accent-soft text-accent'
                           : state === 'noop'
@@ -680,7 +684,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     type="button"
                     onClick={() => setAllPresets((v) => !v)}
                     aria-expanded={allPresets}
-                    className="inline-flex h-9 cursor-pointer items-center rounded-full px-3 text-sm font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="inline-flex h-10 cursor-pointer items-center rounded-full px-3 text-sm sm:h-9 font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     {allPresets ? 'ย่อ' : `มาตรการอื่น (${PRESETS.length - PRESETS_SHOWN})`}
                   </button>
@@ -707,7 +711,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                       <Icon name={g.icon} className="size-4 text-accent" />
                       {g.title}
                       <span className="text-xs font-normal text-muted-fg">
-                        {touched ? `ปรับแล้ว ${touched}` : rest.length < g.controls.length ? `อีก ${rest.length} รายการ` : `${rest.length} รายการ`}
+                        {touched ? `ปรับแล้ว ${touched}` : `${rest.length} รายการ`}
                       </span>
                       <Icon name="chevron" className="ml-auto size-4 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
                     </summary>
@@ -724,31 +728,16 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
           {impact && (
             <Card className="order-3 lg:order-none" icon="money" title="ต้นทุน: ดูแลต่อ หรือ หาคนแทน" subtitle="ประมาณการ คิดจากข้อมูลเดิมของพนักงาน">
               {/* ผลคุ้ม/ไม่คุ้มอยู่ข้างคะแนนด้านขวา (MoneyVerdict) ตรงนี้เป็นตัวเลขประกอบ */}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Stat
-                  label="ต้นทุนถ้าต้องหาคนแทน"
-                  value={money(impact.replacement_cost)}
-                  tone="muted"
-                  sub={impact.warning ? 'ใช้เทียบความสำคัญระหว่างพนักงาน เทียบกับต้นทุนมาตรการตรงๆ ไม่ได้' : 'ใช้คูณกับคะแนนเป็นมูลค่าความเสี่ยง เทียบกับต้นทุนมาตรการตรงๆ ไม่ได้'}
-                />
-                <Stat
-                  label="ต้นทุนมาตรการที่ปรับ (1 ปี)"
-                  value={!impact.costed_from_changes ? '—' : impact.uncosted?.length && impact.retain_cost > 0 ? money(impact.retain_cost) : costText(impact, money)}
-                  tone={!impact.costed_from_changes ? 'muted' : impact.uncosted?.length ? 'amber' : 'blue'}
-                  sub={
-                    !impact.costed_from_changes
-                      ? 'ลองกดมาตรการหรือปรับค่าก่อน'
-                      : impact.uncosted?.length && impact.retain_cost > 0
-                        ? `+ ยังไม่มีตัวเลขของ ${impact.uncosted.map(featureLabel).join(', ')}`
-                        : impact.measures?.length > 1
-                        ? `รวม ${impact.measures.length} มาตรการ`
-                        : undefined
-                  }
-                />
-              </div>
+              {/* ต้นทุนมาตรการอยู่ช่องขวาแล้ว (MoneyVerdict) การ์ดนี้เหลือต้นทุนหาคนแทน + ที่มาของตัวเลข (เดิมซ้ำกัน critique รอบ 13) */}
+              <Stat
+                label="ต้นทุนถ้าต้องหาคนแทน"
+                value={money(impact.replacement_cost)}
+                tone="muted"
+                sub={impact.warning ? 'ใช้เทียบความสำคัญระหว่างพนักงาน เทียบกับต้นทุนมาตรการตรงๆ ไม่ได้' : 'ใช้คูณกับคะแนนเป็นมูลค่าความเสี่ยง เทียบกับต้นทุนมาตรการตรงๆ ไม่ได้'}
+              />
               {/* บอกที่มาของตัวเลข กันคนเข้าใจผิดว่าเป็นต้นทุนจริงของบริษัท (สูตรใน src/business_rules.py) */}
               <details className="group mt-3 rounded-lg bg-muted text-xs text-muted-fg">
-                <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
                   ดูที่มาของตัวเลข
                   <Icon name="chevron" className="ml-auto size-3.5 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
                 </summary>
@@ -767,7 +756,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                         ? 'ยังไม่มีตัวเลข'
                         : 'ไม่มีมาตรการที่มีค่าใช้จ่าย'}
                     {impact.measures.length > 0 && impact.uncosted?.length > 0 && ' + ยังไม่มีตัวเลข'}
-                    {impact.uncosted?.length > 0 && ` (ของ ${impact.uncosted.map(featureLabel).join(', ')})`}
+                    {impact.uncosted?.length > 0 && ` (ของ ${impact.uncosted.map(uncostedLabel).join(', ')})`}
                   </p>
                 )}
                 {!impact.warning && <p>
@@ -832,7 +821,12 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                             <span className={`block tabular-nums ${r.points < 0 ? 'text-risk-low' : 'text-risk-mid'}`}>
                               {r.points < 0 ? `ลด ${-r.points} คะแนน` : r.points > 0 ? `เพิ่ม ${r.points} คะแนน` : 'ไม่ลดคะแนน'}
                             </span>
-                            {impact && <span className="block text-xs tabular-nums text-muted-fg">{partCosts[i]}</span>}
+                            {impact && (
+                              <span className="block text-xs tabular-nums text-muted-fg">
+                                {partCosts[i].text}
+                                {partCosts[i].paid && r.points >= 0 && <span className="text-risk-mid"> · ควรพิจารณานำออก</span>}
+                              </span>
+                            )}
                           </span>
                         </li>
                       ))}

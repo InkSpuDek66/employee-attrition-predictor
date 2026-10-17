@@ -356,7 +356,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
                         disabled={current}
                         aria-current={current ? 'true' : undefined}
                         title={employeeLabel(r.id, r.name)}
-                        className={`h-6 rounded-md border px-2 font-medium tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        className={`h-10 rounded-md border px-2 font-medium sm:h-6 tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                           current
                             ? 'cursor-default border-transparent bg-primary-soft text-on-primary dark:text-fg'
                             : 'cursor-pointer border-line bg-card text-fg hover:border-accent/40 hover:text-accent'
@@ -484,7 +484,7 @@ function StepButtons({ ids, current, onPick }) {
   }, [ids, i, onPick])
   if (i < 0) return null
   const cls =
-    'inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-line bg-card px-2.5 text-xs font-medium text-fg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:border-line disabled:hover:text-fg'
+    'inline-flex h-10 cursor-pointer items-center gap-1 rounded-md border sm:h-8 border-line bg-card px-2.5 text-xs font-medium text-fg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:border-line disabled:hover:text-fg'
   return (
     <div className="flex items-center gap-2 sm:col-span-2">
       <button type="button" className={cls} onClick={() => step(-1)} disabled={i === 0} aria-label="คนก่อนหน้า (เสี่ยงมากกว่า)" aria-keyshortcuts="[" title="คีย์ลัด [">
@@ -509,7 +509,7 @@ function LogoutButton({ user, onLogout, className = '' }) {
       onClick={onLogout}
       aria-label={label}
       title={label}
-      className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
+      className={`grid size-10 shrink-0 cursor-pointer place-items-center rounded-lg border sm:size-9 border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
     >
       <Icon name="logout" className="size-5" />
     </button>
