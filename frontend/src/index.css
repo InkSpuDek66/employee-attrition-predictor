@@ -285,6 +285,13 @@ label {
 input[type='range'] {
   @apply h-1.5 w-full cursor-pointer accent-accent;
 }
+/* มือถือ: พื้นที่กดสูง 40px แต่ระยะห่างรอบๆ เท่าเดิม (ติดลบ margin ชดเชย) critique รอบ 14 */
+@media (max-width: 639px) {
+  input[type='range'] {
+    height: 2.5rem;
+    margin-block: -1.0625rem;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -35,6 +35,11 @@ class Driver(BaseModel):
 
 
 MAX_DRIVERS = 3
+DERIVED_FROM = {
+    ms.OFFICE_DAYS: ("DistanceFromHome", "OverTimeXDistance"),
+    "DistanceFromHome": ("OverTimeXDistance",),
+    "OverTime": ("OverTimeXDistance",),
+}
 
 
 class WhatIfResponse(BaseModel):
@@ -97,6 +102,10 @@ def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     sv = ms.explainer()(X).values
     diff = pd.Series(sv[1] - sv[0], index=X.columns).groupby(cs.feature_group).sum()
     diff = diff[[cs.factor_kind(f) not in ("personal", "unexplained") for f in diff.index]]  # ไม่ยกเป็นเหตุผล (UX-06/07)
+    # OT กับ "ทำ OT ร่วมกับบ้านไกล" เป็นเรื่องเดียวกัน รวมเป็นบรรทัดเดียวแบบหน้า SHAP (SHAP บวกกันได้)
+    # รวมเฉพาะตอน HR ปรับ OT เอง ถ้าปรับแค่ WFH ให้คงชื่อ "ทำ OT ร่วมกับบ้านไกล" (ไม่งั้นอ่านว่า OT เปลี่ยนทั้งที่ไม่ได้แตะ)
+    if changed.get("OverTime") != base.get("OverTime") and "OverTime" in diff.index and "OverTimeXDistance" in diff.index:
+        diff["OverTime"] += diff.pop("OverTimeXDistance")
     # เงินเดือนเพิ่มแล้ว SHAP ของเงินเดือนเป็นบวก = ผลร่วมกับฟีเจอร์อื่น (เช่น ระดับตำแหน่ง) ไม่ใช่เงินเดือนทำให้เสี่ยง
     # โมเดลรับประกันว่าขึ้นเงินเดือนแล้วคะแนนไม่เพิ่ม (src/train.py MONOTONE) จึงไม่โชว์ให้ HR เข้าใจผิด (critique รอบ 8)
     # ไม่ได้ลดเงินเดือน แต่ SHAP ของเงินเดือนดันขึ้น (ขึ้นเงินเดือน หรือปรับอย่างอื่นแล้วผลร่วม) = ไม่ใช่เงินเดือนทำให้เสี่ยง
@@ -106,6 +115,8 @@ def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     # แต่ฟีเจอร์ที่ HR ปรับเองเก็บไว้ถ้าถึง 0.05 ไม่งั้นแถว "แต่ละมาตรการ" บอกลด 1 แต่คำอธิบายไม่มีเรื่องนั้น (critique รอบ 12)
     floor = max(0.05, 0.2 * diff.abs().max()) if len(diff) else 0
     moved = {k for k in changed if changed[k] != base.get(k)}
+    # ช่องที่ HR ปรับ -> ฟีเจอร์ที่โมเดลเห็นจริง (WFH เปลี่ยนระยะทางที่ใช้คำนวณ ไม่ได้เป็นฟีเจอร์เอง critique รอบ 14)
+    moved |= {f for k, fs in DERIVED_FROM.items() if k in moved for f in fs}
     keep = (diff.abs() >= floor) | (diff.index.isin(list(moved)) & (diff.abs() >= 0.05))
     # ปัจจัยที่ HR ปรับเองไม่ถูกตัดด้วย MAX_DRIVERS (กด 4 มาตรการแล้วแถวขึ้นเงินเดือนไม่มีเหตุผลรองรับ critique รอบ 13)
     ordered = diff[keep].abs().sort_values(ascending=False).index

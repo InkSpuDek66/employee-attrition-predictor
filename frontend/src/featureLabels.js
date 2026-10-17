@@ -107,7 +107,7 @@ const PHRASES = {
   OverTime: (s) => (s === 'ทำ' ? 'ทำงานล่วงเวลา (OT)' : 'ไม่ทำ OT'),
   OverTimeXDistance: (s, v) => (v > 0 ? `ทำ OT และบ้านห่างจากที่ทำงาน ${s}` : 'ไม่ทำ OT'),
   BusinessTravel: (s) => (s === 'ไม่ต้องไป' ? 'ไม่ต้องไปทำงานนอกสถานที่' : `ต้องไปทำงานนอกสถานที่${s}`),
-  NumCompaniesWorked: (s) => `เคยทำงานมาแล้ว ${s} บริษัท`,
+  NumCompaniesWorked: (s, v) => (Number(v) === 0 ? 'ยังไม่เคยย้ายบริษัท (งานแรก)' : `เคยทำงานมาแล้ว ${s} บริษัท`),
   Age: (s) => `อายุ ${s} ปี`,
   TotalWorkingYears: (s) => `ทำงานมาแล้วรวม ${s} ปี`,
   YearsAtCompany: (s) => `อยู่บริษัทนี้มา ${s} ปี`,

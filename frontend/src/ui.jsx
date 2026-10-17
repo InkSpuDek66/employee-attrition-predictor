@@ -69,7 +69,7 @@ export function ThemeToggle({ mode, onToggle, className = '' }) {
       onClick={onToggle}
       aria-label={label}
       title={label}
-      className={`grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
+      className={`grid size-10 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted-fg sm:size-9 transition-colors duration-200 hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
     >
       <Icon name={THEME_ICON[mode]} className="size-5" />
     </button>
@@ -250,7 +250,7 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
             aria-checked={active}
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(v)}
-            className={`flex-1 cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+            className={`min-w-10 flex-1 cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               size === 'sm' ? 'h-10 sm:h-8' : 'h-10'
             } ${active ? 'bg-action font-semibold text-on-action shadow-sm' : 'text-muted-fg hover:bg-card hover:text-fg'}`}
           >

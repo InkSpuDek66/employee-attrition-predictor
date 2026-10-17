@@ -140,6 +140,17 @@ export function TopRiskList({ n = 10, department = '', q = '', reasons = false, 
 
 const LIST_STEP = 20
 
+// OT กับ "ทำ OT ร่วมกับบ้านไกล" รวมเป็นรายการเดียวแบบหน้า SHAP / What-if (critique รอบ 14)
+function mergeOT(factors) {
+  const ix = factors.find((f) => f.feature === 'OverTimeXDistance')
+  const ot = factors.find((f) => f.feature === 'OverTime')
+  if (!ix || !ot) return factors
+  return factors
+    .filter((f) => f !== ix)
+    .map((f) => (f === ot ? { ...f, share: f.share + ix.share } : f))
+    .sort((a, b) => b.share - a.share)
+}
+
 // หน้าว่าง: ผู้ช่วยบอกวิธีใช้ + รายชื่อเสี่ยงสูงสุดให้กดเลือกได้เลย ไม่ต้องรู้รหัส
 // คำแนะนำอยู่ในหัวการ์ดรายชื่อเลย (เดิมเป็นกล่องแยกด้านบน กินที่ครึ่งจอแต่มีแค่สองบรรทัด)
 export function EmptyPicker({ title, children, onPick }) {
@@ -254,9 +265,13 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
   if (error) return <SorryState message={error} />
   if (!data) {
     return (
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <Skeleton className="h-[36rem]" />
-        <Skeleton className="h-80" />
+      <div className="space-y-3">
+        {/* โหลดครั้งแรกอาจนานหลายวินาที บอกว่ากำลังทำอะไร ไม่ใช่กล่องว่างเงียบๆ (critique รอบ 14) */}
+        <p className="text-sm text-muted-fg" role="status" aria-live="polite">กำลังโหลดข้อมูลพนักงาน…</p>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <Skeleton className="h-[36rem]" />
+          <Skeleton className="h-80" />
+        </div>
       </div>
     )
   }
@@ -267,7 +282,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
   // แผนกที่ควรดูก่อน = คนเสี่ยงสูงมากสุด (เดิมเรียงตามมูลค่าความเสี่ยงรวม แผนกที่ไม่มีคนเสี่ยงสูงแต่เงินเดือนสูงขึ้นมาก่อน)
   const byHighRisk = [...departments].sort((a, b) => b.risk_bands.High - a.risk_bands.High || b.mean_risk_score - a.mean_risk_score)
   const manyDepartments = departments.length > 4 // เกิน 4 ตัวเลือกเรียงปุ่มแล้วเลือกยาก (critique รอบ 6) ใช้ช่องเลือก
-  const maxShare = Math.max(...s.top_factors.map((f) => f.share), 1e-9)
+  const maxShare = Math.max(...mergeOT(s.top_factors).map((f) => f.share), 1e-9)
   const high = s.risk_bands.High
   const where = department || 'ตอนนี้'
   const headline = high > 0 ? `${where}มี ${high.toLocaleString()} คนที่ควรคุยด้วยเร็วๆ นี้` : `${where}ยังไม่มีใครเสี่ยงสูง`
@@ -366,7 +381,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
         <div className="min-w-0 space-y-4 lg:sticky lg:top-4">
           <Card title="ปัจจัยเด่นของทั้งกลุ่ม" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ต่อคะแนน">
             <ul className="space-y-4">
-              {s.top_factors.map((f) => (
+              {mergeOT(s.top_factors).map((f) => (
                 <li key={f.feature}>
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <span className="font-medium text-fg">{featureLabel(f.feature)}</span>

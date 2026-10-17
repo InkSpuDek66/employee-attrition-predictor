@@ -160,7 +160,10 @@ function Control({ field, type, options, base, value, onChange, unit, wide, hint
           </span>
         )}
       </div>
-      {type === 'range' ? (
+      {type === 'range' && range.max <= range.min ? (
+        // เช่น อยู่บริษัทมา 0 ปี: แถบ 0–0 เลื่อนไม่ได้ แสดงเป็นค่าเฉยๆ (critique รอบ 14)
+        <div className="text-xl font-semibold tabular-nums text-fg">{withUnit(value)}</div>
+      ) : type === 'range' ? (
         <>
           <div className="mb-2 text-xl font-semibold tabular-nums text-fg">{withUnit(value)}</div>
           <input type="range" {...range} value={value} onChange={(e) => onChange(e.target.value)} aria-label={featureLabel(field)} />
@@ -231,7 +234,7 @@ function MoneyVerdict({ impact, money, points, before }) {
       {verdict && <p className={`mt-2 border-t border-line pt-2 text-xs ${verdict.tone}`}>{verdict.text}</p>}
       {partial && (
         <p className="mt-2 border-t border-line pt-2 text-xs text-risk-mid">
-          ต้องประเมินค่าใช้จ่ายของ {impact.uncosted.map(uncostedLabel).join(', ')} เอง ระบบยังไม่มีตัวเลข จึงไม่คิดเป็นบาท
+          ยังไม่รวมค่าใช้จ่ายของมาตรการ: {impact.uncosted.map(uncostedLabel).join(', ')} ระบบยังไม่มีตัวเลข ต้องประเมินเพิ่มเอง
         </p>
       )}
     </div>
@@ -265,7 +268,7 @@ function rowCosts(rows, impact, money) {
 // ต้นทุนของสิ่งที่ปรับ ใช้ข้อความเดียวกันทุกที่ (สรุปข้างคะแนน การ์ดต้นทุน ที่มาของตัวเลข)
 function costText(impact, money) {
   if (!impact.uncosted?.length) return impact.retain_cost > 0 ? money(impact.retain_cost) : 'ไม่มีต้นทุน' // เช่น ลดเงินเดือน
-  return impact.retain_cost > 0 ? `${money(impact.retain_cost)} + ยังไม่มีตัวเลขบางส่วน` : 'ยังไม่มีตัวเลข'
+  return impact.retain_cost > 0 ? `${money(impact.retain_cost)} (ยังไม่รวม ${impact.uncosted.length} มาตรการ)` : 'ยังไม่มีตัวเลข'
 }
 
 // ปัดก่อนแล้วค่อยเลือกสี/ข้อความ (เดิมดูจากค่าก่อนปัด: ขึ้น "ความเสี่ยงเพิ่มขึ้น +0" สีแดง ทั้งที่คะแนนเท่าเดิม)
@@ -696,7 +699,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
               <fieldset className="mb-6">
                 <legend className="mb-1 text-sm font-semibold text-fg">ปัจจัยที่ควรปรับก่อน</legend>
                 <p className="mb-3 text-xs text-muted-fg">ปัจจัยที่บริษัทปรับได้และดันความเสี่ยงของคนนี้ขึ้นมากที่สุด</p>
-                <div className="grid gap-3 sm:grid-cols-2">{focused.map((f) => renderControl({ ...CONTROL[f], wide: CONTROL[f].type === 'money' || CONTROL[f].wide }))}</div>
+                <div className="grid gap-3 sm:grid-cols-2">{focused.map((f) => renderControl({ ...CONTROL[f], wide: true }))}</div>
               </fieldset>
             )}
             {/* กลุ่มอื่นพับไว้ (เดิมเปิดทุกช่องพร้อมกัน ~15 ช่อง) กลุ่มที่มีค่าปรับแล้วเปิดค้าง */}
@@ -751,12 +754,11 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   <p>
                     <b className="text-fg">ต้นทุนมาตรการ</b> ={' '}
                     {impact.measures.length
-                      ? impact.measures.map((m) => `${m.label} ${money(m.cost)}`).join(' + ')
+                      ? impact.measures.map((m) => `${m.label} ${money(m.cost)} (เงินเดือน × ${+(m.cost / impact.monthly_income).toFixed(1)} เดือน)`).join(' + ')
                       : impact.uncosted?.length
                         ? 'ยังไม่มีตัวเลข'
                         : 'ไม่มีมาตรการที่มีค่าใช้จ่าย'}
-                    {impact.measures.length > 0 && impact.uncosted?.length > 0 && ' + ยังไม่มีตัวเลข'}
-                    {impact.uncosted?.length > 0 && ` (ของ ${impact.uncosted.map(uncostedLabel).join(', ')})`}
+                    {impact.uncosted?.length > 0 && ` · ยังไม่รวมค่าใช้จ่ายของ ${impact.uncosted.map(uncostedLabel).join(', ')}`}
                   </p>
                 )}
                 {!impact.warning && <p>
@@ -883,7 +885,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                             type="button"
                             onClick={() => setSaved((all) => all.filter((x) => x.key !== s.key))}
                             aria-label="ลบผลที่บันทึกนี้"
-                            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-fg transition-colors hover:bg-muted hover:text-fg"
+                            className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-fg transition-colors hover:bg-muted hover:text-fg sm:size-9"
                           >
                             <Icon name="error" className="size-4" />
                           </button>
