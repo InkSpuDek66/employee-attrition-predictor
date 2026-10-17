@@ -89,7 +89,7 @@ function ShapBars({ rows, maxAbs }) {
                 aria-hidden="true"
               />
               <span className="sr-only">
-                {up ? 'ดันให้เสี่ยงลาออกมากขึ้น' : 'ดันให้อยู่ต่อ'} ผลกระทบ {Math.abs(r.shap_value).toFixed(2)}
+                {up ? 'ดันให้เสี่ยงลาออกมากขึ้น' : 'ดันให้อยู่ต่อ'} อันดับ {i + 1} จาก {rows.length}
               </span>
               {hover === r.feature && (
                 <span

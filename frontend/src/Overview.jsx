@@ -394,7 +394,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                 <th className="px-5 py-2 sm:px-6">แผนก</th>
                 <th className="px-2 py-2 text-right">พนักงาน</th>
                 <th className="px-2 py-2 text-right">เสี่ยงสูง</th>
-                <th className="px-2 py-2 text-right">คะแนนเฉลี่ย</th>
+                <th className="hidden px-2 py-2 text-right sm:table-cell">คะแนนเฉลี่ย</th>
                 <th className="px-5 py-2 text-right sm:px-6">หาคนแทนคนเสี่ยงสูง (ล้านบาท)</th>
               </tr>
             </thead>
@@ -417,7 +417,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                   </td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{d.n_employees.toLocaleString()}</td>
                   <td className={`px-2 py-2.5 text-right tabular-nums ${d.risk_bands.High ? 'font-semibold text-risk-high' : 'text-muted-fg'}`}>{d.risk_bands.High}</td>
-                  <td className="px-2 py-2.5 text-right tabular-nums">{Math.round(d.mean_risk_score * 100)}</td>
+                  <td className="hidden px-2 py-2.5 text-right tabular-nums sm:table-cell">{Math.round(d.mean_risk_score * 100)}</td>
                   <td className="whitespace-nowrap px-5 py-2.5 text-right tabular-nums sm:px-6" title={baht(d.high_risk_replacement_cost)}>
                     {d.risk_bands.High
                       ? (d.high_risk_replacement_cost / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

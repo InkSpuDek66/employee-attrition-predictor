@@ -192,7 +192,7 @@ function MoneyVerdict({ impact, money, points }) {
   if (points === 0) {
     return (
       <p className="rounded-lg border border-line p-3 text-xs text-muted-fg" aria-live="polite">
-        คะแนนที่แสดงไม่เปลี่ยน ต้นทุนของสิ่งที่ปรับ {costText(impact, money)}
+        คะแนนที่แสดงไม่เปลี่ยน · {impact.retain_cost > 0 || impact.uncosted?.length ? `ต้นทุน ${costText(impact, money)}` : 'ไม่มีต้นทุน'}
       </p>
     )
   }
@@ -211,8 +211,6 @@ function MoneyVerdict({ impact, money, points }) {
     <div className="rounded-lg border border-line p-3 text-sm">
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
         {/* ต้นทุนไม่ครบ = ไม่โชว์บาทที่ลดได้ (เทียบกับต้นทุนที่ขาดแล้วดูเหมือนได้ฟรี) บอกเป็นคะแนนแทน */}
-        <dt className="text-muted-fg">{points > 0 ? 'คะแนนเพิ่มขึ้น' : 'คะแนนลดลง'}</dt>
-        <dd className="text-right font-semibold tabular-nums text-fg">{Math.abs(points)} คะแนน</dd>
         {/* ยังไม่ปรับเทียบ: คะแนนไม่ใช่โอกาสลาออกจริง คูณเป็นบาทแล้วอ่านเหมือนเงินที่ประหยัดได้จริง จึงโชว์แค่คะแนน + ต้นทุน (critique รอบ 9) */}
         {!partial && !impact.warning && (
           <>
@@ -231,6 +229,26 @@ function MoneyVerdict({ impact, money, points }) {
       )}
     </div>
   )
+}
+
+// ต้นทุนของแต่ละแถวใน "แต่ละมาตรการช่วยได้เท่าไหร่": จับ measure จาก backend (business_rules.plan_cost) กับฟีเจอร์ของแถว
+// measure เดียวใช้ร่วมหลายแถวได้ (เลื่อนตำแหน่ง + อบรม = training_and_promotion_track ก้อนเดียว) แถวหลังบอกว่ารวมไปแล้ว
+const MEASURE_FIELDS = {
+  salary_raise: ['MonthlyIncome', 'PercentSalaryHike'],
+  reduce_overtime: ['OverTime'],
+  training_and_promotion_track: ['JobLevel', 'YearsSinceLastPromotion', 'TrainingTimesLastYear'],
+}
+function rowCosts(rows, impact, money) {
+  const claimed = new Set()
+  return rows.map((r) => {
+    const ms = (impact?.measures ?? []).filter((m) => MEASURE_FIELDS[m.key]?.some((f) => r.keys.includes(f)))
+    const fresh = ms.filter((m) => !claimed.has(m.key))
+    ms.forEach((m) => claimed.add(m.key))
+    const unknown = r.keys.some((k) => impact?.uncosted?.includes(k))
+    if (fresh.length) return money(fresh.reduce((t, m) => t + m.cost, 0)) + (unknown ? ' + ยังไม่มีตัวเลข' : '')
+    if (ms.length) return 'ต้นทุนนับรวมในข้อด้านบนแล้ว'
+    return unknown ? 'ยังไม่มีตัวเลข' : 'ไม่มีต้นทุน'
+  })
 }
 
 // ต้นทุนของสิ่งที่ปรับ ใช้ข้อความเดียวกันทุกที่ (สรุปข้างคะแนน การ์ดต้นทุน ที่มาของตัวเลข)
@@ -509,19 +527,20 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   const changesKey = JSON.stringify(changes)
   useEffect(() => {
     if (!loaded?.base) return
-    const applied = PRESETS.filter((p) => presetState(p) === 'applied')
-    if (applied.length < 2) return void setParts({ key: changesKey, rows: [] })
+    const applied = PRESETS.filter((p) => presetState(p) === 'applied').map((p) => ({ label: p.label, keys: Object.keys(p.apply(loaded.base)) }))
+    const covered = new Set(applied.flatMap((g) => g.keys))
+    const groups = [...applied, ...Object.keys(changes).filter((k) => !covered.has(k)).map((k) => ({ label: featureLabel(k), keys: [k] }))]
+    if (groups.length < 2) return void setParts({ key: changesKey, rows: [] })
     const ctrl = new AbortController()
     const body = (c) => ({ employee_id: loaded.id, changes: toApiChanges(c), ...(loaded.tenant && { tenant_id: loaded.tenant }) })
     const timer = setTimeout(async () => {
       try {
         const all = await post(body(changes), ctrl.signal)
         const rows = await Promise.all(
-          applied.map(async (p) => {
-            const patch = p.apply(loaded.base)
-            const without = Object.fromEntries(Object.entries(changes).filter(([k]) => !(k in patch)))
+          groups.map(async (g) => {
+            const without = Object.fromEntries(Object.entries(changes).filter(([k]) => !g.keys.includes(k)))
             const r = await post(body(without), ctrl.signal)
-            return { label: p.label, points: Math.round(scoreOf(all.after) * 100) - Math.round(scoreOf(r.after) * 100) }
+            return { ...g, points: Math.round(scoreOf(all.after) * 100) - Math.round(scoreOf(r.after) * 100) }
           }),
         )
         setParts({ key: changesKey, rows })
@@ -577,6 +596,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   const nChanged = Object.keys(changes).length
   const alreadySaved = saved.some((s) => JSON.stringify(s.changes) === JSON.stringify(changes))
   const partRows = parts.key === changesKey ? parts.rows : []
+  const partCosts = rowCosts(partRows, impact, money)
   // เลื่อนตำแหน่งไม่ช่วย: ดูจากผลของมาตรการนี้เอง (ถ้าใช้ร่วมกับอย่างอื่น) ไม่ใช่ผลรวม (เดิมรวมแล้วลด ป้ายเลยไม่ขึ้น critique รอบ 10)
   const promoRow = partRows.find((r) => r.label.startsWith('เลื่อนตำแหน่ง'))
   const promotionNoHelp = 'JobLevel' in result.changes_applied && (promoRow ? promoRow.points >= 0 : Math.round(delta * 100) >= 0)
@@ -603,7 +623,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
     <div className="space-y-4">
       {error && <Alert>{error}</Alert>}
       <div className="grid items-start gap-4 lg:grid-cols-[1fr_24rem]">
-        <div className="space-y-4">
+        <div className="contents lg:block lg:space-y-4">
           <Card
             icon="sliders"
             title="ปรับเงื่อนไข"
@@ -693,7 +713,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
           </Card>
 
           {impact && (
-            <Card icon="money" title="ต้นทุน: ดูแลต่อ หรือ หาคนแทน" subtitle="ประมาณการ คิดจากข้อมูลเดิมของพนักงาน">
+            <Card className="order-3 lg:order-none" icon="money" title="ต้นทุน: ดูแลต่อ หรือ หาคนแทน" subtitle="ประมาณการ คิดจากข้อมูลเดิมของพนักงาน">
               {/* ผลคุ้ม/ไม่คุ้มอยู่ข้างคะแนนด้านขวา (MoneyVerdict) ตรงนี้เป็นตัวเลขประกอบ */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <Stat
@@ -756,7 +776,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
           )}
         </div>
 
-        <aside className="relative lg:sticky lg:top-20">
+        <aside className="relative order-2 lg:sticky lg:top-20 lg:order-none">
           {toast && <BandToast key={toast.n} kind={toast.kind} />}
           <Card>
             <div className="mb-5 flex items-center justify-between">
@@ -791,16 +811,22 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 {partRows.length > 0 && (
                   <div className="rounded-lg border border-line p-3">
                     <div className="mb-1.5 text-xs font-medium text-muted-fg">แต่ละมาตรการช่วยได้เท่าไหร่ (เมื่อใช้ร่วมกัน)</div>
-                    <ul className="space-y-1 text-sm">
-                      {partRows.map((r) => (
-                        <li key={r.label} className="flex items-center justify-between gap-2">
+                    <ul className="space-y-1.5 text-sm">
+                      {partRows.map((r, i) => (
+                        <li key={r.label} className="flex items-start justify-between gap-2">
                           <span className="min-w-0 text-fg">{r.label}</span>
-                          <span className={`shrink-0 tabular-nums ${r.points < 0 ? 'text-risk-low' : 'text-risk-mid'}`}>
-                            {r.points < 0 ? `ลด ${-r.points} คะแนน` : r.points > 0 ? `เพิ่ม ${r.points} คะแนน` : 'ไม่ลดคะแนน'}
+                          <span className="shrink-0 text-right">
+                            <span className={`block tabular-nums ${r.points < 0 ? 'text-risk-low' : 'text-risk-mid'}`}>
+                              {r.points < 0 ? `ลด ${-r.points} คะแนน` : r.points > 0 ? `เพิ่ม ${r.points} คะแนน` : 'ไม่ลดคะแนน'}
+                            </span>
+                            {impact && <span className="block text-xs tabular-nums text-muted-fg">{partCosts[i]}</span>}
                           </span>
                         </li>
                       ))}
                     </ul>
+                    {partRows.reduce((t, r) => t + r.points, 0) !== Math.round(delta * 100) && (
+                      <p className="mt-2 text-xs text-muted-fg">รวมแต่ละข้อแล้วไม่เท่ายอดรวม เพราะโมเดลคิดผลของหลายเรื่องร่วมกัน</p>
+                    )}
                   </div>
                 )}
                 {promotionNoHelp && (
