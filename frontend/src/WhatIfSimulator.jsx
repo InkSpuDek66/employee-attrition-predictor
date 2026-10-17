@@ -187,12 +187,14 @@ function Stat({ label, value, tone, sub }) {
 // จึงไม่ตัดสินเขียว/แดง บอกแค่ความเสี่ยงที่ลดได้เทียบต้นทุน (critique 2026-10-16 รอบ 5)
 // มาตรการที่ยังไม่มีต้นทุนในระบบ (uncosted) = ตัวเลขดูดีเกินจริง ขึ้นสีเหลือง
 // points = ผลต่างของคะแนนที่แสดง (ปัดแล้ว) ให้ตรงกับเกจก่อน/หลัง (critique รอบ 7: 99 -> 97 แต่ป้ายบอกลด 3)
-function MoneyVerdict({ impact, money, points }) {
+function MoneyVerdict({ impact, money, points, before }) {
   if (impact.expected_benefit == null) return null
+  // คะแนนไม่ขยับ: ป้าย "ยังไม่เปลี่ยน" อยู่ข้างบนแล้ว ตรงนี้บอกแค่ว่าจ่ายไปแล้วไม่ได้อะไร (เดิมสีเทา มองข้ามง่าย critique รอบ 12)
   if (points === 0) {
+    if (!(impact.retain_cost > 0 || impact.uncosted?.length)) return null
     return (
-      <p className="rounded-lg border border-line p-3 text-xs text-muted-fg" aria-live="polite">
-        คะแนนที่แสดงไม่เปลี่ยน · {impact.retain_cost > 0 || impact.uncosted?.length ? `ต้นทุน ${costText(impact, money)}` : 'ไม่มีต้นทุน'}
+      <p className="rounded-lg bg-risk-mid-soft px-3 py-2 text-xs text-risk-mid" aria-live="polite">
+        จ่าย {costText(impact, money)} แต่คะแนนไม่ลด{before >= 95 && ' (คะแนนสูงมาก มาตรการเดียวมักขยับได้น้อย)'} ลองมาตรการอื่นหรือคุยกับพนักงานก่อน
       </p>
     )
   }
@@ -810,7 +812,8 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 )}
                 {partRows.length > 0 && (
                   <div className="rounded-lg border border-line p-3">
-                    <div className="mb-1.5 text-xs font-medium text-muted-fg">แต่ละมาตรการช่วยได้เท่าไหร่ (เมื่อใช้ร่วมกัน)</div>
+                    <div className="text-xs font-medium text-muted-fg">แต่ละมาตรการช่วยได้เท่าไหร่ (เมื่อใช้ร่วมกัน)</div>
+                    <p className="mb-2 text-xs text-muted-fg">ลองเอาข้อนั้นออกจากแผน แล้วดูว่าคะแนนต่างไปเท่าไหร่</p>
                     <ul className="space-y-1.5 text-sm">
                       {partRows.map((r, i) => (
                         <li key={r.label} className="flex items-start justify-between gap-2">
@@ -835,7 +838,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     {Math.round(scoreOf(result.before) * 100) >= 95 && ' (คะแนนสูงมาก มาตรการเดียวมักขยับได้น้อย)'} ลองคุยถามก่อนว่าอยากเติบโตแบบไหน
                   </p>
                 )}
-                <MoneyVerdict impact={impact ?? {}} money={money} points={Math.round(delta * 100)} />
+                <MoneyVerdict impact={impact ?? {}} money={money} points={Math.round(delta * 100)} before={Math.round(scoreOf(result.before) * 100)} />
               </div>
               <button
                 type="button"

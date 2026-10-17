@@ -103,8 +103,11 @@ def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     if diff.get("MonthlyIncome", 0) > 0 and changed["MonthlyIncome"] >= base["MonthlyIncome"]:
         diff = diff.drop("MonthlyIncome")
     # ตัดผลร่วมเล็กๆ (เช่น "ทำ OT ทำให้เสี่ยงขึ้น" กับคนที่ไม่ได้ทำ OT critique รอบ 10): ต้องถึง 0.05 log-odds และ 20% ของตัวใหญ่สุด
+    # แต่ฟีเจอร์ที่ HR ปรับเองเก็บไว้ถ้าถึง 0.05 ไม่งั้นแถว "แต่ละมาตรการ" บอกลด 1 แต่คำอธิบายไม่มีเรื่องนั้น (critique รอบ 12)
     floor = max(0.05, 0.2 * diff.abs().max()) if len(diff) else 0
-    top = diff[diff.abs() >= floor].abs().sort_values(ascending=False).index[:MAX_DRIVERS]
+    moved = {k for k in changed if changed[k] != base.get(k)}
+    keep = (diff.abs() >= floor) | (diff.index.isin(list(moved)) & (diff.abs() >= 0.05))
+    top = diff[keep].abs().sort_values(ascending=False).index[:MAX_DRIVERS]
     return [Driver(feature=f, change=float(diff[f])) for f in top]
 
 
