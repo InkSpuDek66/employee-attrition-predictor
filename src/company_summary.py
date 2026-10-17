@@ -86,13 +86,15 @@ def summarize(shap_values: np.ndarray, feature_names, risk_scores, employees: pd
     ranking = factor_ranking(shap_values, feature_names)
     total = ranking.sum()
     bands = pd.Series([business_rules.risk_band(s) for s in risk]).value_counts()
-    money = business_rules.estimate(employees, risk)
+    # เงินและเกณฑ์เสี่ยงสูงคิดจากคะแนนที่แสดง (ปัดแล้ว) เหมือนระดับ (critique รอบ 9) ตัวเลขบนจอจะได้ตรงกันทุกที่
+    shown = np.array([business_rules.shown_score(s) for s in risk])
+    money = business_rules.estimate(employees, shown)
     return {
         "n_employees": len(risk),
         "mean_risk_score": float(risk.mean()),
         "risk_bands": {band: int(bands.get(band, 0)) for band in business_rules.RISK_BANDS},
         "expected_loss_total": float(money["expected_loss"].sum()),
-        "high_risk_replacement_cost": float(money.loc[risk >= business_rules.HIGH_RISK, "replacement_cost"].sum()),
+        "high_risk_replacement_cost": float(money.loc[shown >= business_rules.HIGH_RISK, "replacement_cost"].sum()),
         "top_factors": [
             {
                 "feature": feature,

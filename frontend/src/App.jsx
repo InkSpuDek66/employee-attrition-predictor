@@ -444,7 +444,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
         <Suspense fallback={<Skeleton className="h-96" />}>
           {TABS.filter((t) => t.Component).map(({ id, Component }) => (
             <div key={`${id}-${dataVersion}`} hidden={tab !== id} className="fade-up">
-              <Component query={query} dark={dark} who={who} tenant={tenant} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} />
+              <Component query={query} dark={dark} who={who} tenant={tenant} onRisk={onRisk[id]} onDone={onDone[id]} onPick={pick} onTab={setTab} />
             </div>
           ))}
         </Suspense>
@@ -475,7 +475,7 @@ function StepButtons({ ids, current, onPick }) {
   const step = (d) => i >= 0 && ids[i + d] !== undefined && onPick(ids[i + d])
   useEffect(() => {
     const onKey = (e) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input:not([type=range]), textarea, select, [contenteditable="true"]')) return
       if (e.code === 'BracketLeft' && i > 0) onPick(ids[i - 1])
       if (e.code === 'BracketRight' && i >= 0 && i < ids.length - 1) onPick(ids[i + 1])
     }

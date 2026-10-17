@@ -8,7 +8,7 @@
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -126,7 +126,9 @@ def _as_of(tenant: str) -> dict:
         return {}
     if when is None:
         return {}
-    return {"data_as_of": when.date().isoformat(), "data_age_days": (datetime.now(when.tzinfo) - when).days}
+    bangkok = timezone(timedelta(hours=7))  # ไทยไม่มีเวลาออมแสง ไม่ต้องพึ่ง tzdata บน Windows
+    day = when.astimezone(bangkok).date()
+    return {"data_as_of": day.isoformat(), "data_age_days": (datetime.now(bangkok).date() - day).days}
 
 
 def _empty(department):

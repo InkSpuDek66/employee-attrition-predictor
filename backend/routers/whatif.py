@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ValidationError
 
 import auth
+import business_rules  # noqa: E402  (อยู่ใน src/)
 import calibration
 import company_summary as cs
 import db
@@ -71,7 +72,7 @@ def whatif(req: WhatIfRequest, user: dict = Depends(auth.current_user)):
     before, after = score([base, changed], record, user["tenant_id"])
     return WhatIfResponse(
         name=_name(req.employee_id, user["tenant_id"]),
-        drivers=_drivers(base, changed, user["tenant_id"]),
+        drivers=_drivers(base, changed, user["tenant_id"]) if _points(after) != _points(before) else [],
         employee_id=req.employee_id,
         before=before,
         after=after,
@@ -80,6 +81,11 @@ def whatif(req: WhatIfRequest, user: dict = Depends(auth.current_user)):
         employee=changed,
         warning=None if record else UNCALIBRATED_WARNING,
     )
+
+
+def _points(s: Score) -> int:
+    """คะแนนที่หน้าเว็บแสดง (x100 ปัด) ไม่เปลี่ยน = ไม่มีอะไรให้อธิบาย (critique รอบ 9: "ยังไม่เปลี่ยน" แต่มีปัจจัยดันขึ้น)"""
+    return round(business_rules.shown_score(_shown(s)) * 100)
 
 
 def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
@@ -93,8 +99,8 @@ def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     diff = diff[[cs.factor_kind(f) not in ("personal", "unexplained") for f in diff.index]]  # ไม่ยกเป็นเหตุผล (UX-06/07)
     # เงินเดือนเพิ่มแล้ว SHAP ของเงินเดือนเป็นบวก = ผลร่วมกับฟีเจอร์อื่น (เช่น ระดับตำแหน่ง) ไม่ใช่เงินเดือนทำให้เสี่ยง
     # โมเดลรับประกันว่าขึ้นเงินเดือนแล้วคะแนนไม่เพิ่ม (src/train.py MONOTONE) จึงไม่โชว์ให้ HR เข้าใจผิด (critique รอบ 8)
-    raised = changed["MonthlyIncome"] - base["MonthlyIncome"]
-    if "MonthlyIncome" in diff and raised * diff["MonthlyIncome"] > 0:
+    # ไม่ได้ลดเงินเดือน แต่ SHAP ของเงินเดือนดันขึ้น (ขึ้นเงินเดือน หรือปรับอย่างอื่นแล้วผลร่วม) = ไม่ใช่เงินเดือนทำให้เสี่ยง
+    if diff.get("MonthlyIncome", 0) > 0 and changed["MonthlyIncome"] >= base["MonthlyIncome"]:
         diff = diff.drop("MonthlyIncome")
     top = diff[diff.abs() > 1e-4].abs().sort_values(ascending=False).index[:MAX_DRIVERS]
     return [Driver(feature=f, change=float(diff[f])) for f in top]

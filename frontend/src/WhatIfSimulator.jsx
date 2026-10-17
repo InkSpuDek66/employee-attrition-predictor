@@ -201,25 +201,26 @@ function MoneyVerdict({ impact, money, points }) {
   const partial = impact.uncosted?.length > 0
   const cost = costText(impact, money)
   const verdict = impact.warning
-    ? { tone: 'text-fg', text: 'ยังบอกไม่ได้ว่าคุ้มไหม (ยังไม่ปรับเทียบ) ใช้เทียบว่ามาตรการไหนลดคะแนนได้มากกว่า' }
+    ? { tone: 'text-muted-fg', text: 'ปรับเทียบแล้วระบบจะบอกได้ว่าคุ้มไหม ตอนนี้ใช้เทียบว่ามาตรการไหนลดคะแนนได้มากกว่า' }
     : partial
       ? null // คำเตือนต้นทุนไม่ครบอยู่บรรทัดล่างแล้ว ไม่ตัดสินคุ้ม/ไม่คุ้มจากต้นทุนที่ขาด
       : impact.expected_benefit >= 0
         ? { tone: 'text-risk-low', text: `คุ้ม: ความเสี่ยงที่ลดได้มากกว่าต้นทุน ${money(impact.expected_benefit)}` }
         : { tone: 'text-risk-high', text: `ยังไม่คุ้ม: ต้นทุนสูงกว่าความเสี่ยงที่ลดได้ ${money(-impact.expected_benefit)}` }
   return (
-    <div className="rounded-lg border border-line p-3 text-sm" aria-live="polite">
+    <div className="rounded-lg border border-line p-3 text-sm">
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
         {/* ต้นทุนไม่ครบ = ไม่โชว์บาทที่ลดได้ (เทียบกับต้นทุนที่ขาดแล้วดูเหมือนได้ฟรี) บอกเป็นคะแนนแทน */}
         <dt className="text-muted-fg">{points > 0 ? 'คะแนนเพิ่มขึ้น' : 'คะแนนลดลง'}</dt>
         <dd className="text-right font-semibold tabular-nums text-fg">{Math.abs(points)} คะแนน</dd>
-        {!partial && (
+        {/* ยังไม่ปรับเทียบ: คะแนนไม่ใช่โอกาสลาออกจริง คูณเป็นบาทแล้วอ่านเหมือนเงินที่ประหยัดได้จริง จึงโชว์แค่คะแนน + ต้นทุน (critique รอบ 9) */}
+        {!partial && !impact.warning && (
           <>
             <dt className="text-muted-fg">{reduced < 0 ? 'มูลค่าความเสี่ยงที่เพิ่มขึ้น' : 'มูลค่าความเสี่ยงที่ลดได้'}</dt>
             <dd className="text-right font-semibold tabular-nums text-fg">{money(Math.abs(reduced))}</dd>
           </>
         )}
-        <dt className="text-muted-fg">ต้นทุนมาตรการ (1 ปี)</dt>
+        <dt className="text-muted-fg">ต้นทุน (1 ปี)</dt>
         <dd className={`text-right font-semibold tabular-nums ${partial ? 'text-risk-mid' : 'text-fg'}`}>{cost}</dd>
       </dl>
       {verdict && <p className={`mt-2 border-t border-line pt-2 text-xs ${verdict.tone}`}>{verdict.text}</p>}
@@ -351,13 +352,15 @@ const CONTROL = Object.fromEntries(GROUPS.flatMap((g) => g.controls.map((c) => [
 // ระยะทางจากบ้าน HR ย้ายบ้านพนักงานไม่ได้ ชี้ไปที่วันเข้าออฟฟิศ (WFH) แทน (critique รอบ 8)
 const FEATURE_FIELDS = { OverTimeXDistance: ['OverTime', 'OfficeDaysPerWeek'], DistanceFromHome: ['OfficeDaysPerWeek'] }
 const FOCUS_N = 3
+// ผลแบบสำรวจ (ความพึงพอใจ ฯลฯ) HR สั่งให้เปลี่ยนไม่ได้ ไม่เสนอเป็นเรื่องแรกที่ควรลอง (ยังปรับในกลุ่มด้านล่างได้ critique รอบ 9)
+const SURVEY = new Set(['AvgSatisfaction', 'JobSatisfaction', 'EnvironmentSatisfaction', 'RelationshipSatisfaction', 'JobInvolvement', 'WorkLifeBalance'])
 const PRESETS_SHOWN = 4
 
 // ช่องที่ควรลองก่อนของคนนี้: ปัจจัยที่บริษัทปรับได้และดันความเสี่ยงขึ้นมากสุด (จาก /shap) ไม่เกิน 3 ช่อง
 function focusFields(contributions) {
   const out = []
   for (const c of contributions) {
-    if (c.shap_value <= 0 || c.kind !== 'actionable') continue
+    if (c.shap_value <= 0 || c.kind !== 'actionable' || SURVEY.has(c.feature)) continue
     for (const f of FEATURE_FIELDS[c.feature] ?? [c.feature]) if (CONTROL[f] && !out.includes(f)) out.push(f)
     if (out.length >= FOCUS_N) break
   }
@@ -479,7 +482,9 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
     const patch = p.apply(loaded.base)
     const keys = Object.keys(patch)
     if (keys.every((k) => isBase(k, patch[k]))) return 'noop'
-    return keys.every((k) => k in changes && sameValue(k, changes[k], patch[k])) ? 'applied' : 'off'
+    // ช่องที่เท่าค่าเดิมอยู่แล้วนับว่าใช้แล้ว (applyPreset ไม่เก็บช่องนั้นไว้ใน changes) เดิมปุ่มเลื่อนตำแหน่งของคนที่เพิ่งเลื่อน
+    // ตำแหน่งไม่ขึ้นว่ากดอยู่ กดยกเลิกไม่ได้ (critique รอบ 9)
+    return keys.every((k) => (k in changes ? sameValue(k, changes[k], patch[k]) : isBase(k, patch[k]))) ? 'applied' : 'off'
   }
   function applyPreset(p) {
     const patch = p.apply(loaded.base)
@@ -557,7 +562,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   return (
     <div className="space-y-4">
       {error && <Alert>{error}</Alert>}
-      <div className="grid items-start gap-4 lg:grid-cols-[1fr_22rem]">
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_24rem]">
         <div className="space-y-4">
           <Card
             icon="sliders"
@@ -695,6 +700,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   <b className="text-fg">มูลค่าความเสี่ยง</b> = คะแนน × ต้นทุนหาคนแทน
                   {impact.expected_benefit != null &&
                     !impact.uncosted?.length &&
+                    !impact.warning &&
                     Math.round(delta * 100) !== 0 &&
                     ` ก่อน ${money(impact.expected_loss)} หลังปรับ ${money(impact.expected_loss_after)}`}
                 </p>
@@ -719,11 +725,27 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
               <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-fg">อัปเดตอัตโนมัติ</span>
             </div>
             <div className="space-y-5">
-              <RiskGauge size="md" title="ก่อนปรับ" score={scoreOf(result.before)} band={result.before.risk_band} bandTh={result.before.risk_band_th} />
-              <RiskGauge size="md" title="หลังปรับ" score={afterScore} band={result.after.risk_band} bandTh={result.after.risk_band_th} />
+              {/* เกจเดียว (เดิมก่อน/หลังเป็นเกจคู่ ช่องขวาซ้อน 9 กล่อง critique รอบ 9) ก่อนปรับเหลือบรรทัดเดียว */}
+              {nChanged > 0 && (
+                <p className="text-sm text-muted-fg">
+                  ก่อนปรับ <b className={`tabular-nums ${BAND[result.before.risk_band].text}`}>{Math.round(scoreOf(result.before) * 100)}</b> · เสี่ยง
+                  {result.before.risk_band_th}
+                </p>
+              )}
+              <RiskGauge size="md" title={nChanged ? 'หลังปรับ' : 'คะแนนตอนนี้'} score={afterScore} band={result.after.risk_band} bandTh={result.after.risk_band_th} />
               <div aria-live="polite" className="space-y-3">
                 <DeltaBadge delta={delta} idle={!nChanged} />
-                <Drivers drivers={result.drivers} changed={result.changes_applied} />
+                {result.drivers?.length > 0 && (
+                  <details className="group rounded-lg border border-line">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+                      ทำไมคะแนนเปลี่ยน ({result.drivers.length})
+                      <Icon name="down" className="ml-auto size-3.5 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
+                    </summary>
+                    <div className="px-3 pb-3">
+                      <Drivers drivers={result.drivers} changed={result.changes_applied} />
+                    </div>
+                  </details>
+                )}
                 {'JobLevel' in result.changes_applied && Math.round(delta * 100) >= 0 && (
                   <p className="rounded-lg bg-risk-mid-soft px-3 py-2 text-xs text-risk-mid">
                     โมเดลเห็นว่าเลื่อนตำแหน่งไม่ช่วยลดความเสี่ยงของคนนี้ (ตำแหน่งสูงขึ้นมักงานหนักขึ้น) ลองคุยถามก่อนว่าอยากเติบโตแบบไหน
@@ -732,13 +754,6 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 )}
                 <MoneyVerdict impact={impact ?? {}} money={money} points={Math.round(delta * 100)} />
               </div>
-              {/* DE-18: ผลของ WFH มาจากสูตรประมาณ (ระยะทาง × วันเข้าออฟฟิศ / 5) โมเดลไม่เคยเรียนเรื่องนี้ บอกไว้ใกล้ตัวเลข */}
-              {'OfficeDaysPerWeek' in result.changes_applied && (
-                <p className="flex items-start gap-1.5 text-xs text-muted-fg">
-                  <Icon name="info" className="size-4 shrink-0" />
-                  ผลของ WFH เป็นการประมาณจากระยะเดินทางที่ลดลงตามวันเข้าออฟฟิศ โมเดลไม่ได้เรียนเรื่อง WFH โดยตรง ใช้ประกอบการคิด ไม่ใช่ตัวเลขยืนยัน
-                </p>
-              )}
               <button
                 type="button"
                 onClick={saveScenario}
@@ -764,12 +779,12 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                           >
                             <span className="flex items-center gap-2">
                               <span className={`text-lg font-semibold tabular-nums ${BAND[s.band].text}`}>{Math.round(s.after * 100)}</span>
-                              <span className={`text-xs tabular-nums ${s.delta < 0 ? 'text-risk-low' : 'text-risk-high'}`}>
+                              <span className={`text-xs tabular-nums ${s.delta < 0 ? 'text-risk-low' : s.delta > 0 ? 'text-risk-high' : 'text-muted-fg'}`}>
                                 {s.delta > 0 ? '+' : ''}
                                 {Math.round(s.delta * 100)}
                               </span>
                               {i === 0 && saved.length > 1 && (
-                                <span className="ml-auto rounded bg-risk-low-soft px-1.5 py-0.5 text-xs font-medium text-risk-low">ดีที่สุด</span>
+                                <span className="ml-auto rounded bg-risk-low-soft px-1.5 py-0.5 text-xs font-medium text-risk-low">คะแนนต่ำสุด</span>
                               )}
                             </span>
                             <span className="mt-0.5 block text-xs text-muted-fg">{describe(s.changes)}</span>
@@ -787,9 +802,14 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   </ul>
                 </div>
               )}
-              {/* คำเตือนเต็มอยู่หน้าภาพรวมแล้ว ตรงนี้ย่อเหลือบรรทัดเดียว (เดิมซ้ำทุกหน้า) */}
-              {result.warning && <UncalibratedNote detail={result.warning} />}
-              <p className="text-xs text-muted-fg">{result.note}</p>
+              {/* หมายเหตุทั้งหมดรวมไว้ท้ายช่อง (DE-18: ผล WFH มาจากสูตรประมาณ ระยะทาง × วันเข้าออฟฟิศ / 5) */}
+              <div className="space-y-1.5 border-t border-line pt-3">
+                {result.warning && <UncalibratedNote detail={result.warning} />}
+                {'OfficeDaysPerWeek' in result.changes_applied && (
+                  <p className="text-xs text-muted-fg">ผลของ WFH ประมาณจากระยะเดินทางที่ลดลง โมเดลไม่ได้เรียนเรื่อง WFH โดยตรง</p>
+                )}
+                <p className="text-xs text-muted-fg">{result.note}</p>
+              </div>
             </div>
           </Card>
         </aside>
@@ -799,7 +819,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-card/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-xl items-center gap-4">
           <div>
-            <div className="text-xs text-muted-fg">หลังปรับ</div>
+            <div className="text-xs text-muted-fg">{nChanged ? 'หลังปรับ' : 'คะแนนตอนนี้'}</div>
             <div className={`text-2xl font-semibold leading-none tabular-nums ${BAND[result.after.risk_band].text}`}>
               <CountUp value={afterScore * 100} />
             </div>

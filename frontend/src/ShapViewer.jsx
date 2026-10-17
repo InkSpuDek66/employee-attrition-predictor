@@ -49,7 +49,7 @@ function Summary({ ups, downs, band }) {
           <p className="font-semibold text-fg">สรุปสั้นๆ</p>
           {ups.length > 0 && (
             <p className="text-fg">
-              {band === 'Low' ? 'แม้ความเสี่ยงต่ำ แต่สิ่งที่ควรจับตาคือ ' : 'สาเหตุหลักที่ทำให้คนนี้เสี่ยงลาออกคือ '}
+              {band === 'Low' ? 'แม้ความเสี่ยงต่ำ แต่สิ่งที่ควรจับตาคือ ' : 'ปัจจัยที่ดันคะแนนความเสี่ยงของคนนี้ขึ้นมากที่สุดคือ '}
               <b>{list(ups.slice(0, 3))}</b>
             </p>
           )}
@@ -143,7 +143,7 @@ function PrintHeader({ id, name, printedAt }) {
   )
 }
 
-export default function ShapViewer({ query, who, onRisk, onDone, onPick }) {
+export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }) {
   const [topN, setTopN] = useState(10)
   const [printedAt, setPrintedAt] = useState('')
   // ค่าเฉลี่ยทั้งบริษัท (คะแนนชุดเดียวกับคนนี้: ปรับเทียบแล้วถ้าบริษัทปรับเทียบ) โหลดไม่ได้ = ไม่แสดงขีด
@@ -232,10 +232,19 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick }) {
               <Icon name="info" className="size-4 shrink-0" />
               คะแนนใช้เทียบว่าใครเสี่ยงกว่าใคร ไม่ใช่โอกาสลาออกจริง
             </p>
+            {/* อธิบายแล้วต่อด้วยการลงมือ: เปิดหน้าลองปรับของคนเดียวกัน (critique รอบ 9) */}
+            <button
+              type="button"
+              onClick={() => onTab('whatif')}
+              className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-action text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 print:hidden"
+            >
+              <Icon name="sliders" className="size-4" />
+              ลองปรับเงื่อนไขให้คนนี้
+            </button>
             <button
               type="button"
               onClick={() => printReport(setPrintedAt)}
-              className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent print:hidden"
+              className="mt-2 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent print:hidden"
             >
               <Icon name="download" className="size-4" />
               พิมพ์ / บันทึก PDF
