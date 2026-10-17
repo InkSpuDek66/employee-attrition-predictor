@@ -14,7 +14,12 @@ const GROUPS = [
     controls: [
       { field: 'MonthlyIncome', type: 'money' },
       { field: 'PercentSalaryHike', type: 'range', min: 0, max: 30, step: 1 },
-      { field: 'StockOptionLevel', type: 'select', options: [[0, 'ไม่มี'], [1, '1'], [2, '2'], [3, '3']] },
+      {
+        field: 'StockOptionLevel',
+        type: 'select',
+        options: [[0, 'ไม่มี'], [1, '1'], [2, '2'], [3, '3']],
+        hint: 'เช่น บริษัทสมทบกองทุนสำรองเลี้ยงชีพเพิ่ม หรือให้หุ้นพนักงาน (EJIP/ESOP) ข้อมูลที่โมเดลเรียนมาเป็นเรื่องหุ้น',
+      },
     ],
   },
   {
@@ -199,7 +204,7 @@ function MoneyVerdict({ impact, money, points, before }) {
     )
   }
   const reduced = impact.expected_loss - impact.expected_loss_after
-  // มาตรการที่ระบบยังไม่มีต้นทุน (หุ้น งดเดินทาง WFH) ห้ามโชว์ "0 บาท" อ่านเหมือนได้ฟรี (critique รอบ 6)
+  // มาตรการที่ระบบยังไม่มีต้นทุน (สวัสดิการระยะยาว งดเดินทาง WFH) ห้ามโชว์ "0 บาท" อ่านเหมือนได้ฟรี (critique รอบ 6)
   const partial = impact.uncosted?.length > 0
   const cost = costText(impact, money)
   const verdict = impact.warning
@@ -365,7 +370,7 @@ const PRESETS = [
   { label: 'งดงานนอกสถานที่', apply: () => ({ BusinessTravel: 'Non-Travel' }) },
   { label: 'ให้ WFH 3 วัน (เข้าออฟฟิศ 2 วัน)', apply: (b) => ({ OfficeDaysPerWeek: Math.min(b.OfficeDaysPerWeek ?? 5, 2) }) },
   { label: 'อบรมเพิ่ม', retention: 'training_and_promotion_track', apply: (b) => ({ TrainingTimesLastYear: Math.min(6, b.TrainingTimesLastYear + 2) }) },
-  { label: 'ให้สิทธิ์ซื้อหุ้น', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
+  { label: 'เพิ่มสวัสดิการระยะยาว', apply: (b) => ({ StockOptionLevel: Math.max(1, b.StockOptionLevel) }) },
 ]
 const CONTROL = Object.fromEntries(GROUPS.flatMap((g) => g.controls.map((c) => [c.field, c])))
 // ปัจจัยใน SHAP ที่ไม่ใช่ช่องปรับตรงๆ → ช่องที่ปรับแล้วมีผล (OT ร่วมกับบ้านไกล = OT + ระยะทาง)

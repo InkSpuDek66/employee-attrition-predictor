@@ -16,7 +16,7 @@ const LABELS = {
   TrainingTimesLastYear: 'จำนวนครั้งที่อบรมปีที่ผ่านมา',
   MonthlyIncome: 'รายได้ต่อเดือน',
   PercentSalaryHike: 'เงินเดือนขึ้นล่าสุด (%)',
-  StockOptionLevel: 'สิทธิ์ซื้อหุ้นพนักงาน',
+  StockOptionLevel: 'สวัสดิการระยะยาว',
   DailyRate: 'อัตราค่าจ้างรายวัน',
   HourlyRate: 'อัตราค่าจ้างรายชั่วโมง',
   MonthlyRate: 'อัตราค่าจ้างรายเดือน',
@@ -56,7 +56,7 @@ const VALUES = {
   JobInvolvement: SAT,
   WorkLifeBalance: { 1: 'แย่', 2: 'พอใช้', 3: 'ดี', 4: 'ดีมาก' },
   PerformanceRating: { 1: 'ต่ำ', 2: 'ดี', 3: 'ดีเยี่ยม', 4: 'โดดเด่น' },
-  StockOptionLevel: { 0: 'ไม่มีสิทธิ์', 1: 'ระดับ 1', 2: 'ระดับ 2', 3: 'ระดับ 3' },
+  StockOptionLevel: { 0: 'ไม่มี', 1: 'ระดับ 1', 2: 'ระดับ 2', 3: 'ระดับ 3' },
   JobLevel: JOB_LEVELS,
 }
 
@@ -115,7 +115,7 @@ const PHRASES = {
   YearsSinceLastPromotion: (s) => `ไม่ได้เลื่อนตำแหน่งมา ${s} ปี`,
   YearsWithCurrManager: (s) => `อยู่กับหัวหน้าคนปัจจุบันมา ${s} ปี`,
   JobLevel: (s) => `ตำแหน่ง${s}`,
-  StockOptionLevel: (s) => (s === 'ไม่มีสิทธิ์' ? 'ไม่มีสิทธิ์ซื้อหุ้นพนักงาน' : `สิทธิ์ซื้อหุ้นพนักงาน${s}`),
+  StockOptionLevel: (s) => (s === 'ไม่มี' ? 'ไม่มีสวัสดิการระยะยาว' : `สวัสดิการระยะยาว${s}`),
   PercentSalaryHike: (s) => `เงินเดือนขึ้นล่าสุด ${s}`,
   TrainingTimesLastYear: (s) => `อบรม ${s} ครั้งในปีที่ผ่านมา`,
   WorkLifeBalance: (s) => `สมดุลงานกับชีวิต${s}`,
