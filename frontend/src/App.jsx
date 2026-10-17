@@ -469,21 +469,31 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
 }
 
 // คนก่อนหน้า/ถัดไปตามลำดับความเสี่ยง (ไล่คุยทีละคนจากรายชื่อหน้าแรก ไม่ต้องกลับไปหน้าภาพรวม)
+// คีย์ลัด [ และ ] (ดูตำแหน่งปุ่ม e.code ใช้ได้ทั้งแป้นไทย/อังกฤษ) ไม่ทำงานตอนพิมพ์ในช่องกรอก
 function StepButtons({ ids, current, onPick }) {
   const i = ids.indexOf(current)
+  const step = (d) => i >= 0 && ids[i + d] !== undefined && onPick(ids[i + d])
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return
+      if (e.code === 'BracketLeft' && i > 0) onPick(ids[i - 1])
+      if (e.code === 'BracketRight' && i >= 0 && i < ids.length - 1) onPick(ids[i + 1])
+    }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [ids, i, onPick])
   if (i < 0) return null
-  const step = (d) => ids[i + d] !== undefined && onPick(ids[i + d])
   const cls =
     'inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-line bg-card px-2.5 text-xs font-medium text-fg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:border-line disabled:hover:text-fg'
   return (
     <div className="flex items-center gap-2 sm:col-span-2">
-      <button type="button" className={cls} onClick={() => step(-1)} disabled={i === 0} aria-label="คนก่อนหน้า (เสี่ยงมากกว่า)">
+      <button type="button" className={cls} onClick={() => step(-1)} disabled={i === 0} aria-label="คนก่อนหน้า (เสี่ยงมากกว่า)" aria-keyshortcuts="[" title="คีย์ลัด [">
         <Icon name="left" className="size-3.5" /> คนก่อนหน้า
       </button>
       <span className="text-xs tabular-nums text-muted-fg">
         อันดับ {(i + 1).toLocaleString()} จาก {ids.length.toLocaleString()} ตามความเสี่ยง
       </span>
-      <button type="button" className={cls} onClick={() => step(1)} disabled={i === ids.length - 1} aria-label="คนถัดไป (เสี่ยงน้อยกว่า)">
+      <button type="button" className={cls} onClick={() => step(1)} disabled={i === ids.length - 1} aria-label="คนถัดไป (เสี่ยงน้อยกว่า)" aria-keyshortcuts="]" title="คีย์ลัด ]">
         คนถัดไป <Icon name="right" className="size-3.5" />
       </button>
     </div>

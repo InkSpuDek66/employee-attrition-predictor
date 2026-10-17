@@ -48,7 +48,7 @@ test('ชื่อพนักงาน: มีชื่อแสดงคู่
 })
 
 test('แบ่งระดับความเสี่ยงที่ 40/70 (README 6.1)', () => {
-  assert.deepEqual([0.399, 0.4, 0.699, 0.7].map(bandOf), ['Low', 'Medium', 'Medium', 'High'])
+  assert.deepEqual([0.394, 0.396, 0.4, 0.694, 0.696, 0.7].map(bandOf), ['Low', 'Medium', 'Medium', 'Medium', 'High', 'High'])
 })
 
 // ---- api(): token, หมดเวลา, คำขอค้างตอน logout, ข้อความ error ----

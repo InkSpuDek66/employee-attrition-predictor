@@ -18,11 +18,17 @@ const initials = (name) => {
 const topQuery = (n, department, q, reasons) =>
   new URLSearchParams({ n, ...(department && { department }), ...(q && { q }), ...(reasons && { reasons: true }) })
 
+// เหตุผลหลักหนึ่งบรรทัด ("ทำ OT และบ้านห่าง 13 กม. · ทำงานล่วงเวลา (OT)") ใช้ทั้งรายชื่อและไฟล์ CSV
+const reasonText = (e) =>
+  (e.reasons ?? [])
+    .map((r) => featurePhrase(r.feature, r.value, r.feature === 'MonthlyIncome' ? baht(r.value) : featureValue(r.feature, r.value)))
+    .join(' · ')
+
 // ดาวน์โหลดรายชื่อเสี่ยงสูงเป็น CSV (เปิดใน Excel ภาษาไทยได้ เพราะใส่ BOM) ไว้ใช้ในประชุม/ส่งหัวหน้าแผนก
 async function downloadCsv(department) {
-  const { employees } = await api(`/company-summary/top-employees?${topQuery(100, department)}`)
-  const header = ['อันดับ', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'คะแนนความเสี่ยง', 'ระดับ', 'แผนก', 'ตำแหน่ง', 'ระดับตำแหน่ง']
-  const rows = employees.map((e, i) => [i + 1, e.employee_id, e.name ?? '', Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, JOB_LEVELS[e.job_level] ?? e.job_level])
+  const { employees } = await api(`/company-summary/top-employees?${topQuery(100, department, '', true)}`)
+  const header = ['อันดับ', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'คะแนนความเสี่ยง', 'ระดับ', 'แผนก', 'ตำแหน่ง', 'ระดับตำแหน่ง', 'เหตุผลหลัก']
+  const rows = employees.map((e, i) => [i + 1, e.employee_id, e.name ?? '', Math.round(shownScore(e) * 100), e.risk_band_th, e.department, e.job_role, JOB_LEVELS[e.job_level] ?? e.job_level, reasonText(e)])
   const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n')
   const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }))
   const a = Object.assign(document.createElement('a'), { href: url, download: `top-risk-${department || 'all'}.csv` })
@@ -61,10 +67,7 @@ export function CsvButton({ department, onDone = () => {} }) {
 // reasons = โชว์เหตุผลหลักหนึ่งบรรทัดต่อคน ("เคยทำงานมาแล้ว 8 บริษัท · ทำงานล่วงเวลา (OT)")
 export function TopRiskList({ n = 10, department = '', q = '', reasons = false, onPick, onMore, onLess, compact = false }) {
   const { loading, data, error } = useApi([`/company-summary/top-employees?${topQuery(n, department, q, reasons)}`])
-  const why = (e) =>
-    e.reasons
-      .map((r) => featurePhrase(r.feature, r.value, r.feature === 'MonthlyIncome' ? baht(r.value) : featureValue(r.feature, r.value)))
-      .join(' · ')
+  const why = reasonText
   if (error) return <p className="text-sm text-risk-high">{error}</p>
   if (!data) return <Skeleton className={compact ? 'h-40' : 'h-80'} />
   const { employees, total } = data[0]

@@ -73,8 +73,9 @@ def financial_impact(
     record = calibration.load(user["tenant_id"])
     employee = resolve_employee(EmployeeRef(employee_id=employee_id), user["tenant_id"])
     (s,) = score([employee], record, user["tenant_id"])
-    shown = s.risk_score if s.calibrated_risk_score is None else s.calibrated_risk_score
-    after = None if risk_after is None else [risk_after]
+    # เงินคิดจากคะแนนที่แสดง (ปัดแล้ว) ไม่งั้น "ลดลง 2 คะแนน" คู่กับเงินของ 2.52 คะแนน (critique รอบ 8)
+    shown = business_rules.shown_score(s.risk_score if s.calibrated_risk_score is None else s.calibrated_risk_score)
+    after = None if risk_after is None else [business_rules.shown_score(risk_after)]
     measures, uncosted, plan = [], [], None
     if changes:
         try:

@@ -348,7 +348,8 @@ const PRESETS = [
 ]
 const CONTROL = Object.fromEntries(GROUPS.flatMap((g) => g.controls.map((c) => [c.field, c])))
 // ปัจจัยใน SHAP ที่ไม่ใช่ช่องปรับตรงๆ → ช่องที่ปรับแล้วมีผล (OT ร่วมกับบ้านไกล = OT + ระยะทาง)
-const FEATURE_FIELDS = { OverTimeXDistance: ['OverTime', 'DistanceFromHome'] }
+// ระยะทางจากบ้าน HR ย้ายบ้านพนักงานไม่ได้ ชี้ไปที่วันเข้าออฟฟิศ (WFH) แทน (critique รอบ 8)
+const FEATURE_FIELDS = { OverTimeXDistance: ['OverTime', 'OfficeDaysPerWeek'], DistanceFromHome: ['OfficeDaysPerWeek'] }
 const FOCUS_N = 3
 const PRESETS_SHOWN = 4
 
@@ -409,7 +410,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
         setSaved([])
         setResult(res)
         lastBand.current = res.after.risk_band
-        onRisk({ id: query.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
+        onRisk({ id: query.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'คะแนน' })
         setError('')
       },
       (err) => {
@@ -437,7 +438,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
         const kind = toastKind(lastBand.current ?? res.before.risk_band, res.after.risk_band)
         if (kind) setToast((t) => ({ n: (t?.n ?? 0) + 1, kind }))
         lastBand.current = res.after.risk_band
-        onRisk({ id: loaded.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'หลังปรับ' })
+        onRisk({ id: loaded.id, band: res.after.risk_band, score: scoreOf(res.after), label: Object.keys(sent).length ? 'หลังปรับ' : 'คะแนน' })
         setError('')
       } catch (err) {
         if (err.name === 'AbortError') return
@@ -692,7 +693,10 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 )}
                 <p>
                   <b className="text-fg">มูลค่าความเสี่ยง</b> = คะแนน × ต้นทุนหาคนแทน
-                  {impact.expected_benefit != null && ` ก่อน ${money(impact.expected_loss)} หลังปรับ ${money(impact.expected_loss_after)}`}
+                  {impact.expected_benefit != null &&
+                    !impact.uncosted?.length &&
+                    Math.round(delta * 100) !== 0 &&
+                    ` ก่อน ${money(impact.expected_loss)} หลังปรับ ${money(impact.expected_loss_after)}`}
                 </p>
                 <p>
                   ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท

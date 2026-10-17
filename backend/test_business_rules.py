@@ -13,7 +13,9 @@ import company_summary as cs  # noqa: E402
 
 
 def test_risk_band_edges():
-    assert [br.risk_band(s) for s in (0.0, 0.399, 0.4, 0.699, 0.7, 1.0)] == ["Low", "Low", "Medium", "Medium", "High", "High"]
+    # ระดับคิดจากคะแนนที่แสดง (x100 ปัด): 0.394 แสดง 39 = ต่ำ, 0.396 แสดง 40 = ปานกลาง
+    cases = (0.0, 0.394, 0.396, 0.4, 0.694, 0.696, 0.7, 1.0)
+    assert [br.risk_band(s) for s in cases] == ["Low", "Low", "Medium", "Medium", "Medium", "High", "High", "High"]
 
 
 def test_severance_days_follow_section_118():

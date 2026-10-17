@@ -33,8 +33,14 @@ RISK_BANDS = {"High": "สูง", "Medium": "ปานกลาง", "Low": "�
 MAX_MONTHLY_INCOME_THB = 5_000_000
 
 
+def shown_score(score: float) -> float:
+    """คะแนนที่หน้าเว็บแสดง (x100 ปัดเป็นจำนวนเต็ม แบบ Math.round) ระดับและเงินคิดจากค่านี้ ตัวเลขบนจอจะได้ตรงกัน"""
+    return int(float(score) * 100 + 0.5) / 100
+
+
 def risk_band(score: float) -> str:
-    """คืน 'High' / 'Medium' / 'Low' ตาม README 6.1"""
+    """คืน 'High' / 'Medium' / 'Low' ตาม README 6.1 คิดจากคะแนนที่แสดง (39.75 แสดง 40 = ปานกลาง critique รอบ 8)"""
+    score = shown_score(score)
     if score >= HIGH_RISK:
         return "High"
     if score >= MEDIUM_RISK:

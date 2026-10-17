@@ -103,7 +103,9 @@ def test_company_summary_uses_calibrated_scores(tmp_path, monkeypatch):
     shown = calibration.apply(calibration.load("ibm_demo"), ms.risk_scores(X))
     after = client.get("/company-summary").json()
     assert after["warning"] is None
-    assert after["risk_bands"]["High"] == int((shown >= business_rules.HIGH_RISK).sum()) != before["risk_bands"]["High"]
+    # ระดับคิดจากคะแนนที่แสดง (x100 ปัด) เหมือนหน้าเว็บ
+    high = sum(business_rules.risk_band(x) == "High" for x in shown)
+    assert after["risk_bands"]["High"] == high != before["risk_bands"]["High"]
     assert after["mean_risk_score"] == pytest.approx(float(shown.mean()))
     depts = client.get("/company-summary/departments").json()["departments"]
     assert sum(d["risk_bands"]["High"] for d in depts) == after["risk_bands"]["High"]
@@ -113,7 +115,7 @@ def test_financial_impact():
     r = client.get("/financial-impact/1").json()
     assert r["replacement_cost"] == pytest.approx(r["hiring_cost"])  # ค่าเริ่มต้นไม่รวมค่าชดเชย
     assert r["expected_benefit"] is None and r["risk_after"] is None  # ยังไม่ได้ลองมาตรการ
-    score = r["score"]["risk_score"]
+    score = business_rules.shown_score(r["score"]["risk_score"])  # เงินคิดจากคะแนนที่แสดง (ปัดแล้ว)
     tried = client.get("/financial-impact/1", params={"risk_after": 0.1}).json()
     assert tried["expected_loss_after"] == pytest.approx(0.1 * r["replacement_cost"])
     assert tried["expected_benefit"] == pytest.approx((score - 0.1) * r["replacement_cost"] - r["retain_cost"])

@@ -91,6 +91,11 @@ def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     sv = ms.explainer()(X).values
     diff = pd.Series(sv[1] - sv[0], index=X.columns).groupby(cs.feature_group).sum()
     diff = diff[[cs.factor_kind(f) not in ("personal", "unexplained") for f in diff.index]]  # ไม่ยกเป็นเหตุผล (UX-06/07)
+    # เงินเดือนเพิ่มแล้ว SHAP ของเงินเดือนเป็นบวก = ผลร่วมกับฟีเจอร์อื่น (เช่น ระดับตำแหน่ง) ไม่ใช่เงินเดือนทำให้เสี่ยง
+    # โมเดลรับประกันว่าขึ้นเงินเดือนแล้วคะแนนไม่เพิ่ม (src/train.py MONOTONE) จึงไม่โชว์ให้ HR เข้าใจผิด (critique รอบ 8)
+    raised = changed["MonthlyIncome"] - base["MonthlyIncome"]
+    if "MonthlyIncome" in diff and raised * diff["MonthlyIncome"] > 0:
+        diff = diff.drop("MonthlyIncome")
     top = diff[diff.abs() > 1e-4].abs().sort_values(ascending=False).index[:MAX_DRIVERS]
     return [Driver(feature=f, change=float(diff[f])) for f in top]
 

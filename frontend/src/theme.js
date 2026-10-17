@@ -37,7 +37,11 @@ export const BAND = {
   High: { th: 'สูง', text: 'text-risk-high', pill: 'bg-risk-high-soft text-risk-high ring-risk-high/15' },
 }
 
-export const bandOf = (score) => (score < LOW ? 'Low' : score < HIGH ? 'Medium' : 'High')
+// ระดับคิดจากคะแนนที่แสดง (x100 ปัด) ตรงกับ business_rules.risk_band: 39.75 แสดง 40 = ปานกลาง
+export const bandOf = (score) => {
+  const shown = Math.round(score * 100) / 100
+  return shown < LOW ? 'Low' : shown < HIGH ? 'Medium' : 'High'
+}
 
 // What-if: ระดับเดิม -> ใหม่ ควรเด้งข้อความแบบไหน (null = ระดับไม่เปลี่ยน ไม่ต้องเด้ง)
 const BAND_RANK = { Low: 0, Medium: 1, High: 2 }
