@@ -102,7 +102,9 @@ def _drivers(base: dict, changed: dict, tenant: str) -> list[Driver]:
     # ไม่ได้ลดเงินเดือน แต่ SHAP ของเงินเดือนดันขึ้น (ขึ้นเงินเดือน หรือปรับอย่างอื่นแล้วผลร่วม) = ไม่ใช่เงินเดือนทำให้เสี่ยง
     if diff.get("MonthlyIncome", 0) > 0 and changed["MonthlyIncome"] >= base["MonthlyIncome"]:
         diff = diff.drop("MonthlyIncome")
-    top = diff[diff.abs() > 1e-4].abs().sort_values(ascending=False).index[:MAX_DRIVERS]
+    # ตัดผลร่วมเล็กๆ (เช่น "ทำ OT ทำให้เสี่ยงขึ้น" กับคนที่ไม่ได้ทำ OT critique รอบ 10): ต้องถึง 0.05 log-odds และ 20% ของตัวใหญ่สุด
+    floor = max(0.05, 0.2 * diff.abs().max()) if len(diff) else 0
+    top = diff[diff.abs() >= floor].abs().sort_values(ascending=False).index[:MAX_DRIVERS]
     return [Driver(feature=f, change=float(diff[f])) for f in top]
 
 

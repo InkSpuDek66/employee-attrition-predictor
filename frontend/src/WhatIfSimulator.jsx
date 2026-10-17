@@ -192,7 +192,7 @@ function MoneyVerdict({ impact, money, points }) {
   if (points === 0) {
     return (
       <p className="rounded-lg border border-line p-3 text-xs text-muted-fg" aria-live="polite">
-        คะแนนที่แสดงไม่เปลี่ยน มูลค่าความเสี่ยงจึงไม่ต่างกัน ต้นทุนของสิ่งที่ปรับ {costText(impact, money)}
+        คะแนนที่แสดงไม่เปลี่ยน ต้นทุนของสิ่งที่ปรับ {costText(impact, money)}
       </p>
     )
   }
@@ -235,7 +235,7 @@ function MoneyVerdict({ impact, money, points }) {
 
 // ต้นทุนของสิ่งที่ปรับ ใช้ข้อความเดียวกันทุกที่ (สรุปข้างคะแนน การ์ดต้นทุน ที่มาของตัวเลข)
 function costText(impact, money) {
-  if (!impact.uncosted?.length) return money(impact.retain_cost)
+  if (!impact.uncosted?.length) return impact.retain_cost > 0 ? money(impact.retain_cost) : 'ไม่มีต้นทุน' // เช่น ลดเงินเดือน
   return impact.retain_cost > 0 ? `${money(impact.retain_cost)} + ยังไม่มีตัวเลขบางส่วน` : 'ยังไม่มีตัวเลข'
 }
 
@@ -387,6 +387,13 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   const [saved, setSaved] = useState([]) // ผลจำลองที่บันทึกไว้เทียบ (ต่อพนักงานหนึ่งคน สูงสุด 4)
   const [toast, setToast] = useState(null) // { n, kind } ข้อความเด้งตอนระดับความเสี่ยงหลังปรับเปลี่ยน (n เพิ่มทุกครั้ง ให้เล่นใหม่)
   const lastBand = useRef(null)
+  // ผลจำลองที่ปรับไว้แยกตามพนักงาน กดคนถัดไปแล้วกลับมายังอยู่ (เดิมหายเงียบๆ critique รอบ 10) หายเมื่อโหลดข้อมูลใหม่/ออกจากระบบ
+  const memory = useRef({})
+  useEffect(() => {
+    if (loaded?.base) memory.current[loaded.id] = { changes, saved }
+  }, [loaded, changes, saved])
+  // แต่ละมาตรการที่กดอยู่ช่วยได้กี่คะแนน (ลองเอาออกทีละอย่าง) มาตรการที่มีต้นทุนแต่ไม่ลดคะแนนจะเห็นทันที
+  const [parts, setParts] = useState({ key: '', rows: [] })
   const [focus, setFocus] = useState({ id: null, fields: [] }) // ช่องที่ควรลองก่อน (ปัจจัยหลักของคนนี้จาก SHAP)
   const [allPresets, setAllPresets] = useState(false)
 
@@ -409,8 +416,9 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
       (res) => {
         setLoaded({ n: query.n, id: query.id, tenant: query.tenant, base: res.employee })
         onDone()
-        setChanges({})
-        setSaved([])
+        const kept = memory.current[query.id]
+        setChanges(kept?.changes ?? {})
+        setSaved(kept?.saved ?? [])
         setResult(res)
         lastBand.current = res.after.risk_band
         onRisk({ id: query.id, band: res.after.risk_band, score: scoreOf(res.after), label: 'คะแนน' })
@@ -498,6 +506,34 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
     })
   }
 
+  const changesKey = JSON.stringify(changes)
+  useEffect(() => {
+    if (!loaded?.base) return
+    const applied = PRESETS.filter((p) => presetState(p) === 'applied')
+    if (applied.length < 2) return void setParts({ key: changesKey, rows: [] })
+    const ctrl = new AbortController()
+    const body = (c) => ({ employee_id: loaded.id, changes: toApiChanges(c), ...(loaded.tenant && { tenant_id: loaded.tenant }) })
+    const timer = setTimeout(async () => {
+      try {
+        const all = await post(body(changes), ctrl.signal)
+        const rows = await Promise.all(
+          applied.map(async (p) => {
+            const patch = p.apply(loaded.base)
+            const without = Object.fromEntries(Object.entries(changes).filter(([k]) => !(k in patch)))
+            const r = await post(body(without), ctrl.signal)
+            return { label: p.label, points: Math.round(scoreOf(all.after) * 100) - Math.round(scoreOf(r.after) * 100) }
+          }),
+        )
+        setParts({ key: changesKey, rows })
+      } catch (err) {
+        if (err.name !== 'AbortError') setParts({ key: changesKey, rows: [] })
+      }
+    }, 400)
+    return () => (clearTimeout(timer), ctrl.abort())
+    // presetState อ่าน changes/loaded ที่อยู่ใน deps แล้ว (changesKey แทน changes ไม่ให้ยิงซ้ำตอน object ใหม่ค่าเดิม)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, changesKey])
+
   function saveScenario() {
     setSaved((s) => [...s, { key: Date.now(), changes, after: scoreOf(result.after), band: result.after.risk_band, delta }])
   }
@@ -540,6 +576,10 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   const afterScore = scoreOf(result.after)
   const nChanged = Object.keys(changes).length
   const alreadySaved = saved.some((s) => JSON.stringify(s.changes) === JSON.stringify(changes))
+  const partRows = parts.key === changesKey ? parts.rows : []
+  // เลื่อนตำแหน่งไม่ช่วย: ดูจากผลของมาตรการนี้เอง (ถ้าใช้ร่วมกับอย่างอื่น) ไม่ใช่ผลรวม (เดิมรวมแล้วลด ป้ายเลยไม่ขึ้น critique รอบ 10)
+  const promoRow = partRows.find((r) => r.label.startsWith('เลื่อนตำแหน่ง'))
+  const promotionNoHelp = 'JobLevel' in result.changes_applied && (promoRow ? promoRow.points >= 0 : Math.round(delta * 100) >= 0)
   const focused = focus.id === loaded.id ? focus.fields : []
   // มาตรการที่ตรงกับปัจจัยหลักขึ้นก่อน แสดง 4 อัน ที่เหลือกดดูเพิ่ม (เดิม 8 ปุ่มพร้อมกัน)
   const hits = (p) => (Object.keys(p.apply(loaded.base)).some((k) => focused.includes(k)) ? 1 : 0)
@@ -660,16 +700,18 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   label="ต้นทุนถ้าต้องหาคนแทน"
                   value={money(impact.replacement_cost)}
                   tone="muted"
-                  sub="ใช้คูณกับคะแนนเป็นมูลค่าความเสี่ยง เทียบกับต้นทุนมาตรการตรงๆ ไม่ได้"
+                  sub={impact.warning ? 'ใช้เทียบความสำคัญระหว่างพนักงาน เทียบกับต้นทุนมาตรการตรงๆ ไม่ได้' : 'ใช้คูณกับคะแนนเป็นมูลค่าความเสี่ยง เทียบกับต้นทุนมาตรการตรงๆ ไม่ได้'}
                 />
                 <Stat
                   label="ต้นทุนมาตรการที่ปรับ (1 ปี)"
-                  value={impact.costed_from_changes ? costText(impact, money) : '—'}
+                  value={!impact.costed_from_changes ? '—' : impact.uncosted?.length && impact.retain_cost > 0 ? money(impact.retain_cost) : costText(impact, money)}
                   tone={!impact.costed_from_changes ? 'muted' : impact.uncosted?.length ? 'amber' : 'blue'}
                   sub={
                     !impact.costed_from_changes
                       ? 'ลองกดมาตรการหรือปรับค่าก่อน'
-                      : impact.measures?.length > 1
+                      : impact.uncosted?.length && impact.retain_cost > 0
+                        ? `+ ยังไม่มีตัวเลขของ ${impact.uncosted.map(featureLabel).join(', ')}`
+                        : impact.measures?.length > 1
                         ? `รวม ${impact.measures.length} มาตรการ`
                         : undefined
                   }
@@ -696,14 +738,14 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     {impact.uncosted?.length > 0 && ` (ของ ${impact.uncosted.map(featureLabel).join(', ')})`}
                   </p>
                 )}
-                <p>
+                {!impact.warning && <p>
                   <b className="text-fg">มูลค่าความเสี่ยง</b> = คะแนน × ต้นทุนหาคนแทน
                   {impact.expected_benefit != null &&
                     !impact.uncosted?.length &&
                     !impact.warning &&
                     Math.round(delta * 100) !== 0 &&
                     ` ก่อน ${money(impact.expected_loss)} หลังปรับ ${money(impact.expected_loss_after)}`}
-                </p>
+                </p>}
                 <p>
                   ตัวคูณเป็นค่าประมาณจากเบนช์มาร์กสากล ใช้เปรียบเทียบ ไม่ใช่ต้นทุนจริงของบริษัท
                   {!impact.include_severance && ' · ไม่นับค่าชดเชยตามมาตรา 118 เพราะจ่ายเมื่อนายจ้างเลิกจ้าง ไม่ใช่เมื่อลาออกเอง'}
@@ -746,10 +788,25 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     </div>
                   </details>
                 )}
-                {'JobLevel' in result.changes_applied && Math.round(delta * 100) >= 0 && (
+                {partRows.length > 0 && (
+                  <div className="rounded-lg border border-line p-3">
+                    <div className="mb-1.5 text-xs font-medium text-muted-fg">แต่ละมาตรการช่วยได้เท่าไหร่ (เมื่อใช้ร่วมกัน)</div>
+                    <ul className="space-y-1 text-sm">
+                      {partRows.map((r) => (
+                        <li key={r.label} className="flex items-center justify-between gap-2">
+                          <span className="min-w-0 text-fg">{r.label}</span>
+                          <span className={`shrink-0 tabular-nums ${r.points < 0 ? 'text-risk-low' : 'text-risk-mid'}`}>
+                            {r.points < 0 ? `ลด ${-r.points} คะแนน` : r.points > 0 ? `เพิ่ม ${r.points} คะแนน` : 'ไม่ลดคะแนน'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {promotionNoHelp && (
                   <p className="rounded-lg bg-risk-mid-soft px-3 py-2 text-xs text-risk-mid">
-                    โมเดลเห็นว่าเลื่อนตำแหน่งไม่ช่วยลดความเสี่ยงของคนนี้ (ตำแหน่งสูงขึ้นมักงานหนักขึ้น) ลองคุยถามก่อนว่าอยากเติบโตแบบไหน
-                    หรือใช้มาตรการอื่นร่วมด้วย
+                    เลื่อนตำแหน่งไม่ทำให้คะแนนของคนนี้ลดลงในโมเดล
+                    {Math.round(scoreOf(result.before) * 100) >= 95 && ' (คะแนนสูงมาก มาตรการเดียวมักขยับได้น้อย)'} ลองคุยถามก่อนว่าอยากเติบโตแบบไหน
                   </p>
                 )}
                 <MoneyVerdict impact={impact ?? {}} money={money} points={Math.round(delta * 100)} />

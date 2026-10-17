@@ -419,7 +419,9 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                   <td className={`px-2 py-2.5 text-right tabular-nums ${d.risk_bands.High ? 'font-semibold text-risk-high' : 'text-muted-fg'}`}>{d.risk_bands.High}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{Math.round(d.mean_risk_score * 100)}</td>
                   <td className="whitespace-nowrap px-5 py-2.5 text-right tabular-nums sm:px-6" title={baht(d.high_risk_replacement_cost)}>
-                    {(d.high_risk_replacement_cost / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {d.risk_bands.High
+                      ? (d.high_risk_replacement_cost / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '—'}
                   </td>
                 </tr>
               ))}
