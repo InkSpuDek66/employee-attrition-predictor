@@ -18,7 +18,7 @@ const GROUPS = [
         field: 'StockOptionLevel',
         type: 'select',
         options: [[0, 'ไม่มี'], [1, '1'], [2, '2'], [3, '3']],
-        hint: 'เช่น บริษัทสมทบกองทุนสำรองเลี้ยงชีพเพิ่ม หรือให้หุ้นพนักงาน (EJIP/ESOP) ข้อมูลที่โมเดลเรียนมาเป็นเรื่องหุ้น',
+        hint: 'เช่น การสมทบกองทุนสำรองเลี้ยงชีพเพิ่ม หรือหุ้นพนักงาน (EJIP/ESOP) โมเดลเรียนรู้จากข้อมูลหุ้นพนักงาน',
       },
     ],
   },
@@ -199,7 +199,7 @@ function MoneyVerdict({ impact, money, points, before }) {
     if (!(impact.retain_cost > 0 || impact.uncosted?.length)) return null
     return (
       <p className="rounded-lg bg-risk-mid-soft px-3 py-2 text-xs text-risk-mid" aria-live="polite">
-        จ่าย {costText(impact, money)} แต่คะแนนไม่ลด{before >= 95 && ' (คะแนนสูงมาก มาตรการเดียวมักขยับได้น้อย)'} ลองมาตรการอื่นหรือคุยกับพนักงานก่อน
+        มีต้นทุน {costText(impact, money)} แต่คะแนนไม่ลดลง{before >= 95 && ' (คะแนนสูงมาก มาตรการเดียวมักลดได้น้อย)'} ควรพิจารณามาตรการอื่นหรือสอบถามพนักงานก่อน
       </p>
     )
   }
@@ -253,7 +253,7 @@ function rowCosts(rows, impact, money) {
     ms.forEach((m) => claimed.add(m.key))
     const unknown = r.keys.some((k) => impact?.uncosted?.includes(k))
     if (fresh.length) return money(fresh.reduce((t, m) => t + m.cost, 0)) + (unknown ? ' + ยังไม่มีตัวเลข' : '')
-    if (ms.length) return 'ต้นทุนนับรวมในข้อด้านบนแล้ว'
+    if (ms.length) return 'รวมอยู่ในต้นทุนรายการด้านบนแล้ว'
     return unknown ? 'ยังไม่มีตัวเลข' : 'ไม่มีต้นทุน'
   })
 }
@@ -707,7 +707,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                       <Icon name={g.icon} className="size-4 text-accent" />
                       {g.title}
                       <span className="text-xs font-normal text-muted-fg">
-                        {touched ? `ปรับแล้ว ${touched}` : rest.length < g.controls.length ? `อีก ${rest.length} ช่อง` : `${rest.length} ช่อง`}
+                        {touched ? `ปรับแล้ว ${touched}` : rest.length < g.controls.length ? `อีก ${rest.length} รายการ` : `${rest.length} รายการ`}
                       </span>
                       <Icon name="chevron" className="ml-auto size-4 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
                     </summary>
@@ -822,8 +822,8 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 )}
                 {partRows.length > 0 && (
                   <div className="rounded-lg border border-line p-3">
-                    <div className="text-xs font-medium text-muted-fg">แต่ละมาตรการช่วยได้เท่าไหร่ (เมื่อใช้ร่วมกัน)</div>
-                    <p className="mb-2 text-xs text-muted-fg">ลองเอาข้อนั้นออกจากแผน แล้วดูว่าคะแนนต่างไปเท่าไหร่</p>
+                    <div className="text-xs font-medium text-muted-fg">ผลของแต่ละมาตรการ (เมื่อใช้ร่วมกัน)</div>
+                    <p className="mb-2 text-xs text-muted-fg">คำนวณโดยนำมาตรการนั้นออกจากแผน แล้วเทียบคะแนนที่เปลี่ยนไป</p>
                     <ul className="space-y-1.5 text-sm">
                       {partRows.map((r, i) => (
                         <li key={r.label} className="flex items-start justify-between gap-2">
@@ -838,14 +838,14 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                       ))}
                     </ul>
                     {partRows.reduce((t, r) => t + r.points, 0) !== Math.round(delta * 100) && (
-                      <p className="mt-2 text-xs text-muted-fg">รวมแต่ละข้อแล้วไม่เท่ายอดรวม เพราะโมเดลคิดผลของหลายเรื่องร่วมกัน</p>
+                      <p className="mt-2 text-xs text-muted-fg">ผลรวมของแต่ละมาตรการอาจไม่เท่ากับคะแนนที่เปลี่ยนทั้งหมด เนื่องจากโมเดลคำนวณผลของหลายปัจจัยร่วมกัน</p>
                     )}
                   </div>
                 )}
                 {promotionNoHelp && (
                   <p className="rounded-lg bg-risk-mid-soft px-3 py-2 text-xs text-risk-mid">
-                    เลื่อนตำแหน่งไม่ทำให้คะแนนของคนนี้ลดลงในโมเดล
-                    {Math.round(scoreOf(result.before) * 100) >= 95 && ' (คะแนนสูงมาก มาตรการเดียวมักขยับได้น้อย)'} ลองคุยถามก่อนว่าอยากเติบโตแบบไหน
+                    การเลื่อนตำแหน่งไม่ทำให้คะแนนของพนักงานคนนี้ลดลง
+                    {Math.round(scoreOf(result.before) * 100) >= 95 && ' (คะแนนสูงมาก มาตรการเดียวมักลดได้น้อย)'} ควรสอบถามพนักงานก่อนว่าต้องการเติบโตในรูปแบบใด
                   </p>
                 )}
                 <MoneyVerdict impact={impact ?? {}} money={money} points={Math.round(delta * 100)} before={Math.round(scoreOf(result.before) * 100)} />
