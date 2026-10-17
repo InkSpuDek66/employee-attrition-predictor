@@ -207,7 +207,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
         <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-risk-mid/25 bg-risk-mid-soft px-4 font-medium text-risk-mid shadow-sm transition-colors duration-150 hover:bg-risk-mid-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
           <Icon name="info" className="size-4" />
           บัญชีทดลอง
-          <Icon name="up" className="size-3.5 transition-transform duration-150 group-open:rotate-180" />
+          <Icon name="chevron" className="size-3.5 rotate-180 transition-transform duration-150 group-open:rotate-0" />
         </summary>
         <div className="absolute bottom-12 left-0 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-card p-3 shadow-lg">
           <p className="mb-2 px-1 text-xs text-muted-fg">ชั่วคราว ใช้กับข้อมูลตัวอย่างเท่านั้น · กดเพื่อกรอกให้</p>

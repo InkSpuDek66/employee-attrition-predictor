@@ -705,9 +705,11 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   <details key={g.title} open={touched > 0 || undefined} className="group">
                     <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
                       <Icon name={g.icon} className="size-4 text-accent" />
-                      {rest.length < g.controls.length ? `${g.title} (อื่นๆ)` : g.title}
-                      <span className="text-xs font-normal text-muted-fg">{touched ? `ปรับแล้ว ${touched}` : `${rest.length} รายการ`}</span>
-                      <Icon name="down" className="ml-auto size-4 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
+                      {g.title}
+                      <span className="text-xs font-normal text-muted-fg">
+                        {touched ? `ปรับแล้ว ${touched}` : rest.length < g.controls.length ? `อีก ${rest.length} ช่อง` : `${rest.length} ช่อง`}
+                      </span>
+                      <Icon name="chevron" className="ml-auto size-4 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
                     </summary>
                     <div className="px-4 pb-4 pt-1">
                       {g.note && <p className="mb-3 text-xs text-muted-fg">{g.note}</p>}
@@ -745,8 +747,11 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 />
               </div>
               {/* บอกที่มาของตัวเลข กันคนเข้าใจผิดว่าเป็นต้นทุนจริงของบริษัท (สูตรใน src/business_rules.py) */}
-              <details className="mt-3 rounded-lg bg-muted text-xs text-muted-fg">
-                <summary className="cursor-pointer px-4 py-2.5 font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent">ดูที่มาของตัวเลข</summary>
+              <details className="group mt-3 rounded-lg bg-muted text-xs text-muted-fg">
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+                  ดูที่มาของตัวเลข
+                  <Icon name="chevron" className="ml-auto size-3.5 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
+                </summary>
                 <div className="space-y-1 px-4 pb-3">
                 <p>
                   <b className="text-fg">ต้นทุนหาคนแทน</b> = เงินเดือน {money(impact.monthly_income)} × 12 เดือน ×{' '}
@@ -808,7 +813,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   <details className="group rounded-lg border border-line">
                     <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
                       ทำไมคะแนนเปลี่ยน ({result.drivers.length})
-                      <Icon name="down" className="ml-auto size-3.5 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
+                      <Icon name="chevron" className="ml-auto size-3.5 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
                     </summary>
                     <div className="px-3 pb-3">
                       <Drivers drivers={result.drivers} changed={result.changes_applied} />

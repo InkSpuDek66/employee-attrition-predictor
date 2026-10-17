@@ -56,7 +56,7 @@ export function CsvButton({ department, onDone = () => {} }) {
       title={state && state !== 'busy' ? state : 'พนักงานเสี่ยงสูงสุด 100 คน'}
       className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
     >
-      <Icon name="down" className="size-4" />
+      <Icon name="download" className="size-4" />
       {state === 'busy' ? 'กำลังเตรียม…' : state ? 'ลองใหม่' : 'CSV'}
     </button>
   )

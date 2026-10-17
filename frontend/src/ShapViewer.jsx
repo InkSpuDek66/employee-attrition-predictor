@@ -291,7 +291,7 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
             <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 text-sm font-semibold text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:px-6 [&::-webkit-details-marker]:hidden">
               <Icon name="list" className="size-4 text-accent" />
               ดูค่าจริงของแต่ละปัจจัย (ตาราง)
-              <Icon name="down" className="ml-auto size-4 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
+              <Icon name="chevron" className="ml-auto size-4 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <div className="px-5 pb-5 sm:px-6">
             <div className="-mx-5 overflow-x-auto sm:-mx-6">

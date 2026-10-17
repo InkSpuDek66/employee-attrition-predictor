@@ -67,7 +67,7 @@ function usePeek(n, unit = 'แถว') {
         aria-expanded={open}
         className="mt-2 inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <Icon name={open ? 'up' : 'down'} className="size-4" />
+        <Icon name="chevron" className={`size-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         {open ? 'ย่อ' : `ดูทั้งหมด (${n.toLocaleString()} ${unit})`}
       </button>
     ),
