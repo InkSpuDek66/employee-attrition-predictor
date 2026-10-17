@@ -304,7 +304,7 @@ input[type='range'] {
   transform-box: fill-box;
   transform-origin: 50% 100%;
   animation:
-    mascot-in 450ms cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    mascot-in 450ms cubic-bezier(0.25, 1, 0.5, 1) both,
     mascot-bob 3s ease-in-out 450ms infinite;
 }
 .mascot-shadow {
@@ -325,7 +325,7 @@ input[type='range'] {
 .mascot-pop {
   transform-box: fill-box;
   transform-origin: 0% 100%;
-  animation: mascot-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) 200ms both;
+  animation: mascot-pop 600ms cubic-bezier(0.25, 1, 0.5, 1) 200ms both;
 }
 .mascot-tail {
   transform-box: fill-box;
@@ -375,7 +375,7 @@ input[type='range'] {
   transform-box: fill-box;
   transform-origin: center;
   animation:
-    mascot-check-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1) 150ms both,
+    mascot-check-in 500ms cubic-bezier(0.25, 1, 0.5, 1) 150ms both,
     mascot-float 2.4s ease-in-out 650ms infinite;
 }
 @keyframes mascot-check-in {

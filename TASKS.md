@@ -136,6 +136,7 @@ Course Milestones ที่ต้องเจอระหว่างทาง: 
   - วิธีทำ: render SHAP values (ข้อมูลซ้อน/nested) เป็น waterfall chart หรือ bar chart รายพนักงาน
   - ผลลัพธ์ที่ต้องส่ง: component ใช้งานได้จริง เชื่อม `/shap` แล้ว
   - สถานะ: `frontend/src/ShapViewer.jsx` เชื่อม `/shap` แล้ว (bar chart + ตาราง + สรุปเป็นประโยค ภาษาไทย) ปรับ UI ทั้งเว็บใหม่ด้วย Tailwind (sidebar, โหมดมืด, เงินเป็นบาท, ลิงก์แชร์ได้ `?tab=&id=`, ผู้ช่วยตัวการ์ตูน) ดู README หัวข้อ "หน้าเว็บ (React)"
+  - ทำเพิ่ม (14–17 ต.ค., branch `dev007-NungUm`): ตรวจ UI ด้วย Impeccable critique 13 รอบ คะแนนจาก 26 เป็น 31/40 (รายงานใน `.impeccable/critique/`) ตัวเลขเงินตรงกันทุกหน้า / เงินเดือนเป็นบาทจริงทุกที่ ส่งเข้าโมเดลด้วยการเทียบอันดับเงินเดือนในบริษัท (`src/income_scale.py`) / โมเดล `attrition-xgboost-P` v3 บังคับว่าขึ้นเงินเดือนแล้วความเสี่ยงไม่เพิ่ม (ค่าเริ่มต้นใน `backend/model_store.py`) / What-if แสดงผลและต้นทุนทีละมาตรการ จำค่าที่ปรับแยกตามพนักงาน / เปลี่ยนชื่อ "สิทธิ์ซื้อหุ้นพนักงาน" เป็น "สวัสดิการระยะยาว" (ไฟล์นำเข้าหัวคอลัมน์เดิมยังใช้ได้) / ข้อความบนหน้าเว็บเป็นภาษาทางการ ยกเว้นคำพูดมาสคอต
   - ทำเพิ่ม: แท็บ "ภาพรวมบริษัท" (`frontend/src/Overview.jsx`) + `GET /company-summary/top-employees` + ปุ่ม CSV ซึ่งทับกับ "React: Company Summary panel" ของ Nanthamon + Yanisa ต้องคุยกันว่าจะใช้ต่อ/ปรับ/แทน ก่อนใครเริ่มทำส่วนนั้น
 - [ ] ช่วย review Superset dashboard ของ Nanthamon หลังทำ SHAP viewer เสร็จ
 - [ ] Integration testing ร่วมกับทั้งทีม

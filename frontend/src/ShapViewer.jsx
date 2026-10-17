@@ -248,7 +248,7 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
               className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-action text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 print:hidden"
             >
               <Icon name="sliders" className="size-4" />
-              ลองปรับเงื่อนไขให้คนนี้
+              จำลองการปรับเงื่อนไขของพนักงานคนนี้
             </button>
             <button
               type="button"

@@ -208,7 +208,7 @@ function MoneyVerdict({ impact, money, points, before }) {
   const partial = impact.uncosted?.length > 0
   const cost = costText(impact, money)
   const verdict = impact.warning
-    ? { tone: 'text-muted-fg', text: 'ปรับเทียบแล้วระบบจะบอกได้ว่าคุ้มไหม ตอนนี้ใช้เทียบว่ามาตรการไหนลดคะแนนได้มากกว่า' }
+    ? { tone: 'text-muted-fg', text: 'เมื่อปรับเทียบแล้ว ระบบจะประเมินความคุ้มค่าได้ ขณะนี้ใช้ได้เพียงเปรียบเทียบว่ามาตรการใดลดคะแนนได้มากกว่า' }
     : partial
       ? null // คำเตือนต้นทุนไม่ครบอยู่บรรทัดล่างแล้ว ไม่ตัดสินคุ้ม/ไม่คุ้มจากต้นทุนที่ขาด
       : impact.expected_benefit >= 0
@@ -275,7 +275,7 @@ function DeltaBadge({ delta: raw, idle = false, className = '' }) {
   if (idle) {
     return (
       <div className={`rounded-lg bg-muted px-4 py-3 text-sm text-muted-fg ring-1 ring-line ${className}`}>
-        ยังไม่ได้ปรับ ลองกดมาตรการหรือปรับค่าในส่วน "ปรับเงื่อนไข" คะแนนหลังปรับจะเปลี่ยนตรงนี้
+        ยังไม่ได้ปรับ เลือกมาตรการหรือปรับค่าในส่วน "ปรับเงื่อนไข" แล้วคะแนนหลังปรับจะแสดงที่นี่
       </div>
     )
   }
@@ -638,7 +638,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
           <Card
             icon="sliders"
             title="ปรับเงื่อนไข"
-            subtitle={nChanged ? `ปรับแล้ว ${nChanged} รายการ (กรอบสีน้ำเงิน)` : 'ลองเลื่อนแถบหรือกดตัวเลือก ระบบคำนวณใหม่ทันที'}
+            subtitle={nChanged ? `ปรับแล้ว ${nChanged} รายการ (กรอบสีน้ำเงิน)` : 'เลื่อนแถบหรือเลือกตัวเลือก ระบบจะคำนวณใหม่ทันที'}
             action={
               <button
                 type="button"
@@ -694,7 +694,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
             </div>
             {focused.length > 0 && (
               <fieldset className="mb-6">
-                <legend className="mb-1 text-sm font-semibold text-fg">ลองปรับเรื่องเหล่านี้ก่อน</legend>
+                <legend className="mb-1 text-sm font-semibold text-fg">ปัจจัยที่ควรปรับก่อน</legend>
                 <p className="mb-3 text-xs text-muted-fg">ปัจจัยที่บริษัทปรับได้และดันความเสี่ยงของคนนี้ขึ้นมากที่สุด</p>
                 <div className="grid gap-3 sm:grid-cols-2">{focused.map((f) => renderControl({ ...CONTROL[f], wide: CONTROL[f].type === 'money' || CONTROL[f].wide }))}</div>
               </fieldset>
