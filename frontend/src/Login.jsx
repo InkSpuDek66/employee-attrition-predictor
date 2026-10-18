@@ -94,7 +94,8 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
   return (
     <main className="relative isolate grid min-h-dvh place-items-center overflow-hidden bg-canvas px-4 py-8 [@media(max-height:820px)]:py-2">
       <div className="login-glow pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
-      <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="absolute right-4 top-4" />
+      {/* z-20: จอมือถือ (เตี้ยกว่า 820px) โลโก้ขยับขึ้นมาทับมุมขวาบน ปุ่มเลยกดไม่ได้ */}
+      <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="absolute right-4 top-4 z-20" />
       {/* จอเตี้ย (โน้ตบุ๊ก 768/720) ย่อโลโก้/ระยะห่าง ฟอร์ม + ผู้ช่วยที่ออกมาชี้จะได้พอดีจอ ไม่ต้องเลื่อน */}
       {/* จอใหญ่: ปุกปุย + จอย ทางซ้าย, กิต + ส้มฉุน ทางขวา (สัตว์ยืนด้านนอก) ยืนเสมอขอบล่างของฟอร์ม เห็นครบในจอเดียว */}
       <div className="flex w-full items-end justify-center gap-6 xl:gap-10">
