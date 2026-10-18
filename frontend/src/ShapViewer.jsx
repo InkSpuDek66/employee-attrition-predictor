@@ -347,7 +347,7 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
                 </tbody>
               </table>
             </div>
-            <p className="mt-4 text-xs text-muted-fg">SHAP บอกความสัมพันธ์กับโมเดล ไม่ใช่เหตุและผลที่พิสูจน์แล้ว</p>
+            <p className="mt-4 text-xs text-muted-fg">ค่าผลกระทบเหล่านี้บอกว่าโมเดลให้น้ำหนักกับปัจจัยใด ไม่ใช่เหตุและผลที่พิสูจน์แล้ว</p>
             </div>
           </details>
         </div>

@@ -389,7 +389,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
         </Card>
 
         <div className="min-w-0 space-y-4 lg:sticky lg:top-4">
-          <Card title="ปัจจัยเด่นของทั้งกลุ่ม" subtitle="ค่าเฉลี่ยผลกระทบ (SHAP) ต่อคะแนน">
+          <Card title="ปัจจัยเด่นของทั้งกลุ่ม" subtitle="ผลกระทบเฉลี่ยของแต่ละปัจจัยต่อคะแนนความเสี่ยง">
             <ul className="space-y-4">
               {mergeOT(s.top_factors).map((f) => (
                 <li key={f.feature}>
