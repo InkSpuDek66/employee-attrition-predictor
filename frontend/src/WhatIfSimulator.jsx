@@ -425,7 +425,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
     if (loaded?.base) memory.current[loaded.id] = { changes, saved }
   }, [loaded, changes, saved])
   // แต่ละมาตรการที่กดอยู่ช่วยได้กี่คะแนน (ลองเอาออกทีละอย่าง) มาตรการที่มีต้นทุนแต่ไม่ลดคะแนนจะเห็นทันที
-  const [parts, setParts] = useState({ key: '', rows: [] })
+  const [parts, setParts] = useState({ key: '', rows: [], total: 0, calibrated: false })
   const [focus, setFocus] = useState({ id: null, fields: [] }) // ช่องที่ควรลองก่อน (ปัจจัยหลักของคนนี้จาก SHAP)
   const [allPresets, setAllPresets] = useState(false)
 
@@ -549,15 +549,18 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
     const body = (c) => ({ employee_id: loaded.id, changes: toApiChanges(c), ...(loaded.tenant && { tenant_id: loaded.tenant }) })
     const timer = setTimeout(async () => {
       try {
+        // คิดจากคะแนนโมเดลก่อนปรับเทียบ (risk_score): ปรับเทียบแบบยืดหยุ่นทำให้คะแนนเป็นขั้นบันได เอาออกทีละอย่างแล้วยังอยู่ขั้นเดิม
+        // ทุกแถวเลยขึ้น "ไม่ลดคะแนน · ควรพิจารณานำออก" ทั้งที่รวมกันลด 22 คะแนน (critique รอบ 15 P0)
+        const raw = (x) => Math.round(x.risk_score * 100)
         const all = await post(body(changes), ctrl.signal)
         const rows = await Promise.all(
           groups.map(async (g) => {
             const without = Object.fromEntries(Object.entries(changes).filter(([k]) => !g.keys.includes(k)))
             const r = await post(body(without), ctrl.signal)
-            return { ...g, points: Math.round(scoreOf(all.after) * 100) - Math.round(scoreOf(r.after) * 100) }
+            return { ...g, points: raw(all.after) - raw(r.after) }
           }),
         )
-        setParts({ key: changesKey, rows })
+        setParts({ key: changesKey, rows, total: raw(all.after) - raw(all.before), calibrated: all.after.calibrated_risk_score != null })
       } catch (err) {
         if (err.name !== 'AbortError') setParts({ key: changesKey, rows: [] })
       }
@@ -611,6 +614,8 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
   const alreadySaved = saved.some((s) => JSON.stringify(s.changes) === JSON.stringify(changes))
   const partRows = parts.key === changesKey ? parts.rows : []
   const partCosts = rowCosts(partRows, impact, money)
+  // คะแนนที่แสดงลดลง แต่เอาออกทีละอย่างแล้วไม่มีข้อไหนทำให้คะแนนเพิ่ม = มาตรการทดแทนกันได้ ห้ามแนะนำให้นำออก
+  const substitutes = partRows.length > 0 && Math.round(delta * 100) < 0 && partRows.every((r) => r.points >= 0)
   // เลื่อนตำแหน่งไม่ช่วย: ดูจากผลของมาตรการนี้เอง (ถ้าใช้ร่วมกับอย่างอื่น) ไม่ใช่ผลรวม (เดิมรวมแล้วลด ป้ายเลยไม่ขึ้น critique รอบ 10)
   const promoRow = partRows.find((r) => r.label.startsWith('เลื่อนตำแหน่ง'))
   const promotionNoHelp = 'JobLevel' in result.changes_applied && (promoRow ? promoRow.points >= 0 : Math.round(delta * 100) >= 0)
@@ -814,7 +819,10 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 {partRows.length > 0 && (
                   <div className="rounded-lg border border-line p-3">
                     <div className="text-xs font-medium text-muted-fg">ผลของแต่ละมาตรการ (เมื่อใช้ร่วมกัน)</div>
-                    <p className="mb-2 text-xs text-muted-fg">คำนวณโดยนำมาตรการนั้นออกจากแผน แล้วเทียบคะแนนที่เปลี่ยนไป</p>
+                    <p className="mb-2 text-xs text-muted-fg">
+                      คำนวณโดยนำมาตรการนั้นออกจากแผน แล้วเทียบคะแนนที่เปลี่ยนไป
+                      {parts.calibrated && ' ใช้คะแนนของโมเดลก่อนปรับเทียบ จึงอาจไม่ตรงกับคะแนนด้านบน'}
+                    </p>
                     <ul className="space-y-1.5 text-sm">
                       {partRows.map((r, i) => (
                         <li key={r.label} className="flex items-start justify-between gap-2">
@@ -826,14 +834,17 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                             {impact && (
                               <span className="block text-xs tabular-nums text-muted-fg">
                                 {partCosts[i].text}
-                                {partCosts[i].paid && r.points >= 0 && <span className="text-risk-mid"> · ควรพิจารณานำออก</span>}
+                                {partCosts[i].paid && r.points >= 0 && !substitutes && <span className="text-risk-mid"> · ควรพิจารณานำออก</span>}
                               </span>
                             )}
                           </span>
                         </li>
                       ))}
                     </ul>
-                    {partRows.reduce((t, r) => t + r.points, 0) !== Math.round(delta * 100) && (
+                    {substitutes && (
+                      <p className="mt-2 text-xs text-risk-mid">มาตรการเหล่านี้ทดแทนกันได้ เมื่อนำออกทีละมาตรการคะแนนแทบไม่เปลี่ยน ควรใช้อย่างน้อยหนึ่งมาตรการ</p>
+                    )}
+                    {partRows.reduce((t, r) => t + r.points, 0) !== parts.total && (
                       <p className="mt-2 text-xs text-muted-fg">ผลรวมของแต่ละมาตรการอาจไม่เท่ากับคะแนนที่เปลี่ยนทั้งหมด เนื่องจากโมเดลคำนวณผลของหลายปัจจัยร่วมกัน</p>
                     )}
                   </div>
