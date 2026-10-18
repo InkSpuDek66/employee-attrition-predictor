@@ -87,6 +87,7 @@ const oneHot = (name) => {
 
 export function featureValue(name, value) {
   if (name === 'OverTimeXDistance' && !value) return 'ไม่ทำ OT'
+  if (name === 'AvgSatisfaction') return Number(value).toFixed(1) // ทศนิยมเดียวกันทุกคน (เดิม "2" กับ "1.75")
   if (VALUES[name]?.[value]) return VALUES[name][value]
   if (UNITS[name]) return `${Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1)} ${UNITS[name]}`.replace(' %', '%')
   if (name.includes('_') && LABELS[name.split('_')[0]]) return value ? 'ใช่' : 'ไม่ใช่' // one-hot
@@ -113,7 +114,7 @@ const PHRASES = {
   YearsAtCompany: (s) => `อยู่บริษัทนี้มา ${s} ปี`,
   YearsInCurrentRole: (s) => `อยู่ตำแหน่งปัจจุบันมา ${s} ปี`,
   YearsSinceLastPromotion: (s) => `ไม่ได้เลื่อนตำแหน่งมา ${s} ปี`,
-  YearsWithCurrManager: (s) => `อยู่กับหัวหน้าคนปัจจุบันมา ${s} ปี`,
+  YearsWithCurrManager: (s, v) => (Number(v) === 0 ? 'เพิ่งเปลี่ยนหัวหน้า (ไม่ถึง 1 ปี)' : `อยู่กับหัวหน้าคนปัจจุบันมา ${s} ปี`),
   JobLevel: (s) => `ตำแหน่ง${s}`,
   StockOptionLevel: (s) => (s === 'ไม่มี' ? 'ไม่มีสวัสดิการระยะยาว' : `สวัสดิการระยะยาว${s}`),
   PercentSalaryHike: (s) => `เงินเดือนขึ้นล่าสุด ${s}`,
@@ -122,7 +123,7 @@ const PHRASES = {
   JobSatisfaction: (s) => `พอใจในงานที่ทำระดับ${s}`,
   EnvironmentSatisfaction: (s) => `พอใจสภาพแวดล้อมที่ทำงานระดับ${s}`,
   RelationshipSatisfaction: (s) => `พอใจความสัมพันธ์กับเพื่อนร่วมงานระดับ${s}`,
-  JobInvolvement: (s) => `ทุ่มเทให้กับงานระดับ${s}`,
+  JobInvolvement: (s) => `ความทุ่มเทในงาน: ${s}`,
   AvgSatisfaction: (s) => `ความพึงพอใจเฉลี่ย ${s} จาก 4`,
 }
 

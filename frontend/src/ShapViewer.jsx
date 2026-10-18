@@ -275,7 +275,7 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
             title="ปัจจัยที่ส่งผลมากที่สุด"
             subtitle="แท่งยิ่งยาว ยิ่งมีผลกับคะแนนมาก"
             action={
-              <div className="w-44 print:hidden">
+              <div className="w-full sm:w-48 print:hidden">
                 <Segmented size="sm" label="จำนวนปัจจัย" options={TOP_N} value={topN} onChange={(v) => setTopN(Number(v))} />
               </div>
             }

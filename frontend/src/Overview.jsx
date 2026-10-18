@@ -196,8 +196,18 @@ const BANDS = [
   ['High', 'bg-band-high'],
 ]
 
+// ปัดแบบเศษเหลือมากสุดได้ก่อน ให้สามช่องรวมกันได้ 100% พอดี (เดิม 63+26+12 = 101)
+function wholePercents(counts, total) {
+  const exact = counts.map((c) => (c / total) * 100)
+  const out = exact.map(Math.floor)
+  const order = exact.map((v, i) => [v - out[i], i]).sort((a, b) => b[0] - a[0])
+  for (let i = 0; i < 100 - out.reduce((a, b) => a + b, 0); i++) out[order[i][1]]++
+  return out
+}
+
 function BandBar({ bands, total }) {
   const pct = (k) => (bands[k] / total) * 100
+  const shown = Object.fromEntries(BANDS.map(([k], i) => [k, wholePercents(BANDS.map(([b]) => bands[b]), total)[i]]))
   return (
     <div>
       <div
@@ -217,7 +227,7 @@ function BandBar({ bands, total }) {
             <dd className={`mt-0.5 text-xl font-semibold tabular-nums ${BAND[k].text}`}>
               <CountUp value={bands[k]} format={(v) => Math.round(v).toLocaleString()} />
             </dd>
-            <dd className="text-xs tabular-nums text-muted-fg">{Math.round(pct(k))}%</dd>
+            <dd className="text-xs tabular-nums text-muted-fg">{total ? shown[k] : 0}%</dd>
           </div>
         ))}
       </dl>
@@ -311,7 +321,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                 type="button"
                 onClick={() => setFullBaht((v) => !v)}
                 aria-pressed={fullBaht}
-                className="-my-2 cursor-pointer rounded-md px-1.5 py-2.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="-my-2 min-h-10 cursor-pointer rounded-md px-1.5 py-2.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
               </button>

@@ -15,7 +15,7 @@ const METHODS = [
 ]
 const METHOD_HINT = {
   platt: 'ปรับทั้งสเกลพร้อมกันแบบนุ่มนวล เหมาะกับข้อมูลน้อย (50–300 คน)',
-  isotonic: 'ปรับตามข้อมูลจริงทีละช่วงคะแนน แม่นกว่าเมื่อมีข้อมูลหลายร้อยคนขึ้นไป แต่ข้อมูลน้อยจะแกว่ง',
+  isotonic: 'ปรับตามข้อมูลจริงทีละช่วงคะแนน ควรมีข้อมูลอย่างน้อย 500 คน ถ้าน้อยกว่านี้คะแนนจะเป็นขั้นบันได หลายคนได้คะแนนเท่ากัน และหน้า What-if จะเห็นผลของมาตรการได้ไม่ชัด',
 }
 const METHOD_TH = { platt: 'แบบเส้นตรง', isotonic: 'แบบยืดหยุ่น' }
 const when = (iso) => new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
@@ -53,7 +53,7 @@ function Status({ active, stale, onReset, resetting }) {
         type="button"
         onClick={onReset}
         disabled={resetting}
-        className="h-9 cursor-pointer rounded-lg border border-line bg-card px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+        className="h-10 cursor-pointer rounded-lg border border-line bg-card px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
       >
         {resetting ? 'กำลังยกเลิก…' : active ? 'ยกเลิกการปรับเทียบ' : 'ลบผลปรับเทียบเก่า'}
       </button>
@@ -152,10 +152,19 @@ function CalibrationChart({ curve, bins }) {
   )
 }
 
-function Result({ r }) {
+// แบบยืดหยุ่นกับข้อมูลน้อย: คะแนนเป็นขั้นบันได (critique รอบ 15 P0) เตือนหลังปรับเสร็จ แนะนำแบบเส้นตรง
+const ISOTONIC_MIN = 500
+
+function Result({ r, method }) {
   const better = r.brier_before > 0 ? 1 - r.brier_after / r.brier_before : 0
   return (
     <Card icon="check" title="3. ปรับเทียบเสร็จแล้ว" subtitle="ทุกหน้า (ภาพรวม / SHAP / What-if) ใช้คะแนนที่ปรับแล้วตั้งแต่ตอนนี้">
+      {method === 'isotonic' && r.n_samples < ISOTONIC_MIN && (
+        <Alert tone="warning">
+          ใช้แบบยืดหยุ่นกับข้อมูล {r.n_samples.toLocaleString()} คน ซึ่งน้อยกว่า {ISOTONIC_MIN} คน คะแนนจะเป็นขั้นบันได หลายคนได้คะแนนเท่ากัน
+          และหน้า What-if จะเห็นผลของมาตรการได้ไม่ชัด ควรปรับเทียบใหม่ด้วยแบบเส้นตรง
+        </Alert>
+      )}
       <div className="grid gap-3 sm:grid-cols-3">
         <Count label="พนักงานที่ใช้ปรับ" value={r.n_samples} />
         <div className="rounded-lg border border-line bg-canvas p-4">
@@ -190,8 +199,8 @@ function Result({ r }) {
         ))}
       </div>
       <p className="mt-4 text-xs text-muted-fg">
-        ค่าความคลาดเคลื่อนหลังปรับวัดจากข้อมูลชุดเดียวกับที่ใช้ปรับเทียบ จึงอาจต่ำกว่าค่าจริงเล็กน้อย การปรับเทียบไม่เปลี่ยนลำดับความเสี่ยงของพนักงานและปัจจัย (SHAP)
-        แต่เปลี่ยนระดับของคะแนนให้สอดคล้องกับบริษัท
+        ค่าความคลาดเคลื่อนหลังปรับวัดจากข้อมูลชุดเดียวกับที่ใช้ปรับเทียบ จึงอาจต่ำกว่าค่าจริงเล็กน้อย การปรับเทียบไม่สลับลำดับความเสี่ยงของพนักงานและไม่เปลี่ยนปัจจัย (SHAP)
+        แต่เปลี่ยนระดับของคะแนนให้สอดคล้องกับบริษัท แบบยืดหยุ่นอาจทำให้หลายคนได้คะแนนเท่ากัน
       </p>
     </Card>
   )
@@ -220,7 +229,7 @@ export default function Calibrate({ who, onChanged }) {
     setRes(null)
     try {
       const r = await postFile('/recalibrate/upload', file, { method })
-      setRes(r)
+      setRes({ ...r, method })
       if (r.result) changed()
     } catch (err) {
       setError(friendly(err))
@@ -285,7 +294,7 @@ export default function Calibrate({ who, onChanged }) {
           <div className="space-y-4">
             <div>
               <Segmented options={METHODS} value={method} onChange={setMethod} label="วิธีปรับเทียบ" />
-              <p className="mt-2 text-xs text-muted-fg">{METHOD_HINT[method]}</p>
+              <p className={`mt-2 text-xs ${method === 'isotonic' ? 'text-risk-mid' : 'text-muted-fg'}`}>{METHOD_HINT[method]}</p>
             </div>
             <DropZone busy={false} file={file} onFile={(f) => f && (setFile(f), setRes(null))} name="calibration_file" />
             <button
@@ -305,7 +314,7 @@ export default function Calibrate({ who, onChanged }) {
 
       {/* ประกาศผลให้โปรแกรมอ่านหน้าจอทันทีที่ปรับเสร็จหรือไฟล์ไม่ผ่าน */}
       <div aria-live="polite">
-        {res?.result && <Result r={res.result} />}
+        {res?.result && <Result r={res.result} method={res.method} />}
         {res && !res.result && (
           <Card icon="warning" title="3. ไฟล์ยังไม่ผ่าน ยังไม่ได้ปรับเทียบ" subtitle={`${res.check.filename} · ${res.message}`}>
             <CheckDetails result={res.check} />
@@ -364,7 +373,7 @@ export default function Calibrate({ who, onChanged }) {
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}
-              className="mt-3 h-9 w-full cursor-pointer rounded-lg border border-line text-sm font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="mt-3 h-10 w-full cursor-pointer rounded-lg border border-line text-sm font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {showAll ? 'ย่อเหลือล่าสุด' : `ดูทั้งหมด (${items.length.toLocaleString()} ครั้ง)`}
             </button>

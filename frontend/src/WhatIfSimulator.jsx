@@ -841,6 +841,9 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                         </li>
                       ))}
                     </ul>
+                    {parts.calibrated && Math.round(delta * 100) === 0 && parts.total < 0 && (
+                      <p className="mt-2 text-xs text-muted-fg">คะแนนของโมเดลลดลง แต่ยังอยู่ในช่วงคะแนนเดิมหลังปรับเทียบ คะแนนด้านบนจึงไม่เปลี่ยน</p>
+                    )}
                     {substitutes && (
                       <p className="mt-2 text-xs text-risk-mid">มาตรการเหล่านี้ทดแทนกันได้ เมื่อนำออกทีละมาตรการคะแนนแทบไม่เปลี่ยน ควรใช้อย่างน้อยหนึ่งมาตรการ</p>
                     )}
@@ -905,14 +908,22 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   </ul>
                 </div>
               )}
-              {/* หมายเหตุทั้งหมดรวมไว้ท้ายช่อง (DE-18: ผล WFH มาจากสูตรประมาณ ระยะทาง × วันเข้าออฟฟิศ / 5) */}
-              <div className="space-y-1.5 border-t border-line pt-3">
-                {result.warning && <UncalibratedNote detail={result.warning} />}
-                {'OfficeDaysPerWeek' in result.changes_applied && (
-                  <p className="text-xs text-muted-fg">ผลของ WFH ประมาณจากระยะเดินทางที่ลดลง โมเดลไม่ได้เรียนเรื่อง WFH โดยตรง</p>
-                )}
-                <p className="text-xs text-muted-fg">{result.note}</p>
-              </div>
+              {/* หมายเหตุทั้งหมดพับไว้ในหัวข้อเดียว (เดิมเรียง 3–5 ย่อหน้าท้ายช่อง critique รอบ 16) สถานะยังไม่ปรับเทียบยังเห็นที่หัวข้อ
+                  DE-18: ผล WFH มาจากสูตรประมาณ ระยะทาง × วันเข้าออฟฟิศ / 5 */}
+              <details className="group border-t border-line pt-3">
+                <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 text-xs font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+                  ข้อจำกัดของผลจำลอง
+                  {result.warning && <span className="font-normal text-risk-mid">· ยังไม่ปรับเทียบกับบริษัท</span>}
+                  <Icon name="chevron" className="ml-auto size-3.5 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
+                </summary>
+                <div className="space-y-1.5 pt-1">
+                  {result.warning && <UncalibratedNote detail={result.warning} />}
+                  {'OfficeDaysPerWeek' in result.changes_applied && (
+                    <p className="text-xs text-muted-fg">ผลของ WFH ประมาณจากระยะเดินทางที่ลดลง โมเดลไม่ได้เรียนเรื่อง WFH โดยตรง</p>
+                  )}
+                  <p className="text-xs text-muted-fg">{result.note}</p>
+                </div>
+              </details>
             </div>
           </Card>
         </aside>

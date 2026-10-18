@@ -323,7 +323,7 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
   return (
     <div className="space-y-4">
       <Alert tone="warning">
-        ตอนนี้ใช้ <b>บัญชีทดลอง</b> ใช้กับข้อมูลทดสอบเท่านั้น ห้ามอัปโหลดข้อมูลพนักงานจริง (PPAP)
+        ตอนนี้ใช้ <b>บัญชีทดลอง</b> ใช้กับข้อมูลทดสอบเท่านั้น ห้ามอัปโหลดข้อมูลพนักงานจริง (PDPA)
       </Alert>
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
