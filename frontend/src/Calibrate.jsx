@@ -27,7 +27,7 @@ function Status({ active, stale, onReset, resetting }) {
   if (!active && !stale)
     return (
       <Alert tone="warning">
-        ยังไม่ได้ปรับเทียบ คะแนนทุกหน้าตอนนี้มาจากโมเดลกลางที่เรียนจากข้อมูล IBM ใช้จัดลำดับว่าใครเสี่ยงกว่าใครได้ แต่ตัวเลขอาจไม่ตรงกับอัตราลาออกจริงของบริษัท
+        ยังไม่ได้ปรับเทียบ คะแนนทุกหน้าขณะนี้เป็นคะแนนตั้งต้นของระบบ ซึ่งคำนวณจากข้อมูลพนักงานของบริษัทตัวอย่างในต่างประเทศ ใช้จัดลำดับว่าใครเสี่ยงกว่าใครได้ แต่ตัวเลขอาจไม่ตรงกับอัตราลาออกจริงของบริษัท
       </Alert>
     )
   return (
@@ -45,8 +45,8 @@ function Status({ active, stale, onReset, resetting }) {
         </span>
       ) : (
         <span className="min-w-60 flex-1">
-          <b>ผลปรับเทียบที่มีทำไว้กับโมเดลรุ่นก่อน ตอนนี้ยังไม่ได้ใช้</b> (ล่าสุดเมื่อ {when(stale.calibrated_at)}) คะแนนทุกหน้ามาจากโมเดลกลาง
-          อัปโหลดไฟล์เดิมด้านล่างอีกครั้งเพื่อปรับเทียบกับโมเดลปัจจุบัน
+          <b>ผลปรับเทียบนี้ทำไว้กับระบบรุ่นก่อน ขณะนี้ไม่ได้ใช้แล้ว</b> (ล่าสุดเมื่อ {when(stale.calibrated_at)}) คะแนนทุกหน้าเป็นคะแนนตั้งต้นของระบบ
+          อัปโหลดไฟล์เดิมด้านล่างอีกครั้งเพื่อปรับเทียบกับระบบรุ่นปัจจุบัน
         </span>
       )}
       <button
@@ -188,7 +188,7 @@ function Result({ r, method }) {
       )}
 
       <h3 className="mt-5 text-sm font-semibold text-fg">คะแนนความเสี่ยง (0–100) ก่อนและหลังปรับเทียบ</h3>
-      <p className="mb-2 text-xs text-muted-fg">คะแนนต่ำหมายถึงเสี่ยงลาออกน้อย ตัวเลขซ้ายคือคะแนนจากโมเดลเดิม ตัวเลขขวาคือคะแนนที่ปรับให้ตรงกับอัตราลาออกของบริษัท</p>
+      <p className="mb-2 text-xs text-muted-fg">คะแนนต่ำหมายถึงเสี่ยงลาออกน้อย ตัวเลขซ้ายคือคะแนนตั้งต้น ตัวเลขขวาคือคะแนนที่ปรับให้ตรงกับอัตราลาออกของบริษัท</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {r.examples.map((e) => (
           <div key={e.before} className="rounded-lg border border-line px-3 py-2 text-center tabular-nums">
@@ -239,7 +239,7 @@ export default function Calibrate({ who, onChanged }) {
   }
 
   async function reset() {
-    if (!confirm('ยกเลิกการปรับเทียบทั้งหมด แล้วกลับไปใช้คะแนนของโมเดลกลาง?')) return
+    if (!confirm('ยกเลิกการปรับเทียบทั้งหมด แล้วกลับไปใช้คะแนนตั้งต้นของระบบหรือไม่')) return
     setResetting(true)
     setError('')
     try {
@@ -266,8 +266,9 @@ export default function Calibrate({ who, onChanged }) {
 
       <Card icon="info" title="การปรับเทียบคืออะไร">
         <p className="max-w-[75ch] text-sm text-muted-fg">
-          โมเดลเรียนจากพนักงานบริษัท IBM ในอเมริกา ตัวเลขความเสี่ยงจึงอาจสูงหรือต่ำกว่าความจริงของบริษัทเรา การปรับเทียบใช้ข้อมูลพนักงานในอดีตว่าใครลาออกไปแล้วบ้าง
-          มาปรับสเกลของคะแนนให้ตรงกับอัตราลาออกจริงของบริษัท โดยไม่ต้องสอนโมเดลใหม่ ใช้ข้อมูลอย่างน้อย 50 คน และต้องมีทั้งคนที่ลาออกและคนที่ยังอยู่
+          คะแนนตั้งต้นของระบบคำนวณจากข้อมูลพนักงานของบริษัทตัวอย่างในต่างประเทศ (IBM สหรัฐอเมริกา) จึงอาจสูงหรือต่ำกว่าความเป็นจริงของบริษัท
+          การปรับเทียบใช้ข้อมูลพนักงานในอดีตว่าผู้ใดลาออกไปแล้ว เพื่อปรับระดับของคะแนนให้ตรงกับอัตราลาออกจริงของบริษัท โดยไม่ต้องสร้างโมเดลใหม่
+          ต้องใช้ข้อมูลอย่างน้อย 50 คน และต้องมีทั้งพนักงานที่ลาออกและพนักงานที่ยังทำงานอยู่
         </p>
       </Card>
 
@@ -329,7 +330,7 @@ export default function Calibrate({ who, onChanged }) {
       )}
 
       {items.length > 0 && (
-        <Card icon="clock" title="ประวัติการปรับเทียบ" subtitle="ตัวหนา = ครั้งที่ระบบใช้อยู่ · ของโมเดลรุ่นก่อนเก็บไว้ดูเท่านั้น">
+        <Card icon="clock" title="ประวัติการปรับเทียบ" subtitle="ตัวหนา = ครั้งที่ระบบใช้อยู่ · ผลที่ทำไว้กับระบบรุ่นก่อนเก็บไว้ดูเท่านั้น">
           <div className="-mx-5 overflow-x-auto sm:-mx-6">
             <table className="w-full whitespace-nowrap text-sm">
               <thead>
@@ -347,7 +348,7 @@ export default function Calibrate({ who, onChanged }) {
                     <td className="px-5 py-2 sm:px-6">
                       {when(h.calibrated_at)}
                       {h === active && <span className="ml-2 rounded-md bg-risk-low-soft px-1.5 py-0.5 text-xs text-risk-low">ใช้อยู่</span>}
-                      {!h.current && <span className="ml-2 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-fg">โมเดลรุ่นก่อน</span>}
+                      {!h.current && <span className="ml-2 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-fg">ระบบรุ่นก่อน</span>}
                     </td>
                     <td className="px-3 py-2">{METHOD_TH[h.method] ?? h.method}</td>
                     <td className="px-3 py-2 text-right">{h.n_samples.toLocaleString()}</td>

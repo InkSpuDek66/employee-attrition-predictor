@@ -428,7 +428,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
                 onChanged={(reset) => (
                   refreshData(),
                   reset
-                    ? speak('ยกเลิกการปรับเทียบแล้ว', 'กลับไปใช้คะแนนของโมเดลกลาง')
+                    ? speak('ยกเลิกการปรับเทียบแล้ว', 'กลับไปใช้คะแนนตั้งต้นของระบบ')
                     : speak('ปรับเทียบเสร็จแล้ว!', 'ทุกหน้าใช้คะแนนที่ตรงกับบริษัทแล้วนะ')
                 )}
               />
