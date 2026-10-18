@@ -821,7 +821,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     <div className="text-xs font-medium text-muted-fg">ผลของแต่ละมาตรการ (เมื่อใช้ร่วมกัน)</div>
                     <p className="mb-2 text-xs text-muted-fg">
                       คำนวณโดยนำมาตรการนั้นออกจากแผน แล้วเทียบคะแนนที่เปลี่ยนไป
-                      {parts.calibrated && ' ใช้คะแนนของโมเดลก่อนปรับเทียบ จึงอาจไม่ตรงกับคะแนนด้านบน'}
+                      {parts.calibrated && ' ตัวเลขในส่วนนี้ใช้คะแนนของโมเดลก่อนปรับเทียบ จึงอาจไม่ตรงกับคะแนนด้านบน'}
                     </p>
                     <ul className="space-y-1.5 text-sm">
                       {partRows.map((r, i) => (
@@ -842,10 +842,10 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                       ))}
                     </ul>
                     {parts.calibrated && Math.round(delta * 100) === 0 && parts.total < 0 && (
-                      <p className="mt-2 text-xs text-muted-fg">คะแนนของโมเดลลดลง แต่ยังอยู่ในช่วงคะแนนเดิมหลังปรับเทียบ คะแนนด้านบนจึงไม่เปลี่ยน</p>
+                      <p className="mt-2 text-xs text-muted-fg">คะแนนของโมเดลลดลง แต่ยังอยู่ในช่วงเดียวกันหลังปรับเทียบ คะแนนด้านบนจึงไม่เปลี่ยน</p>
                     )}
                     {substitutes && (
-                      <p className="mt-2 text-xs text-risk-mid">มาตรการเหล่านี้ทดแทนกันได้ เมื่อนำออกทีละมาตรการคะแนนแทบไม่เปลี่ยน ควรใช้อย่างน้อยหนึ่งมาตรการ</p>
+                      <p className="mt-2 text-xs text-risk-mid">มาตรการเหล่านี้ทดแทนกันได้ เมื่อนำออกทีละมาตรการ คะแนนเปลี่ยนน้อยมาก ควรใช้อย่างน้อยหนึ่งมาตรการ</p>
                     )}
                     {partRows.reduce((t, r) => t + r.points, 0) !== parts.total && (
                       <p className="mt-2 text-xs text-muted-fg">ผลรวมของแต่ละมาตรการอาจไม่เท่ากับคะแนนที่เปลี่ยนทั้งหมด เนื่องจากโมเดลคำนวณผลของหลายปัจจัยร่วมกัน</p>
