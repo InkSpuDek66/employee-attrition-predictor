@@ -178,7 +178,8 @@ function Result({ r }) {
         </>
       )}
 
-      <h3 className="mb-2 mt-5 text-sm font-semibold text-fg">คะแนนเดิมเท่านี้ หลังปรับเป็นเท่าไหร่</h3>
+      <h3 className="mt-5 text-sm font-semibold text-fg">คะแนนความเสี่ยง (0–100) ก่อนและหลังปรับเทียบ</h3>
+      <p className="mb-2 text-xs text-muted-fg">คะแนนต่ำหมายถึงเสี่ยงลาออกน้อย ตัวเลขซ้ายคือคะแนนจากโมเดลเดิม ตัวเลขขวาคือคะแนนที่ปรับให้ตรงกับอัตราลาออกของบริษัท</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {r.examples.map((e) => (
           <div key={e.before} className="rounded-lg border border-line px-3 py-2 text-center tabular-nums">
