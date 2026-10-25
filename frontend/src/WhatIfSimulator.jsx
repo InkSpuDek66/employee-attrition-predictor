@@ -84,7 +84,7 @@ function MoneyControl({ field, base, value, onChange }) {
   }
   return (
     <div
-      className={`rounded-lg border p-4 transition-colors duration-200 sm:col-span-2 ${
+      className={`rounded-2xl border p-4 transition-colors duration-200 sm:col-span-2 ${
         changed ? 'border-accent bg-accent-soft/50' : 'border-line bg-card hover:border-secondary'
       }`}
     >
@@ -145,7 +145,7 @@ function Control({ field, type, options, base, value, onChange, unit, wide, hint
   const optionText = (v) => options?.find(([o]) => String(o) === String(v))?.[1] ?? v
   return (
     <div
-      className={`rounded-lg border p-4 transition-colors duration-200 ${wide ? 'sm:col-span-2' : ''} ${
+      className={`rounded-2xl border p-4 transition-colors duration-200 ${wide ? 'sm:col-span-2' : ''} ${
         changed ? 'border-accent bg-accent-soft/50' : 'border-line bg-card hover:border-secondary/50'
       }`}
     >
@@ -182,7 +182,7 @@ function Control({ field, type, options, base, value, onChange, unit, wide, hint
 function Stat({ label, value, tone, sub }) {
   const tones = { red: 'text-risk-high', blue: 'text-accent', green: 'text-risk-low', muted: 'text-muted-fg', amber: 'text-risk-mid' }
   return (
-    <div className="rounded-lg border border-line bg-canvas p-4">
+    <div className="rounded-2xl bg-muted p-4">
       <div className="text-xs font-medium text-muted-fg">{label}</div>
       <div className={`mt-1 text-2xl font-semibold tabular-nums ${tones[tone]}`}>{value}</div>
       {sub && <div className="mt-1 text-xs text-muted-fg">{sub}</div>}
@@ -218,7 +218,7 @@ function MoneyVerdict({ impact, money, points, before }) {
         ? { tone: 'text-risk-low', text: `คุ้ม: ความเสี่ยงที่ลดได้มากกว่าต้นทุน ${money(impact.expected_benefit)}` }
         : { tone: 'text-risk-high', text: `ยังไม่คุ้ม: ต้นทุนสูงกว่าความเสี่ยงที่ลดได้ ${money(-impact.expected_benefit)}` }
   return (
-    <div className="rounded-lg border border-line p-3 text-sm">
+    <div className="rounded-2xl border border-line p-3 text-sm">
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
         {/* ต้นทุนไม่ครบ = ไม่โชว์บาทที่ลดได้ (เทียบกับต้นทุนที่ขาดแล้วดูเหมือนได้ฟรี) บอกเป็นคะแนนแทน */}
         {/* ยังไม่ปรับเทียบ: คะแนนไม่ใช่โอกาสลาออกจริง คูณเป็นบาทแล้วอ่านเหมือนเงินที่ประหยัดได้จริง จึงโชว์แค่คะแนน + ต้นทุน (critique รอบ 9) */}
@@ -653,7 +653,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 onClick={() => setChanges({})}
                 disabled={!nChanged}
                 title={nChanged ? undefined : 'ยังไม่ได้ปรับอะไร'}
-                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
+                className="inline-flex h-11 sm:h-10 cursor-pointer items-center gap-1.5 rounded-full border border-line px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
               >
                 <Icon name="reset" className="size-4" />
                 กลับเป็นค่าเดิม
@@ -673,7 +673,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                       disabled={state === 'noop'}
                       aria-pressed={state === 'applied'}
                       title={state === 'noop' ? 'พนักงานคนนี้เป็นแบบนี้อยู่แล้ว' : state === 'applied' ? 'กดอีกครั้งเพื่อยกเลิก' : undefined}
-                      className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 sm:h-9 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                      className={`inline-flex h-11 items-center gap-1.5 rounded-full border px-3.5 sm:h-10 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         state === 'applied'
                           ? 'cursor-pointer border-accent bg-accent-soft text-accent'
                           : state === 'noop'
@@ -692,7 +692,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     type="button"
                     onClick={() => setAllPresets((v) => !v)}
                     aria-expanded={allPresets}
-                    className="inline-flex h-10 cursor-pointer items-center rounded-full px-3 text-sm sm:h-9 font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="inline-flex h-11 cursor-pointer items-center rounded-full px-3 text-sm sm:h-10 font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     {allPresets ? 'ย่อ' : `มาตรการอื่น (${PRESETS.length - PRESETS_SHOWN})`}
                   </button>
@@ -806,7 +806,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
               <div aria-live="polite" className="space-y-3">
                 <DeltaBadge delta={delta} idle={!nChanged} />
                 {result.drivers?.length > 0 && (
-                  <details className="group rounded-lg border border-line">
+                  <details className="group rounded-2xl border border-line">
                     <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
                       ทำไมคะแนนเปลี่ยน ({result.drivers.length})
                       <Icon name="chevron" className="ml-auto size-3.5 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
@@ -817,7 +817,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   </details>
                 )}
                 {partRows.length > 0 && (
-                  <div className="rounded-lg border border-line p-3">
+                  <div className="rounded-2xl border border-line p-3">
                     <div className="text-xs font-medium text-muted-fg">ผลของแต่ละมาตรการ (เมื่อใช้ร่วมกัน)</div>
                     <p className="mb-2 text-xs text-muted-fg">
                       คำนวณโดยนำมาตรการนั้นออกจากแผน แล้วเทียบคะแนนที่เปลี่ยนไป
@@ -865,7 +865,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                 onClick={saveScenario}
                 disabled={!nChanged || alreadySaved || saved.length >= 4}
                 title={nChanged ? undefined : 'ปรับเงื่อนไขก่อน แล้วค่อยบันทึกไว้เทียบ'}
-                className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
+                className="flex h-11 sm:h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:border-dashed disabled:text-muted-fg disabled:opacity-80 disabled:hover:bg-transparent"
               >
                 <Icon name="list" className="size-4" />
                 {alreadySaved ? 'บันทึกแบบนี้ไว้แล้ว' : saved.length >= 4 ? 'บันทึกได้สูงสุด 4 แบบ' : 'บันทึกผลนี้ไว้เทียบ'}
@@ -911,7 +911,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
               {/* หมายเหตุทั้งหมดพับไว้ในหัวข้อเดียว (เดิมเรียง 3–5 ย่อหน้าท้ายช่อง critique รอบ 16) สถานะยังไม่ปรับเทียบยังเห็นที่หัวข้อ
                   DE-18: ผล WFH มาจากสูตรประมาณ ระยะทาง × วันเข้าออฟฟิศ / 5 */}
               <details className="group border-t border-line pt-3">
-                <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 text-xs font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+                <summary className="flex min-h-11 sm:min-h-10 cursor-pointer list-none items-center gap-2 text-xs font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
                   ข้อจำกัดของผลจำลอง
                   {result.warning && <span className="font-normal text-risk-mid">· ยังไม่ปรับเทียบกับบริษัท</span>}
                   <Icon name="chevron" className="ml-auto size-3.5 text-muted-fg transition-transform duration-200 group-open:rotate-180" />
@@ -930,7 +930,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
       </div>
 
       {/* มือถือ: แถบคะแนนติดขอบล่าง เลื่อนไปปรับค่าแล้วยังเห็นผล */}
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-card/95 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-card px-4 py-3 lg:hidden">
         <div className="mx-auto flex max-w-xl items-center gap-4">
           <div>
             <div className="text-xs text-muted-fg">{nChanged ? 'หลังปรับ' : 'คะแนนตอนนี้'}</div>

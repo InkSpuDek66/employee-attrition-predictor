@@ -271,6 +271,7 @@ body {
   }
   section { break-inside: avoid; }
   .app-glow { display: none; }
+  details[open]::details-content { opacity: 1; }
 }
 
 /* แตะปุ่มบนมือถือไม่ต้องรอ double-tap zoom */
@@ -293,7 +294,121 @@ input[type='range'] {
   }
 }
 
+/* กล่องพับ (<details>) ทุกอัน: เนื้อหาค่อยๆ ยืดลง/หดขึ้น แทนการโผล่ทันที (เดิมมีแค่ลูกศรหมุน)
+   ใช้ ::details-content + interpolate-size (เบราว์เซอร์ที่ยังไม่รองรับ = เปิดทันทีเหมือนเดิม ไม่พัง) */
+:root {
+  interpolate-size: allow-keywords;
+}
+details::details-content {
+  block-size: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    block-size 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 200ms ease,
+    content-visibility 280ms allow-discrete;
+}
+details[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
+/* ช่องเลือก (<select>) ทุกอัน: รายการตัวเลือกเป็นกล่องการ์ดสีธีม ค่อยๆ เลื่อนลงตอนเปิด ลูกศรหมุน
+   ใช้ customizable select ของเบราว์เซอร์ (appearance: base-select) ยังเป็น <select> จริง คีย์บอร์ด/โปรแกรมอ่านหน้าจอใช้ได้เหมือนเดิม
+   เบราว์เซอร์ที่ยังไม่รองรับ = รายการแบบเดิมของเครื่อง
+   อยู่ใน layer base: class ของ Tailwind (เช่น lg:hidden ของช่องเลือกแผนกบนมือถือ) ต้องทับ display ตรงนี้ได้ */
+@layer base {
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+  select {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  /* ลูกศรเส้น (chevron แบบเดียวกับ ui.jsx) แทนสามเหลี่ยมทึบของเบราว์เซอร์ */
+  select::picker-icon {
+    content: '';
+    inline-size: 1rem;
+    block-size: 1rem;
+    background: var(--color-muted-fg);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: rotate 200ms ease;
+  }
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+  select:open {
+    border-color: var(--color-accent);
+  }
+  ::picker(select) {
+    margin-block: 0.375rem;
+    max-block-size: min(20rem, 60vh);
+    overflow-y: auto;
+    border: 1px solid var(--color-line);
+    border-radius: 1rem;
+    background: var(--color-card);
+    padding: 0.375rem;
+    box-shadow: 0 16px 40px -16px color-mix(in oklab, var(--color-ink) 35%, transparent);
+    transform-origin: top center;
+    opacity: 0;
+    translate: 0 -6px;
+    scale: 0.98;
+    transition:
+      opacity 180ms ease-out,
+      translate 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      scale 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      overlay 220ms allow-discrete,
+      display 220ms allow-discrete;
+  }
+  select:open::picker(select) {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+  @starting-style {
+    select:open::picker(select) {
+      opacity: 0;
+      translate: 0 -6px;
+      scale: 0.98;
+    }
+  }
+  select option {
+    gap: 0.5rem;
+    border-radius: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    color: var(--color-fg);
+    font-size: 0.9375rem;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  select option:hover,
+  select option:focus-visible {
+    background: var(--color-muted);
+    outline: none;
+  }
+  select option:checked {
+    background: var(--color-primary-soft);
+    color: var(--color-fg);
+    font-weight: 600;
+  }
+  select option::checkmark {
+    order: 1;
+    margin-inline-start: auto;
+    color: var(--color-accent);
+  }
+}
+}
+
 @media (prefers-reduced-motion: reduce) {
+  ::picker(select),
+  select::picker-icon {
+    transition-duration: 0ms !important;
+  }
+  details::details-content {
+    transition-duration: 0ms !important;
+  }
   *,
   *::before,
   *::after {
@@ -441,4 +556,22 @@ input[type='range'] {
 }
 @keyframes mascot-float {
   50% { transform: translateY(-4px); }
+}
+
+/* แท่งแนวตั้ง (การ์ดสัดส่วนความเสี่ยงหน้าภาพรวม) ยืดขึ้นจากด้านล่างตอนแสดง */
+.bar-grow-up {
+  transform-origin: center bottom;
+  animation: bar-grow-up 550ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: height 400ms ease;
+}
+@keyframes bar-grow-up {
+  from { transform: scaleY(0); }
+}
+
+/* พื้นหลังหรี่ตอนกางเมนูบนมือถือ */
+.fade-in {
+  animation: fade-in 200ms ease-out both;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
 }

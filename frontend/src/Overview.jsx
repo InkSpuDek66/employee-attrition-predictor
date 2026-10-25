@@ -54,7 +54,7 @@ export function CsvButton({ department, onDone = () => {} }) {
       onClick={go}
       disabled={state === 'busy'}
       title={state && state !== 'busy' ? state : 'พนักงานเสี่ยงสูงสุด 100 คน'}
-      className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+      className="inline-flex h-11 sm:h-10 cursor-pointer items-center gap-1.5 rounded-full border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
     >
       <Icon name="download" className="size-4" />
       {state === 'busy' ? 'กำลังเตรียม…' : state ? 'ลองใหม่' : 'CSV'}
@@ -122,12 +122,12 @@ export function TopRiskList({ n = 10, department = '', q = '', reasons = false, 
         </span>
         <span className="flex gap-2">
           {n > 10 && (
-            <button type="button" onClick={onLess} className="h-10 cursor-pointer rounded-lg border border-line px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+            <button type="button" onClick={onLess} className="h-11 sm:h-10 cursor-pointer rounded-full border border-line px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
               ย่อเหลือ 10 คน
             </button>
           )}
           {total > employees.length && (
-            <button type="button" onClick={onMore} disabled={loading} className="h-10 cursor-pointer rounded-lg border border-line px-3 font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait">
+            <button type="button" onClick={onMore} disabled={loading} className="h-11 sm:h-10 cursor-pointer rounded-full border border-line px-3 font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait">
               แสดงเพิ่มอีก {Math.min(LIST_STEP, total - employees.length).toLocaleString()} คน
             </button>
           )}
@@ -205,32 +205,33 @@ function wholePercents(counts, total) {
   return out
 }
 
-function BandBar({ bands, total }) {
-  const pct = (k) => (bands[k] / total) * 100
-  const shown = Object.fromEntries(BANDS.map(([k], i) => [k, wholePercents(BANDS.map(([b]) => bands[b]), total)[i]]))
+// แท่งแนวตั้งสามแท่ง (แบบการ์ด Impact ใน frontend/ref) สูงตามจำนวนคน + ตัวเลขทุกช่วง (ไม่ใช้สีอย่างเดียว)
+function BandColumns({ bands, total }) {
+  const max = Math.max(...BANDS.map(([k]) => bands[k]), 1)
+  const shown = wholePercents(BANDS.map(([k]) => bands[k]), total || 1)
   return (
-    <div>
-      <div
-        className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-muted"
-        role="img"
-        aria-label={`พนักงาน ${total.toLocaleString()} คน: ${BANDS.map(([k]) => `เสี่ยง${BAND[k].th} ${bands[k]} คน`).join(', ')}`}
-      >
-        {BANDS.map(([k, fill]) => bands[k] > 0 && <div key={k} className={`bar-grow ${fill}`} style={{ width: `${pct(k)}%` }} title={`เสี่ยง${BAND[k].th} ${bands[k].toLocaleString()} คน`} />)}
-      </div>
-      <dl className="mt-3 grid grid-cols-3 gap-2">
-        {BANDS.map(([k, fill]) => (
-          <div key={k}>
-            <dt className="flex items-center gap-1.5 text-xs text-muted-fg">
-              <span className={`size-2 shrink-0 rounded-sm ${fill}`} />
-              เสี่ยง{BAND[k].th}
-            </dt>
-            <dd className={`mt-0.5 text-xl font-semibold tabular-nums ${BAND[k].text}`}>
-              <CountUp value={bands[k]} format={(v) => Math.round(v).toLocaleString()} />
-            </dd>
-            <dd className="text-xs tabular-nums text-muted-fg">{total ? shown[k] : 0}%</dd>
+    <div
+      className="mt-3 grid grid-cols-3 gap-3"
+      role="img"
+      aria-label={`พนักงาน ${total.toLocaleString()} คน: ${BANDS.map(([k]) => `เสี่ยง${BAND[k].th} ${bands[k]} คน`).join(', ')}`}
+    >
+      {BANDS.map(([k, fill], i) => (
+        <div key={k} className="flex flex-col items-center">
+          <div className="flex h-24 w-full items-end justify-center rounded-2xl bg-muted">
+            <div
+              className={`bar-grow-up w-full rounded-2xl ${fill}`}
+              style={{ height: `${Math.max(bands[k] ? 8 : 0, (bands[k] / max) * 100)}%` }}
+              title={`เสี่ยง${BAND[k].th} ${bands[k].toLocaleString()} คน`}
+            />
           </div>
-        ))}
-      </dl>
+          <div className={`mt-2 text-lg font-semibold leading-none tabular-nums ${BAND[k].text}`}>
+            <CountUp value={bands[k]} format={(v) => Math.round(v).toLocaleString()} />
+          </div>
+          <div className="mt-1 text-xs tabular-nums text-muted-fg">
+            {BAND[k].th} · {total ? shown[i] : 0}%
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -247,7 +248,7 @@ function NoEmployees({ who, onImport }) {
         <button
           type="button"
           onClick={onImport}
-          className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent"
+          className="inline-flex h-11 sm:h-10 cursor-pointer items-center gap-1.5 rounded-full bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent"
         >
           <Icon name="upload" className="size-4" />
           ไปนำเข้าข้อมูล
@@ -301,65 +302,97 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
     fix ? ` เรื่องที่บริษัทปรับได้และส่งผลมากที่สุดคือ${featureLabel(fix.feature)}` : ''
   }`
 
-  return (
-    <div className={`space-y-4 transition-opacity duration-200 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
-      {/* หัวหน้า: ผู้ช่วยพูดหัวข้อเอง ประโยคมาจากข้อมูลจริง (กี่คนควรคุย + ปัจจัยที่เจอบ่อยสุด) ตัวเลขรวมอยู่แถวล่างของกล่อง */}
-      <section className="hero-sky -mx-4 px-4 pb-6 pt-6 sm:mx-0 sm:rounded-3xl sm:border sm:border-line sm:px-8 sm:pt-8">
-        <SpeakingMascot who={who}>
-          <p className="text-sm text-muted-fg">{greeting}</p>
-          <h1 className="mt-2 text-balance text-[1.75rem] font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2.5rem]">
-            {headline}
-          </h1>
-          {lead && <p className="mt-3 max-w-[60ch] text-base text-fg/80">{lead}</p>}
-        </SpeakingMascot>
-        <div className="mt-6 grid gap-6 border-t border-line pt-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-16">
-          <BandBar bands={s.risk_bands} total={s.n_employees} />
-          <div className="sm:text-right">
-            <div className="flex items-center gap-2 text-sm text-muted-fg sm:justify-end">
-              {s.risk_bands.High > 0 ? `ถ้า ${s.risk_bands.High.toLocaleString()} คนที่เสี่ยงสูงลาออก` : 'ต้นทุนหาคนแทนคนเสี่ยงสูง'}
-              <button
-                type="button"
-                onClick={() => setFullBaht((v) => !v)}
-                aria-pressed={fullBaht}
-                className="-my-2 min-h-10 cursor-pointer rounded-md px-1.5 py-2.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
-              </button>
-            </div>
-            {/* เดิมโชว์มูลค่าความเสี่ยงรวมทั้งบริษัท แต่ครึ่งหนึ่งมาจากคนเสี่ยงต่ำที่เงินเดือนสูง (critique รอบ 5) ไม่ตรงกับหัวข้อ "ควรคุยกับใคร" */}
-            <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg" title={fullBaht ? undefined : baht(s.high_risk_replacement_cost)}>
-              <CountUp value={s.high_risk_replacement_cost} format={money} />
-            </div>
-            <p className="mt-1 text-xs text-muted-fg">ต้นทุนหาคนแทนโดยประมาณ ไม่ใช่ยอดจริง</p>
-          </div>
-        </div>
-      </section>
-
-      {/* มือถือ หรือแผนกเยอะ (ปุ่มเรียงหลายแถว) = ช่องเลือกแบบเลื่อนลง */}
-      <select aria-label="เลือกแผนก" value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputClass} sm:max-w-xs ${manyDepartments ? '' : 'sm:hidden'}`}>
+  const deptPicker = (cls) =>
+    manyDepartments ? (
+      <select aria-label="เลือกแผนก" value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputClass} ${cls}`}>
         {deptOptions.map(([v, text]) => (
           <option key={v} value={v}>
             {text}
           </option>
         ))}
       </select>
-      {!manyDepartments && (
-        <div className="hidden sm:block">
-          <Segmented label="เลือกแผนก" options={deptOptions} value={department} onChange={setDepartment} />
+    ) : (
+      <div className={cls}>
+        <Segmented label="เลือกแผนก" options={deptOptions} value={department} onChange={setDepartment} />
+      </div>
+    )
+
+  // โครงตาม frontend/ref: ซ้าย = แบนเนอร์ + การ์ดตัวเลขสามใบ + รายชื่อ + ตารางแผนก / ขวา (จอใหญ่) = เลือกแผนก + ปัจจัยเด่น
+  // UX-14: grid item มี min-width: auto เนื้อหาข้างในเคยดันการ์ดกว้างเกินจอมือถือ จึงใส่ min-w-0
+  return (
+    <div
+      className={`grid items-start gap-4 transition-opacity duration-200 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem] ${loading ? 'opacity-60' : ''}`}
+      aria-busy={loading}
+    >
+      <div className="min-w-0 space-y-4">
+        {/* แบนเนอร์: ผู้ช่วยพูดหัวข้อเอง ประโยคมาจากข้อมูลจริง (กี่คนควรคุย + ปัจจัยที่บริษัทปรับได้) */}
+        <section className="hero-sky rounded-[2rem] px-5 py-6 sm:px-8 sm:py-7">
+          <SpeakingMascot who={who}>
+            <p className="text-sm text-muted-fg">{greeting}</p>
+            <h1 className="mt-2 text-balance text-[1.75rem] font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2.25rem]">
+              {headline}
+            </h1>
+            {lead && <p className="mt-3 max-w-[60ch] text-base text-fg/80">{lead}</p>}
+          </SpeakingMascot>
+        </section>
+
+        {/* การ์ดตัวเลขสามใบ (แบบ Members / Data / Impact ใน ref) */}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <Card className="lift fade-up">
+            <h2 className="text-sm font-medium text-muted-fg">พนักงานที่ดูอยู่</h2>
+            <div className="mt-3 text-5xl font-semibold leading-none tracking-tight tabular-nums text-fg">
+              <CountUp value={s.n_employees} format={(v) => Math.round(v).toLocaleString()} />
+            </div>
+            <p className="mt-2 text-sm text-muted-fg">{department || 'ทั้งบริษัท'}</p>
+            <div className="mt-4 flex items-center justify-between rounded-2xl bg-muted px-4 py-3">
+              <span className="text-sm text-muted-fg">คะแนนเฉลี่ย</span>
+              <span className="text-lg font-semibold tabular-nums text-fg">
+                {Math.round(s.mean_risk_score * 100)}
+                <span className="text-sm font-normal text-muted-fg"> / 100</span>
+              </span>
+            </div>
+          </Card>
+          {/* เดิมโชว์มูลค่าความเสี่ยงรวมทั้งบริษัท แต่ครึ่งหนึ่งมาจากคนเสี่ยงต่ำที่เงินเดือนสูง (critique รอบ 5) ไม่ตรงกับหัวข้อ "ควรคุยกับใคร" */}
+          <Card className="lift fade-up [animation-delay:80ms]">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-medium text-muted-fg">
+                {high > 0 ? `ถ้า ${high.toLocaleString()} คนที่เสี่ยงสูงลาออก` : 'ต้นทุนหาคนแทนคนเสี่ยงสูง'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setFullBaht((v) => !v)}
+                aria-pressed={fullBaht}
+                className="-my-2 min-h-11 sm:min-h-10 shrink-0 cursor-pointer rounded-full px-2.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {fullBaht ? 'ย่อ' : 'ดูจำนวนเต็ม'}
+              </button>
+            </div>
+            <div
+              className={`mt-3 font-semibold leading-none tracking-tight tabular-nums text-fg ${fullBaht ? 'text-2xl' : 'text-4xl'}`}
+              title={fullBaht ? undefined : baht(s.high_risk_replacement_cost)}
+            >
+              <CountUp value={s.high_risk_replacement_cost} format={money} />
+            </div>
+            <p className="mt-2 text-sm text-muted-fg">ต้นทุนหาคนแทนโดยประมาณ ไม่ใช่ยอดจริง</p>
+          </Card>
+          <Card className="lift fade-up [animation-delay:160ms] sm:col-span-2 xl:col-span-1">
+            <h2 className="text-sm font-medium text-muted-fg">สัดส่วนความเสี่ยง</h2>
+            <BandColumns bands={s.risk_bands} total={s.n_employees} />
+          </Card>
         </div>
-      )}
-      <DataAsOf asOf={s.data_as_of} days={s.data_age_days} />
 
-      {/* UX-17: หน้าแรกที่มีตัวเลขเยอะสุดต้องบอกข้อจำกัดเหมือนหน้า SHAP / What-if */}
-      {(s.warning || s.data_note) && (
-        <Alert tone="warning">
-          {[s.warning && `${UNCALIBRATED} (ผู้ดูแลระบบปรับเทียบได้ที่แท็บ “ปรับเทียบโมเดล”)`, s.data_note].filter(Boolean).join(' · ')}
-        </Alert>
-      )}
+        {/* มือถือ/แท็บเล็ต: เลือกแผนกอยู่ตรงนี้ (จอใหญ่อยู่คอลัมน์ขวา) */}
+        {deptPicker('lg:hidden')}
+        <DataAsOf asOf={s.data_as_of} days={s.data_age_days} />
 
-      {/* หน้าแรก = คนที่ควรคุยก่อนพร้อมเหตุผล (PRODUCT.md: รู้ในไม่กี่วินาทีว่าควรคุยกับใคร) ตัวเลขรวมอยู่แถบข้าง
-          UX-14: grid item มี min-width: auto เนื้อหาข้างในเคยดันการ์ดกว้างเกินจอมือถือ จึงใส่ min-w-0 */}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
+        {/* UX-17: หน้าแรกที่มีตัวเลขเยอะสุดต้องบอกข้อจำกัดเหมือนหน้า SHAP / What-if */}
+        {(s.warning || s.data_note) && (
+          <Alert tone="warning">
+            {[s.warning && `${UNCALIBRATED} (ผู้ดูแลระบบปรับเทียบได้ที่แท็บ “ปรับเทียบโมเดล”)`, s.data_note].filter(Boolean).join(' · ')}
+          </Alert>
+        )}
+
+        {/* หน้าแรก = คนที่ควรคุยก่อนพร้อมเหตุผล (PRODUCT.md: รู้ในไม่กี่วินาทีว่าควรคุยกับใคร) */}
         <Card
           className="min-w-0"
           title={find.trim() ? 'ผลการค้นหา' : 'ควรคุยกับใครก่อน'}
@@ -388,30 +421,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
           />
         </Card>
 
-        <div className="min-w-0 space-y-4 lg:sticky lg:top-4">
-          <Card title="ปัจจัยเด่นของทั้งกลุ่ม" subtitle="ผลกระทบเฉลี่ยของแต่ละปัจจัยต่อคะแนนความเสี่ยง">
-            <ul className="space-y-4">
-              {mergeOT(s.top_factors).map((f) => (
-                <li key={f.feature}>
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-medium text-fg">{featureLabel(f.feature)}</span>
-                    <span className="tabular-nums text-muted-fg">{Math.round(f.share * 100)}%</span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 rounded-full bg-muted">
-                    <div className="bar-grow h-full rounded-full bg-accent" style={{ width: `${(f.share / maxShare) * 100}%` }} />
-                  </div>
-                  <p className="mt-1.5 text-xs text-muted-fg">
-                    <span className={f.actionable ? 'font-medium text-accent' : ''}>{f.actionable ? 'บริษัทปรับได้' : 'ปรับไม่ได้'}</span>
-                    {f.recommendation && ` · ${f.recommendation}`}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </div>
-      </div>
-
-      <Card icon="money" title="แยกตามแผนก" subtitle="เรียงตามจำนวนคนเสี่ยงสูง กดที่แผนกเพื่อกรอง">
+      <Card icon="list" title="แยกตามแผนก" subtitle="เรียงตามจำนวนคนเสี่ยงสูง กดที่แผนกเพื่อกรอง">
         <div className="-mx-5 overflow-x-auto sm:-mx-6">
           <table className="w-full text-sm">
             <thead>
@@ -455,6 +465,32 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
         </div>
         <p className="mt-3 text-xs text-muted-fg">{s.note}</p>
       </Card>
+      </div>
+
+      <div className="min-w-0 space-y-4 lg:sticky lg:top-4">
+        <Card className="fade-up hidden [animation-delay:120ms] lg:block" title="เลือกแผนก" subtitle="ทุกตัวเลขในหน้านี้เปลี่ยนตามแผนกที่เลือก">
+          {deptPicker('')}
+        </Card>
+        <Card className="fade-up [animation-delay:200ms]" title="ปัจจัยเด่นของทั้งกลุ่ม" subtitle="ผลกระทบเฉลี่ยของแต่ละปัจจัยต่อคะแนนความเสี่ยง">
+          <ul className="space-y-4">
+            {mergeOT(s.top_factors).map((f) => (
+              <li key={f.feature}>
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="font-medium text-fg">{featureLabel(f.feature)}</span>
+                  <span className="tabular-nums text-muted-fg">{Math.round(f.share * 100)}%</span>
+                </div>
+                <div className="mt-1.5 h-2 rounded-full bg-muted">
+                  <div className="bar-grow h-full rounded-full bg-accent" style={{ width: `${(f.share / maxShare) * 100}%` }} />
+                </div>
+                <p className="mt-1.5 text-xs text-muted-fg">
+                  <span className={f.actionable ? 'font-medium text-accent' : ''}>{f.actionable ? 'บริษัทปรับได้' : 'ปรับไม่ได้'}</span>
+                  {f.recommendation && ` · ${f.recommendation}`}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
     </div>
   )
 }

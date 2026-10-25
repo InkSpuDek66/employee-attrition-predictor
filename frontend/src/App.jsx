@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Logo from '../logo/Logo'
 import Login from './Login'
 import { mascotLine } from './mascot/line'
-import Mascot, { MascotLoader, SpeakingMascot } from './mascot/Mascot'
+import { MascotLoader, MascotSwitch, SpeakingMascot } from './mascot/Mascot'
 import Overview from './Overview'
 import { api, BAND, employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THEME_NEXT } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
@@ -154,6 +154,25 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
   const line = mascotLine({ risk: risk[tab], say, idle: IDLE[tab] })
 
   // มือถือ: เลื่อนลงไปไกลแล้วมีปุ่มกลับขึ้นด้านบน (หน้าภาพรวมบนมือถือยาวกว่า 3,000 px) จอใหญ่ซ่อนไว้
+  // มือถือ/แท็บเล็ต: แท่งเมนูหุบเหลือโลโก้ กดโลโก้ = กาง
+  // ตอนกาง: เนื้อหาด้านหลังเป็น inert (กด Tab ไม่หลุดออกไปหลังพื้นหรี่) โฟกัสอยู่ที่ปุ่มโลโก้ Tab ต่อเข้าเมนู
+  // หุบด้วย Esc / พื้นหลัง = โฟกัสกลับมาที่โลโก้ ขยายจอจนเป็นจอใหญ่ = หุบเอง (ไม่ให้ main ค้าง inert)
+  const [railOpen, setRailOpen] = useState(false)
+  const railToggle = useRef(null)
+  function closeRail() {
+    setRailOpen(false)
+    railToggle.current?.focus()
+  }
+  useEffect(() => {
+    if (!railOpen) return
+    const onKey = (e) => e.key === 'Escape' && closeRail()
+    const desktop = matchMedia('(min-width: 1024px)')
+    const onWide = (e) => e.matches && setRailOpen(false)
+    addEventListener('keydown', onKey)
+    desktop.addEventListener('change', onWide)
+    return () => (removeEventListener('keydown', onKey), desktop.removeEventListener('change', onWide))
+  }, [railOpen])
+
   const [farDown, setFarDown] = useState(false)
   useEffect(() => {
     const onScroll = () => setFarDown(scrollY > 1200)
@@ -227,7 +246,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
   }
 
   return (
-    <div className="relative isolate min-h-screen lg:pl-64 print:pl-0">
+    <div className="relative isolate min-h-screen lg:pl-28 print:pl-0">
       <div className="app-glow pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
       <a
         href="#main"
@@ -235,82 +254,70 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
       >
         ข้ามไปเนื้อหาหลัก
       </a>
-      {/* Sidebar (จอใหญ่) / แถบบน (มือถือ) */}
-      {/* จอเตี้ย (แล็ปท็อปซูม 100%): sidebar เลื่อนได้ในตัว กล่องผู้ใช้ + ปุ่มออกจากระบบติดขอบล่างเสมอ */}
-      <aside className="border-b border-line bg-card print:hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r">
-        <div className="flex items-center gap-2.5 px-4 py-4 lg:py-6">
-          <Logo className="size-10 shrink-0" />
-          <div className="leading-tight">
-            <div className="whitespace-nowrap text-sm font-semibold text-fg" translate="no">
-              Attrition Predictor
-            </div>
-            <div className="text-xs text-muted-fg">HR Analytics</div>
-          </div>
-          <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="ml-auto" />
-          {/* มือถือ: ปุ่มออกจากระบบอยู่แถวโลโก้ (ไม่มีแถวผู้ใช้แยก หัวจอจะได้ไม่สูงเกิน) */}
-          <LogoutButton user={user} onLogout={onLogout} className="lg:hidden" />
-        </div>
-
-        {/* มือถือ: 4 ช่องเท่ากัน ไอคอนบนชื่อสั้น เห็นครบทุกแท็บไม่ต้องเลื่อน / จอใหญ่: รายการแนวตั้งใน sidebar */}
-        <nav
-          className="grid gap-1 px-2 pb-2 lg:flex lg:flex-col lg:px-3 lg:pb-0"
-          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
-          aria-label="เครื่องมือ"
+      {/* แท่งเมนูลอยซ้ายแบบ frontend/ref ไอคอนล้วน ชื่อเมนูขึ้นเป็นป้ายตอนชี้/โฟกัส (จอใหญ่)
+          มือถือ/แท็บเล็ต: เหลือแค่โลโก้ลอยมุมซ้ายบน กดแล้วแท่งยืดลงมา (max-height) ไอคอนค่อยๆ โผล่ พื้นหลังหรี่
+          กดพื้นหลัง / Esc / เลือกเมนู = หุบ ตอนหุบเมนูข้างในเป็น invisible กด Tab ไม่หลงเข้าไป
+          ผู้ช่วยย่อเหลือปุ่มหน้าการ์ตูน (กดแล้วเลือกตัว) ชื่อผู้ใช้/บริษัทอยู่ในป้ายของปุ่มออกจากระบบ */}
+      {railOpen && <div className="fade-in fixed inset-0 z-20 bg-ink/40 lg:hidden print:hidden" onClick={closeRail} aria-hidden="true" />}
+      <aside
+        className={`fixed left-2 top-2 z-30 flex w-16 flex-col items-center gap-2 rounded-[2rem] border border-line bg-card py-2 transition-[max-height,box-shadow] duration-300 ease-out print:hidden lg:inset-y-4 lg:left-4 lg:max-h-none lg:w-20 lg:overflow-visible lg:py-5 lg:shadow-sm ${
+          railOpen ? 'max-h-[calc(100dvh-1rem)] overflow-y-auto shadow-xl' : 'max-h-16 overflow-hidden shadow-md'
+        }`}
+      >
+        <button
+          ref={railToggle}
+          type="button"
+          onClick={() => setRailOpen((o) => !o)}
+          aria-expanded={railOpen}
+          aria-controls="rail-menu"
+          aria-label={railOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
+          className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
         >
-          <div className="hidden pt-2 lg:block" aria-hidden="true" />
-          {tabs.map((t) => {
-            const active = tab === t.id
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                aria-current={active ? 'page' : undefined}
-                className={`relative flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-xs font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-left lg:text-sm ${
-                  active ? 'bg-primary-soft text-fg' : 'text-muted-fg hover:bg-muted hover:text-fg'
-                }`}
-              >
-                {active && <span className="absolute inset-y-2 left-0 hidden w-1 rounded-r bg-accent lg:block" />}
+          <Logo className={`size-10 transition-transform duration-300 ${railOpen ? '-rotate-6 scale-90' : ''}`} />
+        </button>
+        <Logo className="mb-4 hidden size-11 shrink-0 lg:block" />
+        <div
+          id="rail-menu"
+          className={`flex flex-1 flex-col items-center gap-2 pt-2 transition-[opacity,visibility,translate] duration-300 lg:visible lg:translate-y-0 lg:pt-0 lg:opacity-100 ${
+            railOpen ? 'visible translate-y-0 opacity-100 delay-75' : 'invisible -translate-y-2 opacity-0'
+          }`}
+        >
+          <nav className="flex flex-col items-center gap-2" aria-label="เครื่องมือ">
+            {tabs.map((t) => (
+              <RailItem key={t.id} label={t.label} active={tab === t.id} onClick={() => (setTab(t.id), setRailOpen(false))}>
                 <Icon name={t.icon} className="size-5" />
-                <span className="whitespace-nowrap text-xs lg:hidden">{t.short}</span>
-                <span className="hidden lg:inline">{t.label}</span>
-              </button>
-            )
-          })}
-        </nav>
-
-        <div className={`hidden flex-1 justify-center lg:flex ${tab === 'overview' && say ? 'items-center' : 'items-end pb-6'}`}>
-          <Mascot risk={risk[tab]} who={who} say={say} idle={IDLE[tab]} chooserOnly={!(tab === 'overview' && say)} onChoose={(v) => (setWho(v), saveMascot(v))} />
-        </div>
-
-        {/* ชื่อรุ่นโมเดลเป็นรายละเอียดของทีมพัฒนา ไม่โชว์ให้ HR (เดิมกินที่จนท้าย sidebar ถูกตัดที่จอสูง 900px) */}
-        <div className="hidden items-center gap-3 border-t border-line bg-card px-4 py-3 lg:sticky lg:bottom-0 lg:flex lg:px-5">
-          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-fg">
-            <Icon name="user" className="size-5" />
+              </RailItem>
+            ))}
+          </nav>
+          <div className="mt-auto flex flex-col items-center gap-2 pt-4">
+            <MascotSwitch who={who} onChoose={(v) => (setWho(v), saveMascot(v))} />
+            <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="size-11! rounded-full! border-0!" />
+            <LogoutButton user={user} onLogout={onLogout} className="size-11! rounded-full! border-0!" />
           </div>
-          <div className="min-w-0 flex-1 leading-tight" title={`${user.username} · ${user.tenant_id}`}>
-            <div className="truncate text-sm font-medium text-fg">{user.name}</div>
-            <div className="text-xs text-muted-fg">{user.tenant_name ?? user.tenant_id}</div>
-          </div>
-          <LogoutButton user={user} onLogout={onLogout} />
         </div>
-
       </aside>
 
-      <main id="main" className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8 print:max-w-none print:p-0">
+      {/* ภาพรวมไม่มีหัวเพจของ App: ข้อความผู้ช่วยหลังทำอะไรสำเร็จ (ดาวน์โหลด CSV) ขึ้นเป็นกล่องลอยมุมล่าง */}
+      {tab === 'overview' && say && (
+        <div key={say.n} role="status" className="fade-up fixed bottom-5 left-4 z-30 max-w-xs rounded-2xl bg-card px-4 py-3 shadow-lg ring-1 ring-line lg:left-28 print:hidden">
+          <div className="text-sm font-semibold text-fg">{say.text}</div>
+          <div className="text-xs text-muted-fg">{say.sub}</div>
+        </div>
+      )}
+
+      <main id="main" inert={railOpen || undefined} className="mx-auto max-w-7xl px-4 pb-28 pt-20 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8 print:max-w-none print:p-0">
         {/* หัวเพจ (ยกเว้นภาพรวมที่มีหัวของตัวเอง): ผู้ช่วยพูดหัวข้อ = คำถามของ HR ท่า/คำพูดเปลี่ยนตามความเสี่ยงของคนที่ดูอยู่
             ช่องรหัสพนักงานอยู่ในหัวเพจเฉพาะแท็บรายคน (ภาพรวม/นำเข้า เลือกคนจากรายชื่อแทน) */}
         <header
-          className={`hero-sky -mx-4 mb-6 flex-col px-4 print:hidden sm:mx-0 sm:rounded-3xl sm:border sm:border-line sm:px-7 xl:flex-row xl:justify-between ${
-            PER_EMPLOYEE.includes(tab) ? 'gap-3 py-3 xl:items-center' : 'gap-5 py-5 xl:items-end'
-          } ${
+          className={`mb-6 flex-col gap-4 print:hidden xl:flex-row xl:justify-between ${PER_EMPLOYEE.includes(tab) ? 'xl:items-start' : 'xl:items-end'} ${
             tab === 'overview' ? 'hidden' : 'flex'
           }`}
         >
           {PER_EMPLOYEE.includes(tab) ? (
             // หน้ารายคน: หัวเตี้ย หัวข้อ + คำพูดสั้นของผู้ช่วยในบรรทัดเดียว
-            <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="sm">
-              <h1 className="text-balance text-xl font-semibold leading-snug tracking-tight text-fg sm:text-2xl">{current.hint}</h1>
-              <p className="mt-0.5 text-sm text-fg/80" aria-live="polite">
+            <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="plain">
+              <h1 className="text-balance text-2xl font-semibold leading-snug tracking-tight text-fg sm:text-[2rem]">{current.hint}</h1>
+              <p className="mt-1 text-sm text-muted-fg" aria-live="polite">
                 <span className="font-medium">{line.text}</span>
                 <span className="hidden sm:inline"> {line.sub}</span>
                 {risk[tab]?.band && !say && (
@@ -319,10 +326,10 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
               </p>
             </SpeakingMascot>
           ) : (
-            <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="md">
-              <p className="text-sm text-muted-fg">{current.label}</p>
-              <h1 className="mt-1.5 text-balance text-2xl font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2rem]">{current.hint}</h1>
-              <p className="mt-2 text-sm text-fg/80" aria-live="polite">
+            <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="plain">
+              <h1 className="text-balance text-[1.75rem] font-semibold leading-[1.3] tracking-tight text-fg sm:text-[2.5rem]">{current.label}</h1>
+              <p className="mt-1.5 text-sm text-muted-fg" aria-live="polite">
+                {current.hint} ·{' '}
                 <span className="font-medium">{line.text}</span> {line.sub}
               </p>
             </SpeakingMascot>
@@ -356,7 +363,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
                         disabled={current}
                         aria-current={current ? 'true' : undefined}
                         title={employeeLabel(r.id, r.name)}
-                        className={`h-10 rounded-md border px-2 font-medium sm:h-6 tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        className={`h-11 rounded-full border px-3 font-medium sm:h-10 tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                           current
                             ? 'cursor-default border-transparent bg-primary-soft text-on-primary dark:text-fg'
                             : 'cursor-pointer border-line bg-card text-fg hover:border-accent/40 hover:text-accent'
@@ -376,7 +383,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
           <div className="sticky top-0 z-20 hidden h-0 lg:block print:hidden">
             <form
               onSubmit={submit}
-              className="fade-up absolute right-0 top-4 flex w-[22rem] items-center gap-2 rounded-xl border border-line bg-card/95 p-2 shadow-md backdrop-blur"
+              className="fade-up absolute right-0 top-4 flex w-[22rem] items-center gap-2 rounded-2xl border border-line bg-card p-2 shadow-md"
             >
               <label className="flex min-w-0 flex-1 items-center gap-2 pl-1.5 text-muted-fg">
                 <Icon name="user" className="size-4 shrink-0" />
@@ -394,7 +401,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
               </label>
               <button
                 disabled={!!pending[tab]}
-                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex h-11 sm:h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-action px-4 text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
               >
                 {pending[tab] ? <MascotLoader /> : 'โหลด'}
               </button>
@@ -457,7 +464,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
           aria-label="กลับขึ้นด้านบน"
           title="กลับขึ้นด้านบน"
           // What-if มีแถบคะแนนติดขอบล่างบนมือถือ ยกปุ่มขึ้นไปเหนือแถบ
-          className={`fade-up fixed right-4 z-20 grid size-11 cursor-pointer place-items-center rounded-full border border-line bg-card/95 text-fg shadow-md backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden print:hidden ${
+          className={`fade-up fixed right-4 z-20 grid size-11 cursor-pointer place-items-center rounded-full border border-line bg-card text-fg shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden print:hidden ${
             tab === 'whatif' ? 'bottom-24' : 'bottom-5'
           }`}
         >
@@ -465,6 +472,30 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
         </button>
       )}
     </div>
+  )
+}
+
+// ปุ่มเมนูในแท่ง: วงกลมไอคอน ตัวที่เลือก = ฟ้าอ่อน + ขีดฟ้าชิดขอบแท่ง ชื่อเมนูเป็นป้ายดำโผล่ขวาตอนชี้/โฟกัส (ตาม frontend/ref)
+function RailItem({ label, active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      aria-label={label}
+      className={`lift group relative grid size-12 cursor-pointer place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+        active ? 'bg-primary-soft text-fg' : 'text-muted-fg hover:bg-muted hover:text-fg'
+      }`}
+    >
+      {children}
+      {active && <span className="absolute -left-2 h-5 w-1 rounded-r-full bg-accent lg:-left-4" aria-hidden="true" />}
+      <span
+        className="pointer-events-none absolute left-full ml-5 hidden -translate-x-1 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 lg:block"
+        aria-hidden="true"
+      >
+        {label}
+      </span>
+    </button>
   )
 }
 
@@ -484,7 +515,7 @@ function StepButtons({ ids, current, onPick }) {
   }, [ids, i, onPick])
   if (i < 0) return null
   const cls =
-    'inline-flex h-10 cursor-pointer items-center gap-1 rounded-md border sm:h-8 border-line bg-card px-2.5 text-xs font-medium text-fg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:border-line disabled:hover:text-fg'
+    'inline-flex h-11 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border sm:h-10 border-line bg-card px-3 text-sm font-medium text-fg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:border-line disabled:hover:text-fg'
   return (
     <div className="flex items-center gap-2 sm:col-span-2">
       <button type="button" className={cls} onClick={() => step(-1)} disabled={i === 0} aria-label="คนก่อนหน้า (เสี่ยงมากกว่า)" aria-keyshortcuts="[" title="คีย์ลัด [">

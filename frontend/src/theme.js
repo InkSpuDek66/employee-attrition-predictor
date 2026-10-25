@@ -29,7 +29,7 @@ export const toApiChanges = (changes) =>
   'MonthlyIncome' in changes ? { ...changes, MonthlyIncome: Math.round(changes.MonthlyIncome) } : changes
 
 export const inputClass =
-  'h-11 w-full rounded-lg border border-line bg-card px-3 text-fg outline-none transition-colors duration-200 placeholder:text-muted-fg hover:border-secondary focus-visible:border-accent focus-visible:ring-3 focus-visible:ring-accent/20'
+  'h-11 w-full rounded-xl border border-line bg-card px-3.5 text-fg outline-none transition-colors duration-200 placeholder:text-muted-fg hover:border-secondary focus-visible:border-accent focus-visible:ring-3 focus-visible:ring-accent/20'
 
 export const BAND = {
   Low: { th: 'ต่ำ', text: 'text-risk-low', pill: 'bg-risk-low-soft text-risk-low ring-risk-low/15' },

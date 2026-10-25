@@ -112,7 +112,7 @@ export function PrimaryButton({ loading, children, loadingText = 'กำลั�
   return (
     <button
       disabled={loading}
-      className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+      className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
     >
       {loading && <MascotLoader />}
       {loading ? loadingText : children}
@@ -120,16 +120,25 @@ export function PrimaryButton({ loading, children, loadingText = 'กำลั�
   )
 }
 
-// หัวการ์ดเป็นตัวหนังสือล้วน (เดิมมีกล่องไอคอนหน้าหัวข้อทุกการ์ด = หน้าตาแบบ template ทั่วไป, critique 2026-10-16)
-// prop icon ยังรับไว้ให้ที่เรียกเดิมไม่พัง แต่ไม่วาดแล้ว
-export function Card({ title, subtitle, action, children, className = '' }) {
+// พื้นการ์ดแบบ frontend/ref: ขาวมุมโค้งมาก ไม่มีเส้นขอบ (โหมดมืดมีเส้นขอบ แยกจากพื้นได้) ใช้กับกล่องระดับเดียวกับ Card ที่ไม่ได้ใช้ Card
+export const cardClass = 'rounded-3xl bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:border dark:border-line'
+
+// icon = ไอคอนเส้นสีฟ้าหน้าหัวข้อ ช่วยให้กวาดตาหาการ์ดได้เร็ว ไม่มีกล่องพื้นหลัง (กล่องไอคอนทุกการ์ด = หน้าตาแบบ template, critique 2026-10-16)
+export function Card({ title, subtitle, action, icon, children, className = '' }) {
   return (
-    <section className={`rounded-xl border border-line bg-card p-5 sm:p-6 ${className}`}>
+    <section className={`${cardClass} p-5 sm:p-6 ${className}`}>
       {title && (
         <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold tracking-tight text-fg">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-sm text-muted-fg">{subtitle}</p>}
+          <div className="flex min-w-0 items-start gap-2.5">
+            {icon && (
+              <span className="mt-1 shrink-0 text-accent" aria-hidden="true">
+                <Icon name={icon} className="size-5" />
+              </span>
+            )}
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold tracking-tight text-fg">{title}</h2>
+              {subtitle && <p className="mt-0.5 text-sm text-muted-fg">{subtitle}</p>}
+            </div>
           </div>
           {action}
         </header>
@@ -153,7 +162,7 @@ export function UncalibratedNote({ detail }) {
 export function Alert({ tone = 'error', children }) {
   const style = tone === 'error' ? 'border-risk-high/15 bg-risk-high-soft text-risk-high' : 'border-risk-mid/15 bg-risk-mid-soft text-risk-mid'
   return (
-    <div role={tone === 'error' ? 'alert' : undefined} className={`flex gap-2.5 rounded-lg border px-4 py-3 text-sm ${style}`}>
+    <div role={tone === 'error' ? 'alert' : undefined} className={`flex gap-2.5 rounded-2xl border px-4 py-3 text-sm ${style}`}>
       <Icon name={tone} className="mt-0.5 size-5 shrink-0" />
       <span>{children}</span>
     </div>
@@ -239,7 +248,7 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
     e.currentTarget.querySelectorAll('[role=radio]')[next]?.focus()
   }
   return (
-    <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+    <div className="flex flex-wrap gap-1 rounded-3xl bg-muted p-1" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
       {options.map(([v, text], i) => {
         const active = i === current
         return (
@@ -250,8 +259,8 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
             aria-checked={active}
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(v)}
-            className={`min-w-10 flex-auto cursor-pointer whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-              size === 'sm' ? 'h-10 sm:h-8' : 'h-10'
+            className={`min-w-10 flex-auto cursor-pointer whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              size === 'sm' ? 'h-11 sm:h-10' : 'h-11 sm:h-10'
             } ${active ? 'bg-action font-semibold text-on-action shadow-sm' : 'text-muted-fg hover:bg-card hover:text-fg'}`}
           >
             {text}

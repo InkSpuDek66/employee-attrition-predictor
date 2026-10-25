@@ -11,7 +11,7 @@ export function DownloadButton({ path, filename, children, onError }) {
     <button
       type="button"
       onClick={() => download(path, filename).catch((err) => onError(friendly(err)))}
-      className="lift inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-card px-4 py-2 text-left font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      className="lift inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-card px-4 py-2 text-left font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <Icon name="download" className="size-5 shrink-0" />
       {children}
@@ -42,7 +42,7 @@ export function DropZone({ busy, file, onFile, name }) {
 
 export function Count({ label, value, tone = 'text-fg' }) {
   return (
-    <div className="rounded-lg border border-line bg-canvas p-4">
+    <div className="rounded-2xl bg-muted p-4">
       <div className="text-xs font-medium text-muted-fg">{label}</div>
       <div className={`mt-1 text-2xl font-semibold tabular-nums ${tone}`}>{value.toLocaleString()}</div>
     </div>
@@ -65,7 +65,7 @@ function usePeek(n, unit = 'แถว') {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="mt-2 inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="mt-2 inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 sm:h-10 text-sm font-medium text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <Icon name="chevron" className={`size-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         {open ? 'ย่อ' : `ดูทั้งหมด (${n.toLocaleString()} ${unit})`}
@@ -447,7 +447,7 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
                           key={id}
                           type="button"
                           onClick={() => onPick(id)}
-                          className="lift inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          className="lift inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-line bg-card px-3 sm:h-10 text-sm font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
                           {employeeLabel(id, result.saved_names?.[id])}
                           <Icon name="right" className="size-4 text-muted-fg" />
@@ -466,7 +466,7 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
                   type="button"
                   onClick={askSave}
                   disabled={!ok || !canSave || saving}
-                  className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
+                  className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
                 >
                   {saving && <MascotLoader />}
                   {saving ? 'กำลังบันทึก…' : `บันทึกเข้าระบบ ${result.n_valid.toLocaleString()} คน`}
@@ -507,14 +507,14 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
             <button
               type="button"
               onClick={() => confirmBox.current.close()}
-              className="inline-flex h-10 cursor-pointer items-center rounded-lg border border-line px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="inline-flex h-11 sm:h-10 cursor-pointer items-center rounded-full border border-line px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               ยกเลิก กลับไปแก้ไฟล์
             </button>
             <button
               type="button"
               onClick={() => save(true)}
-              className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-action px-4 text-sm font-medium text-on-action hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent"
+              className="inline-flex h-11 sm:h-10 cursor-pointer items-center rounded-full bg-action px-4 text-sm font-medium text-on-action hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent"
             >
               ใช่ บันทึก
             </button>

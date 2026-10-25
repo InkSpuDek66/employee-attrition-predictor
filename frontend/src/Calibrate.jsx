@@ -53,7 +53,7 @@ function Status({ active, stale, onReset, resetting }) {
         type="button"
         onClick={onReset}
         disabled={resetting}
-        className="h-10 cursor-pointer rounded-lg border border-line bg-card px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+        className="h-11 sm:h-10 cursor-pointer rounded-full border border-line bg-card px-3 font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
       >
         {resetting ? 'กำลังยกเลิก…' : active ? 'ยกเลิกการปรับเทียบ' : 'ลบผลปรับเทียบเก่า'}
       </button>
@@ -167,11 +167,11 @@ function Result({ r, method }) {
       )}
       <div className="grid gap-3 sm:grid-cols-3">
         <Count label="พนักงานที่ใช้ปรับ" value={r.n_samples} />
-        <div className="rounded-lg border border-line bg-canvas p-4">
+        <div className="rounded-2xl bg-muted p-4">
           <div className="text-xs font-medium text-muted-fg">อัตราลาออกจริงของบริษัท</div>
           <div className="mt-1 text-2xl font-semibold tabular-nums text-fg">{pct(r.positive_rate)}</div>
         </div>
-        <div className="rounded-lg border border-line bg-canvas p-4">
+        <div className="rounded-2xl bg-muted p-4">
           <div className="text-xs font-medium text-muted-fg" title="วัดด้วย Brier score: ค่าเฉลี่ยของ (คะแนน − ผลจริง)²">ความคลาดเคลื่อนของคะแนน</div>
           <div className="mt-1 text-2xl font-semibold tabular-nums text-fg">
             {r.brier_before.toFixed(3)} <span className="text-muted-fg">→</span> <span className="text-risk-low">{r.brier_after.toFixed(3)}</span>
@@ -291,7 +291,7 @@ export default function Calibrate({ who, onChanged }) {
           </ul>
         </Card>
 
-        <Card icon="sliders" title="2. เลือกวิธีแล้วอัปโหลด" subtitle=".xlsx หรือ .csv ไม่เกิน 5 MB / 10,000 แถว">
+        <Card icon="upload" title="2. เลือกวิธีแล้วอัปโหลด" subtitle=".xlsx หรือ .csv ไม่เกิน 5 MB / 10,000 แถว">
           <div className="space-y-4">
             <div>
               <Segmented options={METHODS} value={method} onChange={setMethod} label="วิธีปรับเทียบ" />
@@ -302,7 +302,7 @@ export default function Calibrate({ who, onChanged }) {
               type="button"
               onClick={run}
               disabled={!file || busy}
-              className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
+              className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-action px-5 font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-fg"
             >
               {busy && <MascotLoader />}
               {busy ? 'กำลังตรวจไฟล์และปรับเทียบ…' : 'ปรับเทียบด้วยไฟล์นี้'}
@@ -374,7 +374,7 @@ export default function Calibrate({ who, onChanged }) {
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}
-              className="mt-3 h-10 w-full cursor-pointer rounded-lg border border-line text-sm font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="mt-3 h-11 sm:h-10 w-full cursor-pointer rounded-full border border-line text-sm font-medium text-accent transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {showAll ? 'ย่อเหลือล่าสุด' : `ดูทั้งหมด (${items.length.toLocaleString()} ครั้ง)`}
             </button>

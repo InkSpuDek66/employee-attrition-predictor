@@ -5,23 +5,25 @@ import Logo from '../logo/Logo'
 import { api, baht, bandOf, employeeLabel, friendly, loadSession, useApi } from './theme'
 import { NotFoundState, SorryState } from './mascot/Mascot'
 import { EmptyPicker } from './Overview'
-import { Card, Icon, RiskGauge, Segmented, Skeleton, UncalibratedNote } from './ui'
+import { Card, Icon, RiskGauge, Segmented, Skeleton, UncalibratedNote, cardClass } from './ui'
 
 const TOP_N = [5, 10, 15, 20].map((n) => [n, `${n}`])
 
 function Driver({ tone, title, row, count, topN }) {
   const up = tone === 'up'
   return (
-    <div className="rounded-xl border border-line bg-card p-5">
-      <div className={`flex items-center gap-2 text-sm font-medium ${up ? 'text-risk-high' : 'text-accent'}`}>
-        <span className={`grid size-7 place-items-center rounded-md ${up ? 'bg-risk-high-soft' : 'bg-accent-soft'}`}>
-          <Icon name={up ? 'up' : 'down'} className="size-4" />
-        </span>
-        {title}
+    <div className={`${cardClass} lift p-2`}>
+      {/* หัวการ์ดสีพาสเทลแบบ ref: ป้ายบอกฝั่ง + ชื่อปัจจัยตัวใหญ่ (เดิมเป็นลูกศรกลางกล่อง ไม่ได้บอกอะไรเพิ่ม) */}
+      <div className={`flex min-h-24 flex-col justify-between gap-3 rounded-2xl p-3 ${up ? 'bg-risk-high-soft' : 'bg-accent-soft'}`}>
+        <span className="w-fit rounded-full bg-ink px-2.5 py-0.5 text-xs font-medium text-white">{title}</span>
+        <div className={`text-xl font-semibold leading-snug ${row ? (up ? 'text-risk-high' : 'text-accent') : 'text-muted-fg'}`}>
+          {row?.label ?? `ไม่มีใน ${topN} ปัจจัยหลัก`}
+        </div>
       </div>
-      <div className="mt-3 text-lg font-semibold text-fg">{row?.label ?? `ไม่มีใน ${topN} ปัจจัยหลัก`}</div>
-      <div className="text-sm text-muted-fg">{row ? row.phrase : 'เพิ่มจำนวนปัจจัยที่แสดงในกราฟด้านล่างเพื่อดูเพิ่ม'}</div>
-      {row && <div className="mt-3 text-xs text-muted-fg">{up ? 'ดันให้เสี่ยงขึ้น' : 'ช่วยให้อยู่ต่อ'} {count} จาก {topN} ปัจจัยหลัก</div>}
+      <div className="px-3 pb-3 pt-3">
+        <div className="text-sm text-fg">{row ? row.phrase : 'เพิ่มจำนวนปัจจัยที่แสดงในกราฟด้านล่างเพื่อดูเพิ่ม'}</div>
+        {row && <div className="mt-2 text-xs text-muted-fg">{up ? 'ดันให้เสี่ยงขึ้น' : 'ช่วยให้อยู่ต่อ'} {count} จาก {topN} ปัจจัยหลัก</div>}
+      </div>
     </div>
   )
 }
@@ -40,11 +42,9 @@ function commuteText(c, usedKm) {
 function Summary({ ups, downs, band }) {
   const list = (rows) => rows.map((r) => r.phrase).join(', ')
   return (
-    <div className="rounded-xl border border-line bg-card p-5">
+    <div className={`${cardClass} p-5`}>
       <div className="flex items-start gap-3">
-        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-accent">
-          <Icon name="info" className="size-5" />
-        </div>
+        <Icon name="info" className="mt-0.5 size-5 shrink-0 text-accent" />
         <div className="space-y-1.5 text-sm leading-relaxed">
           <p className="font-semibold text-fg">สรุป</p>
           {ups.length > 0 && (
@@ -245,7 +245,7 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
             <button
               type="button"
               onClick={() => onTab('whatif')}
-              className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-action text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 print:hidden"
+              className="mt-4 flex h-11 sm:h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full bg-action text-sm font-medium text-on-action transition-colors duration-200 hover:bg-action-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 print:hidden"
             >
               <Icon name="sliders" className="size-4" />
               จำลองการปรับเงื่อนไขของพนักงานคนนี้
@@ -253,7 +253,7 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
             <button
               type="button"
               onClick={() => printReport(setPrintedAt)}
-              className="mt-2 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent print:hidden"
+              className="mt-2 flex h-11 sm:h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line text-sm font-medium text-fg transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent print:hidden"
             >
               <Icon name="download" className="size-4" />
               พิมพ์ / บันทึก PDF
@@ -296,7 +296,7 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
           </Card>
 
           {/* ตารางเป็นปัจจัยชุดเดียวกับกราฟด้านบน (เดิมเปิดค้าง เห็นซ้ำสองรอบ) พับไว้ เปิดดูค่าจริงได้ */}
-          <details className="group rounded-xl border border-line bg-card">
+          <details className={`group ${cardClass} overflow-hidden`}>
             <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 text-sm font-semibold text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:px-6 [&::-webkit-details-marker]:hidden">
               <Icon name="list" className="size-4 text-accent" />
               ดูค่าจริงของแต่ละปัจจัย (ตาราง)

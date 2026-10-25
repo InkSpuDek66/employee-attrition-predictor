@@ -2,6 +2,7 @@
 // แทน "สถานการณ์" ไม่ใช่ตัวพนักงาน และเป็นของตกแต่ง (aria-hidden) ข้อมูลจริงอยู่ที่ตัวเลข/ป้ายในหน้า
 // แอนิเมชันอยู่ใน index.css (mascot-*) ปิดเองเมื่อผู้ใช้ตั้ง reduced-motion
 // มี 4 ตัว: joy (Joy.jsx) / kit (Kit.jsx), cat / dog (PetCharacter.jsx) ตัวที่เลือกเก็บใน App (theme.js: loadMascot/saveMascot)
+import { useEffect, useRef } from 'react'
 import Joy from './Joy'
 import Kit from './Kit'
 import PetCharacter from './PetCharacter'
@@ -88,15 +89,21 @@ export function SpeakingMascot({ who, mood = 'none', replay, size = 'lg', childr
     lg: { row: 'flex-col items-center gap-3 sm:flex-row sm:items-end sm:gap-5', char: 'w-24 sm:w-40', bubble: 'px-6 py-5 sm:mb-6 sm:px-8 sm:py-6', tail: 'side' },
     md: { row: 'flex-col items-center gap-3 sm:flex-row sm:items-end sm:gap-5', char: 'w-20 sm:w-28', bubble: 'px-5 py-4 sm:mb-3 sm:px-7 sm:py-5', tail: 'side' },
     sm: { row: 'flex-row items-center gap-3', char: 'w-14 sm:w-16', bubble: 'px-4 py-3 sm:px-5', tail: 'left' },
+    // plain = หัวเพจแบบ frontend/ref: หัวเรื่องตัวใหญ่บนพื้นโล่ง ตัวการ์ตูนยืนข้างๆ ไม่มีกล่องคำพูด
+    plain: { row: 'flex-row items-center gap-3 sm:gap-4', char: 'w-14 sm:w-[4.5rem]' },
   }[size]
   return (
     <div className={`flex min-w-0 ${box.row}`}>
       <div className={`shrink-0 [&_svg]:h-auto [&_svg]:w-full ${box.char}`} aria-hidden="true">
         <Character key={`${who}-${mood}-${replay ?? ''}`} mood={mood} />
       </div>
-      <Bubble tail={box.tail} className={`w-full min-w-0 max-w-3xl shadow-[0_18px_40px_-24px_rgb(30_70_140/0.35)] ${box.bubble}`}>
-        {children}
-      </Bubble>
+      {size === 'plain' ? (
+        <div className="min-w-0">{children}</div>
+      ) : (
+        <Bubble tail={box.tail} className={`w-full min-w-0 max-w-3xl shadow-[0_18px_40px_-24px_rgb(30_70_140/0.35)] ${box.bubble}`}>
+          {children}
+        </Bubble>
+      )}
     </div>
   )
 }
@@ -105,7 +112,7 @@ export function SpeakingMascot({ who, mood = 'none', replay, size = 'lg', childr
 export function AssistantHint({ title, children }) {
   // ตัวการ์ตูนพูดอยู่ที่หัวเพจแล้ว ตรงนี้เหลือแถบคำแนะนำเตี้ยๆ (เดิมเป็นกล่องเส้นประใหญ่ กินที่แต่เนื้อหาน้อย)
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-line bg-card/70 px-4 py-3">
+    <div className="flex items-start gap-3 rounded-2xl border border-line bg-card/70 px-4 py-3">
       <Icon name="info" className="mt-0.5 size-5 shrink-0 text-accent" />
       <p className="text-sm text-muted-fg">
         <span className="font-semibold text-fg">{title}</span> {children}
@@ -178,6 +185,87 @@ export function NotFoundState({ who, message }) {
         <p className="mt-2 text-xs text-muted-fg/80">{message}</p>
       </Bubble>
     </div>
+  )
+}
+
+// ปุ่มหน้าผู้ช่วยในแท่งเมนู: กดแล้วกล่องเลือกผู้ช่วยเด้งออกข้างแท่ง (popover ของเบราว์เซอร์: กดนอกกล่อง/Esc ปิดเอง
+// อยู่ชั้นบนสุด ไม่โดนแท่งเมนูตัด) ตำแหน่งคำนวณจากปุ่มตอนเปิด และคำนวณใหม่ถ้าขนาดจอเปลี่ยนระหว่างเปิด
+// คีย์บอร์ดแบบ radio group เหมือน Segmented: เปิดแล้วโฟกัสอยู่ที่ตัวที่เลือก ลูกศรซ้าย/ขวา = เปลี่ยนตัว (เห็นหน้าใหม่ในแท่งทันที)
+// Enter / Space / คลิก = เลือกแล้วปิด
+export function MascotSwitch({ who, onChoose }) {
+  const Avatar = CHARACTERS[who]
+  const trigger = useRef(null)
+  const panel = useRef(null)
+  function place() {
+    const r = trigger.current.getBoundingClientRect()
+    const edge = trigger.current.closest('aside')?.getBoundingClientRect().right ?? r.right
+    Object.assign(panel.current.style, { left: `${edge + 12}px`, bottom: `${innerHeight - r.bottom}px`, top: 'auto', right: 'auto' })
+  }
+  function onToggle(e) {
+    if (e.newState !== 'open') return removeEventListener('resize', place)
+    place()
+    addEventListener('resize', place)
+    panel.current.querySelector('[aria-checked="true"]')?.focus()
+  }
+  useEffect(() => () => removeEventListener('resize', place), [])
+  function onKeyDown(e) {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]
+    if (!step) return
+    e.preventDefault()
+    const next = (MASCOTS.indexOf(who) + step + MASCOTS.length) % MASCOTS.length
+    onChoose(MASCOTS[next])
+    panel.current.querySelectorAll('[role=radio]')[next]?.focus()
+  }
+  const close = () => (panel.current.hidePopover(), trigger.current.focus())
+  return (
+    <>
+      <button
+        ref={trigger}
+        type="button"
+        popoverTarget="mascot-picker"
+        aria-label={`ผู้ช่วย: ${LABELS[who]} (กดเพื่อเลือกผู้ช่วย)`}
+        title={`ผู้ช่วย: ${LABELS[who]}`}
+        className="size-11 cursor-pointer overflow-hidden rounded-full bg-muted ring-2 ring-line transition hover:ring-accent/50 focus-visible:outline-none focus-visible:ring-accent"
+      >
+        <Avatar mood="none" mini />
+      </button>
+      <div
+        ref={panel}
+        id="mascot-picker"
+        popover="auto"
+        onToggle={onToggle}
+        className="fade-up fixed m-0 rounded-2xl border border-line bg-card p-4 text-center text-fg shadow-xl"
+      >
+        <div id="mascot-picker-label" className="text-sm text-muted-fg">
+          อยากให้ใครเป็นผู้ช่วยดี?
+        </div>
+        <div className="mt-2 flex justify-center gap-2" role="radiogroup" aria-labelledby="mascot-picker-label" onKeyDown={onKeyDown}>
+          {MASCOTS.map((k) => {
+            const Pick = CHARACTERS[k]
+            return (
+              <button
+                key={k}
+                type="button"
+                role="radio"
+                aria-checked={who === k}
+                tabIndex={who === k ? 0 : -1}
+                aria-label={LABELS[k]}
+                title={LABELS[k]}
+                onClick={() => (onChoose(k), close())}
+                className={`size-12 cursor-pointer overflow-hidden rounded-full bg-muted transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  who === k ? 'ring-2 ring-accent ring-offset-2 ring-offset-card' : 'opacity-60 hover:opacity-100'
+                }`}
+              >
+                <Pick mood="none" mini />
+              </button>
+            )
+          })}
+        </div>
+        <div className="mt-1.5 text-sm font-medium text-fg" aria-hidden="true">
+          {LABELS[who]}
+        </div>
+      </div>
+    </>
   )
 }
 

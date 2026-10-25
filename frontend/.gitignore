@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# design reference videos/images (local only, not part of the app)
+ref/
