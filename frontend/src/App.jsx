@@ -81,13 +81,6 @@ export default function App() {
   return <Workspace user={session.user} onLogout={() => (saveSession(null), setSession(null), setExpired(false), history.replaceState(null, '', location.pathname))} {...theme} />
 }
 
-// คำทักทายตามช่วงเวลาบนหน้าภาพรวม
-function greeting(name) {
-  const h = new Date().getHours()
-  const part = h < 5 ? 'สวัสดี' : h < 11 ? 'สวัสดีตอนเช้า' : h < 13 ? 'สวัสดีตอนกลางวัน' : h < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น'
-  return `${part} ${name}`
-}
-
 // ผู้ช่วยใน sidebar ตอนยังไม่มีอะไรให้ดู: หน้าที่ไม่ใช่รายคนพูดเรื่องของหน้านั้น (ไม่ชวนเลือกพนักงาน)
 const IDLE = {
   calibrate: { text: 'มาปรับคะแนนให้ตรงกับบริษัทกัน', sub: 'ใช้ไฟล์พนักงานที่รู้ผลแล้วว่าใครลาออก' },
@@ -247,7 +240,6 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
 
   return (
     <div className="relative isolate min-h-screen lg:pl-28 print:pl-0">
-      <div className="app-glow pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
       <a
         href="#main"
         className="sr-only z-50 rounded-lg bg-primary px-4 py-2 text-on-primary focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
@@ -255,13 +247,13 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
         ข้ามไปเนื้อหาหลัก
       </a>
       {/* แท่งเมนูลอยซ้ายแบบ frontend/ref ไอคอนล้วน ชื่อเมนูขึ้นเป็นป้ายตอนชี้/โฟกัส (จอใหญ่)
-          มือถือ/แท็บเล็ต: เหลือแค่โลโก้ลอยมุมซ้ายบน กดแล้วแท่งยืดลงมา (max-height) ไอคอนค่อยๆ โผล่ พื้นหลังหรี่
-          กดพื้นหลัง / Esc / เลือกเมนู = หุบ ตอนหุบเมนูข้างในเป็น invisible กด Tab ไม่หลงเข้าไป
+          มือถือ/แท็บเล็ต: เหลือแค่โลโก้ลอยมุมซ้ายบน กดแล้วแท่งเปิดลงมาด้วย clip-path (.rail-reveal ไม่ขยับความสูงจริง) ไอคอนค่อยๆ โผล่ พื้นหลังหรี่
+          กดพื้นหลัง / Esc / เลือกเมนู = หุบ ตอนหุบเมนูข้างในเป็น display: none กด Tab ไม่หลงเข้าไป
           ผู้ช่วยย่อเหลือปุ่มหน้าการ์ตูน (กดแล้วเลือกตัว) ชื่อผู้ใช้/บริษัทอยู่ในป้ายของปุ่มออกจากระบบ */}
       {railOpen && <div className="fade-in fixed inset-0 z-20 bg-ink/40 lg:hidden print:hidden" onClick={closeRail} aria-hidden="true" />}
       <aside
-        className={`fixed left-2 top-2 z-30 flex w-16 flex-col items-center gap-2 rounded-[2rem] border border-line bg-card py-2 transition-[max-height,box-shadow] duration-300 ease-out print:hidden lg:inset-y-4 lg:left-4 lg:max-h-none lg:w-20 lg:overflow-visible lg:py-5 lg:shadow-sm ${
-          railOpen ? 'max-h-[calc(100dvh-1rem)] overflow-y-auto shadow-xl' : 'max-h-16 overflow-hidden shadow-md'
+        className={`fixed left-2 top-2 z-30 flex w-16 flex-col items-center gap-2 rounded-[2rem] border border-line bg-card py-2 print:hidden lg:inset-y-4 lg:left-4 lg:max-h-none lg:w-20 lg:overflow-visible lg:py-5 lg:shadow-sm ${
+          railOpen ? 'rail-reveal max-h-[calc(100dvh-1rem)] overflow-y-auto shadow-xl' : 'shadow-md'
         }`}
       >
         <button
@@ -278,9 +270,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
         <Logo className="mb-4 hidden size-11 shrink-0 lg:block" />
         <div
           id="rail-menu"
-          className={`flex flex-1 flex-col items-center gap-2 pt-2 transition-[opacity,visibility,translate] duration-300 lg:visible lg:translate-y-0 lg:pt-0 lg:opacity-100 ${
-            railOpen ? 'visible translate-y-0 opacity-100 delay-75' : 'invisible -translate-y-2 opacity-0'
-          }`}
+          className={`flex-1 flex-col items-center gap-2 pt-2 lg:flex lg:pt-0 ${railOpen ? 'fade-up flex' : 'hidden'}`}
         >
           <nav className="flex flex-col items-center gap-2" aria-label="เครื่องมือ">
             {tabs.map((t) => (
@@ -321,7 +311,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
                 <span className="font-medium">{line.text}</span>
                 <span className="hidden sm:inline"> {line.sub}</span>
                 {risk[tab]?.band && !say && (
-                  <span className="tabular-nums text-muted-fg"> · #{risk[tab].id} {risk[tab].label} {Math.round(risk[tab].score * 100)}</span>
+                  <span className="tabular-nums text-muted-fg"> (#{risk[tab].id} {risk[tab].label} {Math.round(risk[tab].score * 100)})</span>
                 )}
               </p>
             </SpeakingMascot>
@@ -329,8 +319,8 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
             <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="plain">
               <h1 className="text-balance text-[1.75rem] font-semibold leading-[1.3] tracking-tight text-fg sm:text-[2.5rem]">{current.label}</h1>
               <p className="mt-1.5 text-sm text-muted-fg" aria-live="polite">
-                {current.hint} ·{' '}
-                <span className="font-medium">{line.text}</span> {line.sub}
+                {/* ปกติ = คำอธิบายหน้า + คำแนะนำของผู้ช่วย (ไม่พูดเรื่องเดียวกันซ้ำ) หลังทำอะไรสำเร็จ = ข้อความของผู้ช่วยแทน */}
+                {say ? <span className="font-medium">{line.text}</span> : current.hint} {line.sub}
               </p>
             </SpeakingMascot>
           )}
@@ -411,7 +401,6 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
 
         <div hidden={tab !== 'overview'} key={`overview-${dataVersion}`} className="fade-up">
           <Overview
-            greeting={greeting(user.name)}
             who={who}
             onPick={pick}
             onImport={() => setTab('import')}
@@ -515,14 +504,15 @@ function StepButtons({ ids, current, onPick }) {
   }, [ids, i, onPick])
   if (i < 0) return null
   const cls =
-    'inline-flex h-11 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border sm:h-10 border-line bg-card px-3 text-sm font-medium text-fg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:border-line disabled:hover:text-fg'
+    'inline-flex h-11 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border sm:h-10 border-line bg-card px-3 text-xs font-medium text-fg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:border-line disabled:hover:text-fg'
   return (
     <div className="flex items-center gap-2 sm:col-span-2">
       <button type="button" className={cls} onClick={() => step(-1)} disabled={i === 0} aria-label="คนก่อนหน้า (เสี่ยงมากกว่า)" aria-keyshortcuts="[" title="คีย์ลัด [">
         <Icon name="left" className="size-3.5" /> คนก่อนหน้า
       </button>
-      <span className="text-xs tabular-nums text-muted-fg">
-        อันดับ {(i + 1).toLocaleString()} จาก {ids.length.toLocaleString()} ตามความเสี่ยง
+      <span className="whitespace-nowrap text-xs tabular-nums text-muted-fg" title="อันดับตามความเสี่ยง จากมากไปน้อย">
+        อันดับ {(i + 1).toLocaleString()} จาก {ids.length.toLocaleString()}
+        <span className="sr-only"> ตามความเสี่ยง</span>
       </span>
       <button type="button" className={cls} onClick={() => step(1)} disabled={i === ids.length - 1} aria-label="คนถัดไป (เสี่ยงน้อยกว่า)" aria-keyshortcuts="]" title="คีย์ลัด ]">
         คนถัดไป <Icon name="right" className="size-3.5" />
@@ -613,7 +603,7 @@ function EmployeeSearch({ value, onChange, onPick }) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-fg">{employeeLabel(e.employee_id, e.name)}</span>
                 <span className="block truncate text-xs text-muted-fg">
-                  {e.job_role} · {e.department}
+                  {e.job_role}, {e.department}
                 </span>
               </span>
               <span className={`text-sm font-semibold tabular-nums ${BAND[e.risk_band].text}`}>

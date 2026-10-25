@@ -123,7 +123,7 @@ function InvalidRows({ rows, total }) {
                 <td colSpan={headers.length} className="whitespace-normal px-5 pb-2.5 text-xs text-risk-high sm:px-6">
                   {Object.entries(r.errors)
                     .map(([col, msg]) => `${col}: ${msg}`)
-                    .join(' · ')}
+                    .join(', ')}
                 </td>
               </tr>
             </tbody>
@@ -250,7 +250,7 @@ function ChangesToCheck({ result }) {
         <ul className="mt-2 space-y-1">
           {list.slice(0, peek.count).map((c, i) => (
             <li key={c.employee_id} className={peek.fade(i)}>
-              <span className="font-medium">{employeeLabel(c.employee_id, c.name)}</span>: {c.reasons.join(' · ')}
+              <span className="font-medium">{employeeLabel(c.employee_id, c.name)}</span>: {c.reasons.join(', ')}
             </li>
           ))}
         </ul>
@@ -352,10 +352,10 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
             </li>
             <li>
               “ข้อมูลทดลอง” เป็นพนักงานจำลอง มีชื่อ แผนก ตำแหน่งภาษาไทย ใช้ทดสอบการนำเข้าและดูผลในหน้าภาพรวม
-              {ibmDemo && <b className="text-risk-high"> บริษัทนี้มีพนักงาน IBM รหัส 1–1,470 อยู่แล้ว นำเข้าไฟล์ทดลองจะทับคนเดิม ลองในบริษัทที่สร้างเองดีกว่า</b>}
+              {ibmDemo && <b className="text-risk-high"> บริษัทนี้มีพนักงาน IBM รหัส 1 ถึง 1,470 อยู่แล้ว นำเข้าไฟล์ทดลองจะทับคนเดิม ลองในบริษัทที่สร้างเองดีกว่า</b>}
             </li>
             <li>ช่องความพึงพอใจ/สมดุลงานกับชีวิต (จากแบบสำรวจพนักงาน) และความทุ่มเท (จากการประเมินของหัวหน้า) ไม่มีข้อมูลก็เว้นว่างได้</li>
-            <li>“เข้าออฟฟิศ (วัน/สัปดาห์)” ใส่ 0–5 ตามนโยบาย WFH หรือระบบลงเวลา เว้นว่าง = เข้าทุกวัน</li>
+            <li>“เข้าออฟฟิศ (วัน/สัปดาห์)” ใส่ 0 ถึง 5 ตามนโยบาย WFH หรือระบบลงเวลา เว้นว่าง = เข้าทุกวัน</li>
           </ul>
         </Card>
 
@@ -420,12 +420,12 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
           {/* บอกก่อนกดบันทึกว่าจะเกิดอะไร (ต้องต่อ database) */}
           {!result.saved && ok && result.n_new != null && (
             <p className="mt-4 rounded-lg bg-canvas px-4 py-3 text-sm text-fg" aria-live="polite">
-              ถ้าบันทึก: เพิ่มใหม่ <b className="tabular-nums">{result.n_new.toLocaleString()}</b> คน · อัปเดต{' '}
+              ถ้าบันทึก: เพิ่มใหม่ <b className="tabular-nums">{result.n_new.toLocaleString()}</b> คน อัปเดต{' '}
               <b className="tabular-nums">{result.n_update.toLocaleString()}</b> คน
               {result.n_leaving != null && (
                 <>
                   {' '}
-                  · บันทึกว่าออกแล้ว <b className={`tabular-nums ${result.n_leaving ? 'text-risk-high' : ''}`}>{result.n_leaving.toLocaleString()}</b> คน
+                  และบันทึกว่าออกแล้ว <b className={`tabular-nums ${result.n_leaving ? 'text-risk-high' : ''}`}>{result.n_leaving.toLocaleString()}</b> คน
                 </>
               )}
             </p>
@@ -487,7 +487,7 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
       <dialog
         ref={confirmBox}
         aria-labelledby="confirm-title"
-        className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-line bg-card p-0 text-fg shadow-xl backdrop:bg-ink/40"
+        className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-line bg-card p-0 text-fg shadow-lg backdrop:bg-ink/40"
       >
         <div className="p-5">
           <div className="flex items-start gap-3">

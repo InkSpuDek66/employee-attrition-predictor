@@ -22,7 +22,7 @@ const topQuery = (n, department, q, reasons) =>
 const reasonText = (e) =>
   (e.reasons ?? [])
     .map((r) => featurePhrase(r.feature, r.value, r.feature === 'MonthlyIncome' ? baht(r.value) : featureValue(r.feature, r.value)))
-    .join(' · ')
+    .join(', ')
 
 // ดาวน์โหลดรายชื่อเสี่ยงสูงเป็น CSV (เปิดใน Excel ภาษาไทยได้ เพราะใส่ BOM) ไว้ใช้ในประชุม/ส่งหัวหน้าแผนก
 async function downloadCsv(department) {
@@ -97,7 +97,7 @@ export function TopRiskList({ n = 10, department = '', q = '', reasons = false, 
                 <span className="block truncate text-sm font-medium text-fg">{employeeLabel(e.employee_id, e.name)}</span>
                 {!compact && (
                   <span className="line-clamp-2 block text-xs text-muted-fg">
-                    {e.job_role} · {e.department} · {JOB_LEVELS[e.job_level] ?? `ระดับ ${e.job_level}`}
+                    {e.job_role}, {e.department} ({JOB_LEVELS[e.job_level] ?? `ระดับ ${e.job_level}`})
                   </span>
                 )}
                 {reasons && e.reasons?.length > 0 && (
@@ -228,7 +228,7 @@ function BandColumns({ bands, total }) {
             <CountUp value={bands[k]} format={(v) => Math.round(v).toLocaleString()} />
           </div>
           <div className="mt-1 text-xs tabular-nums text-muted-fg">
-            {BAND[k].th} · {total ? shown[i] : 0}%
+            {BAND[k].th} {total ? shown[i] : 0}%
           </div>
         </div>
       ))}
@@ -258,7 +258,7 @@ function NoEmployees({ who, onImport }) {
   )
 }
 
-export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
+export default function Overview({ who, onPick, onImport, onCsv }) {
   const [department, setDepartment] = useState('')
   // ค้นหา/ดูทั้งหมดในการ์ดรายชื่อ (หน่วง 250ms ระหว่างพิมพ์ ไม่ยิง API ทุกตัวอักษร)
   const [find, setFind] = useState('')
@@ -328,8 +328,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
         {/* แบนเนอร์: ผู้ช่วยพูดหัวข้อเอง ประโยคมาจากข้อมูลจริง (กี่คนควรคุย + ปัจจัยที่บริษัทปรับได้) */}
         <section className="hero-sky rounded-[2rem] px-5 py-6 sm:px-8 sm:py-7">
           <SpeakingMascot who={who}>
-            <p className="text-sm text-muted-fg">{greeting}</p>
-            <h1 className="mt-2 text-balance text-[1.75rem] font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2.25rem]">
+            <h1 className="text-balance text-[1.75rem] font-semibold leading-[1.35] tracking-tight text-fg sm:text-[2.25rem]">
               {headline}
             </h1>
             {lead && <p className="mt-3 max-w-[60ch] text-base text-fg/80">{lead}</p>}
@@ -388,7 +387,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
         {/* UX-17: หน้าแรกที่มีตัวเลขเยอะสุดต้องบอกข้อจำกัดเหมือนหน้า SHAP / What-if */}
         {(s.warning || s.data_note) && (
           <Alert tone="warning">
-            {[s.warning && `${UNCALIBRATED} (ผู้ดูแลระบบปรับเทียบได้ที่แท็บ “ปรับเทียบโมเดล”)`, s.data_note].filter(Boolean).join(' · ')}
+            {[s.warning && `${UNCALIBRATED} (ผู้ดูแลระบบปรับเทียบได้ที่แท็บ “ปรับเทียบโมเดล”)`, s.data_note].filter(Boolean).join(' ')}
           </Alert>
         )}
 
@@ -484,7 +483,7 @@ export default function Overview({ greeting, who, onPick, onImport, onCsv }) {
                 </div>
                 <p className="mt-1.5 text-xs text-muted-fg">
                   <span className={f.actionable ? 'font-medium text-accent' : ''}>{f.actionable ? 'บริษัทปรับได้' : 'ปรับไม่ได้'}</span>
-                  {f.recommendation && ` · ${f.recommendation}`}
+                  {f.recommendation && `: ${f.recommendation}`}
                 </p>
               </li>
             ))}

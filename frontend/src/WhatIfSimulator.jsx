@@ -131,7 +131,7 @@ function MoneyControl({ field, base, value, onChange }) {
         </div>
       </div>
       {/* ระบบเทียบอันดับเงินเดือนกับคนอื่นในบริษัท (ไม่ใช่ตัวเลขเงินตรงๆ) จึงบอกไว้ ขึ้นเงินเดือนแล้วจะเห็นผลเท่าที่อันดับขยับ */}
-      <p className="mt-2 text-xs text-muted-fg">พิมพ์ตัวเลขแล้วกด Enter หรือลากแถบ · ระบบดูว่าเงินเดือนนี้มากหรือน้อยเมื่อเทียบกับคนอื่นในบริษัท</p>
+      <p className="mt-2 text-xs text-muted-fg">พิมพ์ตัวเลขแล้วกด Enter หรือลากแถบ ระบบดูว่าเงินเดือนนี้มากหรือน้อยเมื่อเทียบกับคนอื่นในบริษัท</p>
     </div>
   )
 }
@@ -406,7 +406,7 @@ function describe(changes) {
       const opt = CONTROL[f]?.options?.find(([o]) => String(o) === String(v))?.[1]
       return `${featureLabel(f)}: ${f === 'MonthlyIncome' ? baht(v) : (opt ?? v.toLocaleString())}`
     })
-    .join(' · ')
+    .join(', ')
 }
 
 export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, onPick }) {
@@ -661,7 +661,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
             }
           >
             <div className="mb-6">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-fg">มาตรการสำเร็จรูป</div>
+              <div className="mb-2 text-sm font-medium text-muted-fg">มาตรการสำเร็จรูป</div>
               <div className="flex flex-wrap gap-2">
                 {shownPresets.map((p) => {
                   const state = presetState(p)
@@ -683,7 +683,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                     >
                       {state === 'applied' ? <Icon name="check" className="size-4" /> : state === 'off' ? <span aria-hidden="true">+</span> : null}
                       {p.label}
-                      {state === 'noop' && <span className="text-xs font-normal">· ทำอยู่แล้ว</span>}
+                      {state === 'noop' && <span className="text-xs font-normal">(ทำอยู่แล้ว)</span>}
                     </button>
                   )
                 })}
@@ -698,7 +698,7 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
                   </button>
                 )}
               </div>
-              <p className="mt-2 text-xs text-muted-fg">กดหลายอันได้ ผลรวมกัน · กดซ้ำเพื่อยกเลิก · ปรับละเอียดต่อได้ที่ช่องด้านล่าง</p>
+              <p className="mt-2 text-xs text-muted-fg">เลือกได้หลายมาตรการ ผลจะรวมกัน กดซ้ำเพื่อยกเลิก และปรับละเอียดต่อได้ที่ช่องด้านล่าง</p>
             </div>
             {focused.length > 0 && (
               <fieldset className="mb-6">
@@ -789,7 +789,6 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
           <Card>
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <div className="text-xs font-medium text-muted-fg">ผลจำลอง</div>
                 <div className="font-semibold text-fg">{employeeLabel(loaded.id, result.name)}</div>
               </div>
               <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-fg">อัปเดตอัตโนมัติ</span>
@@ -798,8 +797,8 @@ export default function WhatIfSimulator({ query, who, tenant, onRisk, onDone, on
               {/* เกจเดียว (เดิมก่อน/หลังเป็นเกจคู่ ช่องขวาซ้อน 9 กล่อง critique รอบ 9) ก่อนปรับเหลือบรรทัดเดียว */}
               {nChanged > 0 && (
                 <p className="text-sm text-muted-fg">
-                  ก่อนปรับ <b className={`tabular-nums ${BAND[result.before.risk_band].text}`}>{Math.round(scoreOf(result.before) * 100)}</b> · เสี่ยง
-                  {result.before.risk_band_th}
+                  ก่อนปรับ <b className={`tabular-nums ${BAND[result.before.risk_band].text}`}>{Math.round(scoreOf(result.before) * 100)}</b> (เสี่ยง
+                  {result.before.risk_band_th})
                 </p>
               )}
               <RiskGauge size="md" title={nChanged ? 'หลังปรับ' : 'คะแนนตอนนี้'} score={afterScore} band={result.after.risk_band} bandTh={result.after.risk_band_th} />

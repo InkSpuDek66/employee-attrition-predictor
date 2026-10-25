@@ -14,7 +14,7 @@ const METHODS = [
   ['isotonic', 'แบบยืดหยุ่น'],
 ]
 const METHOD_HINT = {
-  platt: 'ปรับทั้งสเกลพร้อมกันแบบนุ่มนวล เหมาะกับข้อมูลน้อย (50–300 คน)',
+  platt: 'ปรับทั้งสเกลพร้อมกันแบบนุ่มนวล เหมาะกับข้อมูลน้อย (50 ถึง 300 คน)',
   isotonic: 'ปรับตามข้อมูลจริงทีละช่วงคะแนน ควรใช้ข้อมูลอย่างน้อย 500 คน หากน้อยกว่านี้ พนักงานหลายคนจะได้คะแนนเท่ากัน และหน้าลองปรับเงื่อนไขจะแสดงผลของแต่ละมาตรการได้ไม่ชัดเจน',
 }
 const METHOD_TH = { platt: 'แบบเส้นตรง', isotonic: 'แบบยืดหยุ่น' }
@@ -145,7 +145,7 @@ function CalibrationChart({ curve, bins }) {
         )}
       </div>
       <figcaption className="mt-2 text-xs text-muted-fg">
-        แกนตั้ง = คะแนนหลังปรับ · จุดสีส้มอยู่ใต้เส้นประ = ช่วงนั้นโมเดลให้คะแนนสูงกว่าความจริง อยู่เหนือ = ต่ำกว่าความจริง
+        แกนตั้งคือคะแนนหลังปรับ จุดสีส้มอยู่ใต้เส้นประ = ช่วงนั้นโมเดลให้คะแนนสูงกว่าความจริง อยู่เหนือ = ต่ำกว่าความจริง
         เส้นทึบคือสูตรที่ดึงคะแนนเข้าหาจุดสีส้ม
       </figcaption>
     </figure>
@@ -187,7 +187,7 @@ function Result({ r, method }) {
         </>
       )}
 
-      <h3 className="mt-5 text-sm font-semibold text-fg">คะแนนความเสี่ยง (0–100) ก่อนและหลังปรับเทียบ</h3>
+      <h3 className="mt-5 text-sm font-semibold text-fg">คะแนนความเสี่ยง (0 ถึง 100) ก่อนและหลังปรับเทียบ</h3>
       <p className="mb-2 text-xs text-muted-fg">คะแนนต่ำหมายถึงเสี่ยงลาออกน้อย ตัวเลขซ้ายคือคะแนนตั้งต้น ตัวเลขขวาคือคะแนนที่ปรับให้ตรงกับอัตราลาออกของบริษัท</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {r.examples.map((e) => (
@@ -330,7 +330,7 @@ export default function Calibrate({ who, onChanged }) {
       )}
 
       {items.length > 0 && (
-        <Card icon="clock" title="ประวัติการปรับเทียบ" subtitle="ตัวหนา = ครั้งที่ระบบใช้อยู่ · ผลที่ทำไว้กับระบบรุ่นก่อนเก็บไว้ดูเท่านั้น">
+        <Card icon="clock" title="ประวัติการปรับเทียบ" subtitle="ตัวหนาคือครั้งที่ระบบใช้อยู่ ผลที่ทำไว้กับระบบรุ่นก่อนเก็บไว้ดูเท่านั้น">
           <div className="-mx-5 overflow-x-auto sm:-mx-6">
             <table className="w-full whitespace-nowrap text-sm">
               <thead>

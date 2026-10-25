@@ -1,3 +1,11 @@
+/* Hallmark · checked: 2026-10-25 · genre: modern-minimal (inferred) · shape: app screen
+ * floor: 0 open (the 45 sloplint FAIL left are the two notes below) · fixed: 10 (2a, 4, 10a, 19, 26b, 29, 48, 54, 63, 67) · finish: F16, F24 · structural: 2 printed (overview leads with a greeting banner, not the list; a rail for 6 destinations)
+ * built: the project · redesign: polish · v2.0.0 */
+/* Hallmark · note 48 · the dark values sit in the .dark theme block that Tailwind's dark variant reads; sloplint reads only :root and [data-theme] as token blocks */
+/* Hallmark · note 4 · Mascot.jsx picker: sloplint reads the colour token class ring-offset-card inside bg-card as a nested card; the avatars are radio buttons in one popover */
+/* Hallmark · kept the dash in "ยาว 3–32 ตัว" (theme.js) · theme.test.js:147 matches that exact text, and a polish never edits a test */
+/* Hallmark · finish-review: subagent · 5 findings · 5 resolved (gauge pin scroll, doubled page subtitle, "ผลวิเคราะห์ของ" titles, role and department separator, rank caption wrap) */
+/* Hallmark · dismissed 49 · "จำลองการปรับเงื่อนไขของพนักงานคนนี้" sits on one line at 390 and 1440 in the screenshots */
 @import 'tailwindcss';
 
 /* โหมดมืดสลับด้วย class .dark บน <html> (index.html ตั้งค่าแรกตามเครื่อง/ที่เคยเลือก) */
@@ -25,6 +33,8 @@
   --color-ink: #0f1e33;
   --color-canvas: #f5f9fd;
   --color-card: #ffffff;
+  /* กระดาษตอนพิมพ์: ขาวเสมอแม้เปิดโหมดมืดอยู่ */
+  --color-paper: #ffffff;
   --color-fg: #0f1b2d;
   --color-muted: #edf3fa;
   --color-muted-fg: #56677d;
@@ -121,29 +131,9 @@ body {
   @apply bg-canvas text-fg antialiased;
 }
 
-/* พื้นหลังจางๆ ของหน้า login: แสงฟ้าพาสเทลสองมุมทแยง (ซ้ายบน/ขวาล่าง) เข้มเท่ากัน บนพื้นสีเดิม (ใช้สีธีม โหมดมืดเปลี่ยนเอง) */
-.login-glow {
-  background:
-    radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%),
-    radial-gradient(42rem 32rem at 88% 92%, color-mix(in oklab, var(--color-primary) 45%, transparent), transparent 70%);
-}
-/* หน้าหลัก: แสงฟ้าพาสเทลมุมขวาบนกับซ้ายล่าง จางกว่าหน้า login (ไม่แย่งสายตาจากข้อมูล) */
-.app-glow {
-  background:
-    radial-gradient(40rem 28rem at 100% 0%, color-mix(in oklab, var(--color-primary) 22%, transparent), transparent 70%),
-    radial-gradient(36rem 26rem at 0% 100%, color-mix(in oklab, var(--color-primary) 16%, transparent), transparent 70%);
-}
-.dark .app-glow {
-  background:
-    radial-gradient(40rem 28rem at 100% 0%, color-mix(in oklab, var(--color-primary) 7%, transparent), transparent 70%),
-    radial-gradient(36rem 26rem at 0% 100%, color-mix(in oklab, var(--color-primary) 5%, transparent), transparent 70%);
-}
-/* หัวหน้าภาพรวม: ท้องฟ้าฟ้าอมม่วงจางๆ จุดเดียวของทั้งหน้าที่มีบรรยากาศ */
+/* แบนเนอร์หน้าภาพรวม: พื้นฟ้าอ่อนสีเดียวจาก token (เดิมไล่สีฟ้าไปม่วง Hallmark 2a) โหมดมืดเปลี่ยนตาม token เอง */
 .hero-sky {
-  background: linear-gradient(160deg, #e3eefc 0%, #edf2fd 55%, #f0edfb 100%);
-}
-.dark .hero-sky {
-  background: linear-gradient(160deg, #13263f 0%, #151f39 60%, #1b1a36 100%);
+  background: var(--color-primary-soft);
 }
 /* กล่องรอโหลด: แถบแสงวิ่งผ่านแทนการกะพริบ */
 .skeleton {
@@ -163,18 +153,11 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px -4px color-mix(in oklab, var(--color-accent) 25%, transparent);
 }
-.dark .login-glow {
-  background:
-    radial-gradient(42rem 32rem at 12% 8%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%),
-    radial-gradient(42rem 32rem at 88% 92%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%);
-}
-
 /* อนิเมชั่นของหน้าจอ: สั้น (≤ 0.9s) เล่นตอนแสดง/ข้อมูลเปลี่ยนเท่านั้น และหยุดเองเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว" (กฎ reduced-motion ด้านล่าง) */
 /* กราฟแท่งยืดออกตอนแสดงครั้งแรก + เลื่อนความยาวนุ่มๆ ตอนค่าเปลี่ยน (ซ้าย = ยืดจากซ้าย, -r = ยืดจากขวา) */
 .bar-grow {
   transform-origin: left center;
   animation: bar-grow 550ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  transition: width 400ms ease;
 }
 .bar-grow-r {
   transform-origin: right center;
@@ -251,6 +234,16 @@ body {
     accent-color: var(--color-accent);
     scrollbar-color: var(--color-secondary) transparent;
   }
+  /* ปุ่มตอนกด / ปิดอยู่ (Hallmark 26b) อยู่ใน base: class ของ Tailwind ทับได้ (เช่น cursor-wait ตอนโหลด) */
+  :where(button, a[href], summary, [role='button']):not(:disabled, [aria-disabled='true']):active {
+    scale: 0.97;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  :root {
+    caret-color: var(--color-accent);
+  }
   ::selection {
     background: var(--color-primary);
     color: var(--color-on-primary);
@@ -265,12 +258,11 @@ body {
 @media print {
   @page { margin: 14mm; }
   body {
-    background: #fff !important;
+    background: var(--color-paper) !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
   section { break-inside: avoid; }
-  .app-glow { display: none; }
   details[open]::details-content { opacity: 1; }
 }
 
@@ -351,7 +343,7 @@ details[open]::details-content {
     border-radius: 1rem;
     background: var(--color-card);
     padding: 0.375rem;
-    box-shadow: 0 16px 40px -16px color-mix(in oklab, var(--color-ink) 35%, transparent);
+    box-shadow: 0 8px 16px -10px color-mix(in oklab, var(--color-ink) 35%, transparent);
     transform-origin: top center;
     opacity: 0;
     translate: 0 -6px;
@@ -562,7 +554,6 @@ details[open]::details-content {
 .bar-grow-up {
   transform-origin: center bottom;
   animation: bar-grow-up 550ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  transition: height 400ms ease;
 }
 @keyframes bar-grow-up {
   from { transform: scaleY(0); }
@@ -574,4 +565,15 @@ details[open]::details-content {
 }
 @keyframes fade-in {
   from { opacity: 0; }
+}
+
+/* แท่งเมนูมือถือ: เปิดลงมาด้วย clip-path (ไม่ขยับความสูงจริง Hallmark 10a) จากขนาดโลโก้ 4rem ไปเต็มแท่ง */
+@media (max-width: 1023.98px) {
+  .rail-reveal {
+    animation: rail-reveal 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+@keyframes rail-reveal {
+  from { clip-path: inset(0 0 calc(100% - 4rem) 0 round 2rem); }
+  to { clip-path: inset(0 0 0 0 round 2rem); }
 }

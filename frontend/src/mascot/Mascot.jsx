@@ -100,7 +100,7 @@ export function SpeakingMascot({ who, mood = 'none', replay, size = 'lg', childr
       {size === 'plain' ? (
         <div className="min-w-0">{children}</div>
       ) : (
-        <Bubble tail={box.tail} className={`w-full min-w-0 max-w-3xl shadow-[0_18px_40px_-24px_rgb(30_70_140/0.35)] ${box.bubble}`}>
+        <Bubble tail={box.tail} className={`w-full min-w-0 max-w-3xl shadow-[0_12px_20px_-12px_var(--color-secondary)] ${box.bubble}`}>
           {children}
         </Bubble>
       )}
@@ -234,7 +234,7 @@ export function MascotSwitch({ who, onChoose }) {
         id="mascot-picker"
         popover="auto"
         onToggle={onToggle}
-        className="fade-up fixed m-0 rounded-2xl border border-line bg-card p-4 text-center text-fg shadow-xl"
+        className="fade-up fixed m-0 rounded-2xl border border-line bg-card p-4 text-center text-fg shadow-[0_6px_16px_-8px_var(--color-secondary)]"
       >
         <div id="mascot-picker-label" className="text-sm text-muted-fg">
           อยากให้ใครเป็นผู้ช่วยดี?

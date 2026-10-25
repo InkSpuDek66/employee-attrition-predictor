@@ -93,8 +93,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
 
   return (
     <main className="relative isolate grid min-h-dvh place-items-center overflow-hidden bg-canvas px-4 py-8 [@media(max-height:820px)]:py-2">
-      <div className="login-glow pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
-      {/* z-20: จอมือถือ (เตี้ยกว่า 820px) โลโก้ขยับขึ้นมาทับมุมขวาบน ปุ่มเลยกดไม่ได้ */}
+            {/* z-20: จอมือถือ (เตี้ยกว่า 820px) โลโก้ขยับขึ้นมาทับมุมขวาบน ปุ่มเลยกดไม่ได้ */}
       <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="absolute right-4 top-4 z-20" />
       {/* จอเตี้ย (โน้ตบุ๊ก 768/720) ย่อโลโก้/ระยะห่าง ฟอร์ม + ผู้ช่วยที่ออกมาชี้จะได้พอดีจอ ไม่ต้องเลื่อน */}
       {/* จอใหญ่: ปุกปุย + จอย ทางซ้าย, กิต + ส้มฉุน ทางขวา (สัตว์ยืนด้านนอก) ยืนเสมอขอบล่างของฟอร์ม เห็นครบในจอเดียว */}
@@ -218,7 +217,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
                 <button
                   type="button"
                   onClick={() => (setUsername(a.username), setPassword(a.password), setProblem(null), (demo.current.open = false))}
-                  className="lift w-full cursor-pointer rounded-lg border border-line bg-card px-3 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="w-full cursor-pointer rounded-xl bg-muted/60 px-3 py-2.5 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                     <span className="font-medium text-fg">{a.role}</span>

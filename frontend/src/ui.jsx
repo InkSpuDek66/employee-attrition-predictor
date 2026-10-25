@@ -207,10 +207,11 @@ export function RiskGauge({ title, score, band = bandOf(score), bandTh, size = '
         {avg != null && (
           <div className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fg/45" style={{ left: `${avg * 100}%` }} aria-hidden="true" />
         )}
-        <div
-          className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-card bg-fg ring-1 ring-line transition-[left] duration-300"
-          style={{ left: `${pct}%` }}
-        />
+        {/* หมุดเลื่อนด้วย transform (Hallmark 10a): ชั้นนอกกว้างเท่าแถบ เริ่มอยู่ซ้ายของแถบทั้งชิ้น (right-full) หมุดอยู่ที่ขอบขวาของมัน
+            translateX(pct%) จึงพาหมุดไปที่ pct% ของแถบ และส่วนที่ล้นอยู่ทางซ้าย ไม่ทำให้หน้าเลื่อนแนวนอน */}
+        <div className="absolute inset-y-0 right-full w-full transition-transform duration-300" style={{ transform: `translateX(${pct}%)` }} aria-hidden="true">
+          <div className="absolute left-full top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-card bg-fg ring-1 ring-line" />
+        </div>
       </div>
       <div className="relative mt-1.5 h-4 text-xs tabular-nums text-muted-fg">
         <span className="absolute left-0">0</span>

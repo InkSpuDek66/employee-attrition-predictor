@@ -133,10 +133,10 @@ function PrintHeader({ id, name, printedAt }) {
     <div className="hidden items-center gap-3 border-b border-line pb-4 print:flex">
       <Logo className="size-12" />
       <div className="flex-1">
-        <div className="text-lg font-semibold text-fg">รายงานความเสี่ยงการลาออก · {employeeLabel(id, name)}</div>
+        <div className="text-lg font-semibold text-fg">รายงานความเสี่ยงการลาออกของ {employeeLabel(id, name)}</div>
         <div className="text-sm text-muted-fg">
-          {user?.tenant_name ?? user?.tenant_id} · พิมพ์เมื่อ {printedAt}
-          {user?.name && ` · โดย ${user.name}`}
+          {user?.tenant_name ?? user?.tenant_id} พิมพ์เมื่อ {printedAt}
+          {user?.name && ` โดย ${user.name}`}
         </div>
       </div>
     </div>
@@ -228,11 +228,10 @@ export default function ShapViewer({ query, who, onRisk, onDone, onPick, onTab }
         <aside className="lg:sticky lg:top-20 lg:order-last">
           <Card>
             <div className="mb-4">
-              <div className="text-xs font-medium text-muted-fg">ผลวิเคราะห์</div>
               <div className="font-semibold text-fg">{employeeLabel(query.id, data.name)}</div>
               {data.job_role && (
                 <div className="text-xs text-muted-fg">
-                  {data.job_role} · {data.department}
+                  {data.job_role}, {data.department}
                 </div>
               )}
             </div>
