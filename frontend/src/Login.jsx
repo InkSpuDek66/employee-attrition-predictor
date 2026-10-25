@@ -91,119 +91,128 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
     }
   }
 
-  return (
-    <main className="relative isolate grid min-h-dvh place-items-center overflow-hidden bg-canvas px-4 py-8 [@media(max-height:820px)]:py-2">
-            {/* z-20: จอมือถือ (เตี้ยกว่า 820px) โลโก้ขยับขึ้นมาทับมุมขวาบน ปุ่มเลยกดไม่ได้ */}
-      <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="absolute right-4 top-4 z-20" />
-      {/* จอเตี้ย (โน้ตบุ๊ก 768/720) ย่อโลโก้/ระยะห่าง ฟอร์ม + ผู้ช่วยที่ออกมาชี้จะได้พอดีจอ ไม่ต้องเลื่อน */}
-      {/* จอใหญ่: ปุกปุย + จอย ทางซ้าย, กิต + ส้มฉุน ทางขวา (สัตว์ยืนด้านนอก) ยืนเสมอขอบล่างของฟอร์ม เห็นครบในจอเดียว */}
-      <div className="flex w-full items-end justify-center gap-6 xl:gap-10">
-        <WelcomeMascots keys={['dog', 'joy']} enter="left" away={away} className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
-        <div className="w-full max-w-md space-y-6 [@media(max-height:820px)]:space-y-3">
-        <div className="login-enter flex flex-col items-center text-center">
-          <Logo className="size-24 sm:size-28 [@media(max-height:820px)]:size-20" />
-          <div className="mt-3 text-2xl font-semibold tracking-tight text-fg" translate="no">
-            Attrition Predictor
-          </div>
-          <div className="text-sm text-muted-fg">HR Analytics · ทำนายความเสี่ยงพนักงานลาออก</div>
+  // สองฟอร์มซ้อนในช่องเดียวกัน (ฟอร์มที่ไม่ได้ใช้ซ่อนไว้) การ์ดสูงเท่ากัน ลิงก์สลับหน้าอยู่ล่างสุดตำแหน่งเดิม กดสลับไปมาไม่กระโดด
+  const forms = (
+    <div className="grid">
+      <form ref={registerForm} onSubmit={createCompany} noValidate inert={mode !== 'register'} className={`flex flex-col [grid-area:1/1] ${mode === 'register' ? '' : 'invisible max-lg:hidden'} space-y-3 rounded-xl border border-line bg-card p-6`}>
+        <div>
+          <h1 className="text-xl font-semibold text-fg">สร้างบริษัทใหม่</h1>
+          <p className="text-sm text-muted-fg">ได้บริษัทว่างพร้อมบัญชีผู้ดูแลระบบ แล้วนำเข้าพนักงานของบริษัทเองได้ ไม่เห็นข้อมูลบริษัทอื่น</p>
         </div>
-
-        {/* สองฟอร์มซ้อนในช่องเดียวกัน (ฟอร์มที่ไม่ได้ใช้ซ่อนไว้) การ์ดสูงเท่ากัน ลิงก์สลับหน้าอยู่ล่างสุดตำแหน่งเดิม กดสลับไปมาไม่กระโดด */}
+        <CheckedField mascot={BOTH} label="ชื่อบริษัท" name="company_name" problem={regProblem} value={company.company_name} onChange={setField('company_name')} maxLength={100} />
+        <div className="grid grid-flow-dense items-start gap-3 sm:grid-cols-2">
+          <CheckedField mascot={LEFT} label="ชื่อของคุณ" name="name" problem={regProblem} value={company.name} onChange={setField('name')} maxLength={100} />
+          <CheckedField side="right" mascot={RIGHT} label="ชื่อผู้ใช้ (a-z ตัวเลข)" name="username" problem={regProblem} value={company.username} onChange={setField('username')} autoComplete="username" spellCheck={false} />
+          <CheckedField mascot={LEFT} label="รหัสผ่าน (8 ตัวขึ้นไป)" name="password" problem={regProblem} type="password" value={company.password} onChange={setField('password')} autoComplete="new-password" />
+          <CheckedField side="right" mascot={RIGHT} label="ยืนยันรหัสผ่าน" name="confirm" problem={regProblem} type="password" value={company.confirm} onChange={setField('confirm')} autoComplete="new-password" />
+        </div>
+        {regProblem && !regProblem.field && <Alert>{regProblem.text}</Alert>}
         <div className="grid">
-          <form ref={registerForm} onSubmit={createCompany} noValidate inert={mode !== 'register'} className={`flex flex-col [grid-area:1/1] ${mode === 'register' ? '' : 'invisible'} space-y-3 rounded-xl border border-line bg-card p-6`}>
-            <div>
-              <h1 className="text-xl font-semibold text-fg">สร้างบริษัทใหม่</h1>
-              <p className="text-sm text-muted-fg">ได้บริษัทว่างพร้อมบัญชีผู้ดูแลระบบ แล้วนำเข้าพนักงานของบริษัทเองได้ ไม่เห็นข้อมูลบริษัทอื่น</p>
-            </div>
-            <CheckedField mascot={BOTH} label="ชื่อบริษัท" name="company_name" problem={regProblem} value={company.company_name} onChange={setField('company_name')} maxLength={100} />
-            <div className="grid grid-flow-dense items-start gap-3 sm:grid-cols-2">
-              <CheckedField mascot={LEFT} label="ชื่อของคุณ" name="name" problem={regProblem} value={company.name} onChange={setField('name')} maxLength={100} />
-              <CheckedField side="right" mascot={RIGHT} label="ชื่อผู้ใช้ (a-z ตัวเลข)" name="username" problem={regProblem} value={company.username} onChange={setField('username')} autoComplete="username" spellCheck={false} />
-              <CheckedField mascot={LEFT} label="รหัสผ่าน (8 ตัวขึ้นไป)" name="password" problem={regProblem} type="password" value={company.password} onChange={setField('password')} autoComplete="new-password" />
-              <CheckedField side="right" mascot={RIGHT} label="ยืนยันรหัสผ่าน" name="confirm" problem={regProblem} type="password" value={company.confirm} onChange={setField('confirm')} autoComplete="new-password" />
-            </div>
-            {regProblem && !regProblem.field && <Alert>{regProblem.text}</Alert>}
-            <div className="grid">
-              <PrimaryButton loading={busy} loadingText="กำลังสร้าง…">
-                สร้างบริษัทและเข้าสู่ระบบ <Icon name="right" className="size-4" />
-              </PrimaryButton>
-            </div>
-            <p className="mt-auto text-center text-sm text-muted-fg">
-              มีบัญชีแล้ว?{' '}
-              <button type="button" onClick={() => switchTo('login')} className="cursor-pointer font-medium text-accent hover:underline">
-                เข้าสู่ระบบ
-              </button>
-            </p>
-          </form>
-          <form ref={loginForm} onSubmit={submit} noValidate style={{ '--enter': '120ms' }} inert={mode !== 'login'} className={`login-enter flex flex-col [grid-area:1/1] ${mode === 'login' ? '' : 'invisible'} space-y-4 rounded-xl border border-line bg-card p-6`}>
-          <div>
-            <h1 className="text-xl font-semibold text-fg">เข้าสู่ระบบ</h1>
-            <p className="text-sm text-muted-fg">ข้อมูลพนักงานเป็นข้อมูลส่วนบุคคล ต้องเข้าสู่ระบบก่อนใช้งาน</p>
-          </div>
-          <Field label="ชื่อผู้ใช้" icon="user">
-            <input
-              className={`${inputClass} ${loginBad('username') ? invalidClass : ''}`}
-              name="username"
-              autoComplete="username"
-              spellCheck={false}
-              aria-invalid={loginBad('username') || undefined}
-              value={username}
-              onChange={typed(setUsername, 'username')}
-            />
-          </Field>
-          {loginProblem?.field === 'username' && (
-            <PointHint key={loginProblem.text} {...LEFT} className="-mt-2">
-              {loginProblem.text}
-            </PointHint>
-          )}
-          <Field label="รหัสผ่าน">
-            <span className="relative block">
-              <input
-                className={`${inputClass} pr-12 ${loginBad('password') ? invalidClass : ''}`}
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                aria-invalid={loginBad('password') || undefined}
-                value={password}
-                onChange={typed(setPassword, 'password')}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
-                aria-pressed={showPassword}
-                className="absolute inset-y-0 right-0 grid w-11 cursor-pointer place-items-center rounded-r-lg text-muted-fg transition-colors duration-150 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <Icon name={showPassword ? 'eyeOff' : 'eye'} className="size-5" />
-              </button>
-            </span>
-          </Field>
-          {['password', 'credentials'].includes(loginProblem?.field) && (
-            <PointHint key={loginProblem.text} {...(loginProblem.field === 'password' ? { ...RIGHT, align: 'right' } : BOTH)} className="-mt-2">
-              {loginProblem.text}
-            </PointHint>
-          )}
-          {expired && !loginProblem && <Alert tone="warning">หมดเวลาการใช้งาน หรือระบบเพิ่งเริ่มใหม่ กรุณาเข้าสู่ระบบอีกครั้ง</Alert>}
-          {loginProblem && !loginProblem.field && <Alert>{loginProblem.text}</Alert>}
-          <div className="grid">
-            <PrimaryButton loading={busy} loadingText="กำลังเข้าสู่ระบบ…">
-              เข้าสู่ระบบ <Icon name="right" className="size-4" />
-            </PrimaryButton>
-          </div>
-          <p className="mt-auto text-center text-sm text-muted-fg">
-            ยังไม่มีบัญชี?{' '}
-            <button type="button" onClick={() => switchTo('register')} className="cursor-pointer font-medium text-accent hover:underline">
-              สร้างบริษัทใหม่
-            </button>
-          </p>
-          </form>
+          <PrimaryButton loading={busy} loadingText="กำลังสร้าง…">
+            สร้างบริษัทและเข้าสู่ระบบ <Icon name="right" className="size-4" />
+          </PrimaryButton>
         </div>
-        </div>
-        <WelcomeMascots keys={['kit', 'cat']} enter="right" away={away} className="mb-2 hidden gap-2 lg:flex [&_svg]:h-40 xl:[&_svg]:h-48 [&_[data-kind=pet]_svg]:h-28 xl:[&_[data-kind=pet]_svg]:h-32" />
+        <p className="mt-auto text-center text-sm text-muted-fg">
+          มีบัญชีแล้ว?{' '}
+          <button type="button" onClick={() => switchTo('login')} className="cursor-pointer font-medium text-accent hover:underline">
+            เข้าสู่ระบบ
+          </button>
+        </p>
+      </form>
+      <form ref={loginForm} onSubmit={submit} noValidate style={{ '--enter': '120ms' }} inert={mode !== 'login'} className={`login-enter flex flex-col [grid-area:1/1] ${mode === 'login' ? '' : 'invisible max-lg:hidden'} space-y-4 rounded-xl border border-line bg-card p-6`}>
+      <div>
+        <h1 className="text-xl font-semibold text-fg">เข้าสู่ระบบ</h1>
+        <p className="text-sm text-muted-fg">ข้อมูลพนักงานเป็นข้อมูลส่วนบุคคล ต้องเข้าสู่ระบบก่อนใช้งาน</p>
       </div>
+      <Field label="ชื่อผู้ใช้" icon="user">
+        <input
+          className={`${inputClass} ${loginBad('username') ? invalidClass : ''}`}
+          name="username"
+          autoComplete="username"
+          spellCheck={false}
+          aria-invalid={loginBad('username') || undefined}
+          value={username}
+          onChange={typed(setUsername, 'username')}
+        />
+      </Field>
+      {loginProblem?.field === 'username' && (
+        <PointHint key={loginProblem.text} {...LEFT} className="-mt-2">
+          {loginProblem.text}
+        </PointHint>
+      )}
+      <Field label="รหัสผ่าน">
+        <span className="relative block">
+          <input
+            className={`${inputClass} pr-12 ${loginBad('password') ? invalidClass : ''}`}
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            aria-invalid={loginBad('password') || undefined}
+            value={password}
+            onChange={typed(setPassword, 'password')}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+            aria-pressed={showPassword}
+            className="absolute inset-y-0 right-0 grid w-11 cursor-pointer place-items-center rounded-r-lg text-muted-fg transition-colors duration-150 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <Icon name={showPassword ? 'eyeOff' : 'eye'} className="size-5" />
+          </button>
+        </span>
+      </Field>
+      {['password', 'credentials'].includes(loginProblem?.field) && (
+        <PointHint key={loginProblem.text} {...(loginProblem.field === 'password' ? { ...RIGHT, align: 'right' } : BOTH)} className="-mt-2">
+          {loginProblem.text}
+        </PointHint>
+      )}
+      {expired && !loginProblem && <Alert tone="warning">หมดเวลาการใช้งาน หรือระบบเพิ่งเริ่มใหม่ กรุณาเข้าสู่ระบบอีกครั้ง</Alert>}
+      {loginProblem && !loginProblem.field && <Alert>{loginProblem.text}</Alert>}
+      <div className="grid">
+        <PrimaryButton loading={busy} loadingText="กำลังเข้าสู่ระบบ…">
+          เข้าสู่ระบบ <Icon name="right" className="size-4" />
+        </PrimaryButton>
+      </div>
+      <p className="mt-auto text-center text-sm text-muted-fg">
+        ยังไม่มีบัญชี?{' '}
+        <button type="button" onClick={() => switchTo('register')} className="cursor-pointer font-medium text-accent hover:underline">
+          สร้างบริษัทใหม่
+        </button>
+      </p>
+      </form>
+    </div>
+  )
+  // แบ่งครึ่งจอ: ซ้าย = ผืนสีหลักของระบบ (โหมดมืดเป็นกรมท่า) ชื่อระบบ + ประโยคเดียว + ผู้ช่วยทั้งสี่ยืนบนแถบพื้น / ขวา = ฟอร์มบนพื้นขาว
+  // มือถือ: ผืนสีเป็นแถบบน ผู้ช่วยทั้งสี่ตัวเล็กยืนบนแถบพื้น ฟอร์มอยู่ล่าง (การ์ดสูงพอดีฟอร์มที่ใช้อยู่) เว้นที่ล่างให้ปุ่มบัญชีทดลองไม่ทับลิงก์
+  return (
+    <main className="relative isolate grid min-h-dvh bg-card lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      {/* มือถือ: ปุ่มอยู่บนแถบสี ใช้สีตัวหนังสือของแถบ */}
+      <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="absolute right-4 top-4 z-20 max-lg:border-current/30! max-lg:text-on-action! dark:max-lg:text-fg!" />
+      <section className="relative flex flex-col overflow-hidden bg-action pl-6 pr-16 pt-8 text-on-action lg:px-14 lg:pt-14 dark:bg-primary-soft dark:text-fg">
+        <div className="login-enter flex items-center gap-4 lg:flex-col lg:items-start">
+          <Logo className="size-20 shrink-0 lg:size-28" />
+          <div>
+            <div className="text-2xl font-semibold tracking-tight lg:mt-4 lg:text-5xl" translate="no">
+              Attrition Predictor
+            </div>
+            <p className="mt-1 max-w-md text-base opacity-90 lg:mt-4 lg:text-xl">
+              รู้ก่อนว่าพนักงานคนไหน<span className="whitespace-nowrap">เสี่ยงลาออก</span> และเพราะอะไร
+            </p>
+          </div>
+        </div>
+        {/* พื้นที่ผู้ช่วยยืน: แถบสีเข้มกว่าผืนหนึ่งขั้นที่ขอบล่าง (-mr-10 บนมือถือชดเชย pr-16 ที่เว้นให้ปุ่มธีม ผู้ช่วยจะได้อยู่กลาง) ตัวที่ออกไปชี้ช่องในฟอร์มจางหายจากตรงนี้ (away) */}
+        <div className="relative -mr-10 mt-auto pt-6 lg:mr-0 lg:pt-10">
+          <div className="absolute inset-x-[-3.5rem] bottom-0 h-10 bg-[color-mix(in_oklab,var(--color-action)_82%,var(--color-ink))] dark:bg-secondary" aria-hidden="true" />
+          <WelcomeMascots keys={['dog', 'joy', 'kit', 'cat']} enter="left" away={away} className="relative justify-center gap-2 pb-4 lg:gap-3 lg:pb-6 xl:gap-6 [&_svg]:h-24 [&_[data-kind=pet]_svg]:h-16 lg:[&_svg]:h-44 lg:[&_[data-kind=pet]_svg]:h-28 xl:[&_svg]:h-56 xl:[&_[data-kind=pet]_svg]:h-32" />
+        </div>
+      </section>
+      <section className="grid place-items-center px-4 pb-24 pt-8 lg:pb-8">
+        <div className="w-full max-w-md">{forms}</div>
+      </section>
 
-      {/* บัญชีทดลอง: พับเก็บไว้มุมซ้ายล่าง กดเพื่อเปิด แล้วกดบัญชีเพื่อกรอกให้ */}
-      <details ref={demo} className="group fixed bottom-4 left-4 z-10 max-w-[calc(100vw-2rem)] text-sm">
+      {/* บัญชีทดลอง: พับเก็บไว้มุมซ้ายล่างของฝั่งฟอร์ม กดเพื่อเปิด แล้วกดบัญชีเพื่อกรอกให้ */}
+      <details ref={demo} className={`group fixed bottom-4 z-10 left-4 lg:left-[calc(50%+1rem)] max-w-[calc(100vw-2rem)] text-sm`}>
         <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-risk-mid/25 bg-risk-mid-soft px-4 font-medium text-risk-mid shadow-sm transition-colors duration-150 hover:bg-risk-mid-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
           <Icon name="info" className="size-4" />
           บัญชีทดลอง

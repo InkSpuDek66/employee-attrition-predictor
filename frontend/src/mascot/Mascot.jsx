@@ -225,9 +225,10 @@ export function MascotSwitch({ who, onChoose }) {
         popoverTarget="mascot-picker"
         aria-label={`ผู้ช่วย: ${LABELS[who]} (กดเพื่อเลือกผู้ช่วย)`}
         title={`ผู้ช่วย: ${LABELS[who]}`}
-        className="size-11 cursor-pointer overflow-hidden rounded-full bg-muted ring-2 ring-line transition hover:ring-accent/50 focus-visible:outline-none focus-visible:ring-accent"
+        // ตัวเต็มขนาดเล็ก ไม่มีกรอบ (รูปหน้าในวงกลมดูอึดอัดในแท่ง) key = เปลี่ยนตัวแล้วเล่นท่าเข้าใหม่
+        className="w-12 cursor-pointer rounded-2xl px-0.5 pt-1 transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:w-14 [&_svg]:h-auto [&_svg]:w-full"
       >
-        <Avatar mood="none" mini />
+        <Avatar key={who} mood="none" />
       </button>
       <div
         ref={panel}

@@ -31,7 +31,8 @@
   --color-accent: #2b6cb0;
   --color-accent-soft: #edf5fe;
   --color-ink: #0f1e33;
-  --color-canvas: #f5f9fd;
+  /* พื้นหน้าเทาอมฟ้าเข้มกว่าการ์ดขาวหนึ่งขั้น (1.17:1 ใกล้ ref) การ์ดจึงแยกจากพื้นเป็นก้อน (เดิม #f5f9fd ต่างจากการ์ดแค่ 1.06:1 หน้าดูโล่ง) */
+  --color-canvas: #e8eef5;
   --color-card: #ffffff;
   /* กระดาษตอนพิมพ์: ขาวเสมอแม้เปิดโหมดมืดอยู่ */
   --color-paper: #ffffff;
