@@ -277,6 +277,21 @@ function Pose({ mood, suit }) {
       </>
     )
   }
+  if (mood === 'Wrong') {
+    // ผิด: ไขว้แขนเป็นกากบาทหน้าอก (ท่า "ไม่ใช่") + ป้าย ✕ สีแดง (หน้าใช้แบบเม้มปาก)
+    return (
+      <>
+        <Arm suit={suit} d="M56 120 Q68 118 88 106" />
+        <Arm suit={suit} d="M84 120 Q72 118 52 106" />
+        <Hand cx={89} cy={105} />
+        <Hand cx={51} cy={105} />
+        <g className="mascot-float">
+          <circle cx="122" cy="30" r="11" className="fill-card" {...o} strokeWidth="1.4" />
+          <path d="M117 25 l10 10 M127 25 l-10 10" className="stroke-risk-high" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      </>
+    )
+  }
   if (mood === 'Point') {
     // ชี้ขึ้น: ยกแขนขวาชูนิ้วชี้ไปที่ช่อง/จุดที่อยู่ด้านบน (ใช้ใน PointHint)
     return (
@@ -307,7 +322,7 @@ function Pose({ mood, suit }) {
 // mini = รูปหน้าเล็กสำหรับปุ่มเลือกผู้ช่วย: ตัดภาพเฉพาะหัว ไม่วาดแขน ไม่ขยับ
 export default function HrCharacter({ mood, girl = false, mini = false }) {
   const suit = girl ? SUIT_GIRL : SUIT_BOY
-  const look = mood === 'Point' ? 'none' : mood // ท่าชี้ใช้หน้า/เนกไทแบบปกติ
+  const look = mood === 'Point' ? 'none' : mood === 'Wrong' ? 'Medium' : mood // ท่าชี้ใช้หน้า/เนกไทแบบปกติ ท่าผิดใช้หน้าเม้มปาก
   return (
     <svg
       viewBox={mini === 'head' ? '10 2 120 122' : mini ? '22 16 96 96' : '0 0 140 172'} // head = ทั้งหัวไม่ตัดผม (ตัวโหลดในปุ่ม)

@@ -207,7 +207,7 @@ function Result({ r, method }) {
 }
 
 // onChanged(reset) = คะแนนทั้งระบบเปลี่ยน (reset = true ตอนยกเลิกการปรับเทียบ)
-export default function Calibrate({ who, onChanged }) {
+export default function Calibrate({ who, onChanged, onSay = () => {} }) {
   const [version, setVersion] = useState(0)
   const history = useApi([`/recalibrate/history?v=${version}`]) // v เปลี่ยน = โหลดประวัติใหม่
   const [file, setFile] = useState(null)
@@ -275,7 +275,12 @@ export default function Calibrate({ who, onChanged }) {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Card icon="list" title="1. เตรียมไฟล์" subtitle="หัวคอลัมน์เดียวกับหน้านำเข้า + คอลัมน์ “ลาออกแล้วหรือยัง”">
           <div className="flex flex-wrap gap-2">
-            <DownloadButton path="/recalibrate/template" filename="recalibrate_template.xlsx" onError={setError}>
+            <DownloadButton
+              path="/recalibrate/template"
+              filename="recalibrate_template.xlsx"
+              onError={setError}
+              onDone={() => onSay('ดาวน์โหลดไฟล์ตัวอย่างให้แล้ว', 'ใส่พนักงานที่รู้ผลแล้ว พร้อมคอลัมน์ว่าลาออกแล้วหรือยัง')}
+            >
               ไฟล์ตัวอย่าง (เปล่า)
             </DownloadButton>
             <DownloadButton path="/recalibrate/template?demo=true" filename="recalibrate_demo.xlsx" onError={setError}>

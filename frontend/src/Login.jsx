@@ -29,7 +29,11 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
   const registerForm = useRef(null)
   const loginForm = useRef(null)
   const setField = (k) => (e) => (setCompany((c) => ({ ...c, [k]: e.target.value })), problem?.field === k && setProblem(null))
-  const switchTo = (m) => (setMode(m), setProblem(null))
+  // สลับฟอร์มแล้วผู้ช่วยฝั่งที่กำลังเข้ามากระโดดเข้าใหม่ตามทิศที่ใบมีดกวาด (ไปสร้างบริษัท = เข้าจากซ้าย, กลับมาเข้าสู่ระบบ = เข้าจากขวา)
+  // นับแยกฝั่ง: เล่นใหม่ (key เปลี่ยน) เฉพาะฝั่งที่เข้ามา ฝั่งที่จากไปซ่อนทันทีที่กดสลับ (ไม่ให้เห็นสองชุดซ้อนกันระหว่างใบมีดกวาด)
+  const [entries, setEntries] = useState({ login: 0, register: 0 })
+  const switchTo = (m) => (setMode(m), setProblem(null), setEntries((e) => ({ ...e, [m]: e[m] + 1 })))
+  const loginHop = entries.login ? 'right' : 'left'
   const point = (p) => (setProblem(p), p.field && focusField(registerForm.current, p.field))
   // หน้าเข้าสู่ระบบ: credentials = ชื่อผู้ใช้/รหัสผ่านไม่ตรง (backend ไม่บอกว่าช่องไหน) แดงทั้งสองช่อง โฟกัสรหัสผ่าน
   const pointLogin = (p) => (setProblem(p), p.field && focusField(loginForm.current, p.field === 'credentials' ? 'password' : p.field))
@@ -49,6 +53,8 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
     ? { company_name: ALL, name: ['joy', 'dog'], password: ['joy', 'dog'], username: ['kit', 'cat'], confirm: ['kit', 'cat'] }
     : { username: ['joy', 'dog'], password: ['kit', 'cat'], credentials: ALL }
   const away = pointing[problem?.field] || []
+  // ตัวที่ไม่ได้ออกไปชี้ทำท่าตามสถานการณ์แทนโบกมือ: กำลังส่ง = สู้ๆ, กรอกผิด/รหัสไม่ตรง = ไขว้แขนบอกว่าผิด, ระบบมีปัญหา = ขอโทษ
+  const reaction = busy ? 'High' : !problem ? 'none' : problem.field ? 'Wrong' : 'Sorry'
 
   async function createCompany(e) {
     e.preventDefault()
@@ -64,6 +70,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...body, company_name: body.company_name.trim(), name: body.name.trim() }),
         }),
+        true, // บริษัทใหม่: แอปให้ผู้ช่วยต้อนรับหลังเข้า (หน้า login ไม่หน่วงไว้ฉลอง)
       )
     } catch (err) {
       point(serverProblem(err))
@@ -91,10 +98,14 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
     }
   }
 
-  // สองฟอร์มซ้อนในช่องเดียวกัน (ฟอร์มที่ไม่ได้ใช้ซ่อนไว้) การ์ดสูงเท่ากัน ลิงก์สลับหน้าอยู่ล่างสุดตำแหน่งเดิม กดสลับไปมาไม่กระโดด
+  // มือถือ: สองฟอร์มซ้อนในช่องเดียวกัน แสดงเฉพาะฟอร์มที่ใช้อยู่ (การ์ดสูงพอดีฟอร์ม)
+  // จอใหญ่: สร้างบริษัทอยู่ครึ่งซ้าย เข้าสู่ระบบอยู่ครึ่งขวา แสดงทั้งคู่ ฟอร์มที่ไม่ได้ใช้ถูกใบมีดบังไว้และเป็น inert
+  // (ไม่ซ่อนตอนกดสลับ ใบมีดบังจอทั้งหมดกลางทางก่อนแล้วจึงเผยฟอร์มใหม่ เหมือนสลับกันใต้เงามืด)
+  // จอใหญ่: การ์ดขาวมุมโค้งบนพื้นเทาอมฟ้า (เดิมฟอร์มลอยบนพื้นขาวทั้งครึ่งจอ ดูโล่ง)
+  const formHalf = 'lg:w-full lg:max-w-md lg:self-center lg:justify-self-center lg:rounded-3xl lg:border-0 lg:p-8 lg:shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:lg:border'
   const forms = (
-    <div className="grid">
-      <form ref={registerForm} onSubmit={createCompany} noValidate inert={mode !== 'register'} className={`flex flex-col [grid-area:1/1] ${mode === 'register' ? '' : 'invisible max-lg:hidden'} space-y-3 rounded-xl border border-line bg-card p-6`}>
+    <div className="grid lg:min-h-dvh lg:grid-cols-2 lg:py-12">
+      <form ref={registerForm} onSubmit={createCompany} noValidate inert={mode !== 'register'} className={`flex flex-col [grid-area:1/1] ${mode === 'register' ? '' : 'max-lg:hidden'} space-y-3 rounded-xl border border-line bg-card p-6 ${formHalf}`}>
         <div>
           <h1 className="text-xl font-semibold text-fg">สร้างบริษัทใหม่</h1>
           <p className="text-sm text-muted-fg">ได้บริษัทว่างพร้อมบัญชีผู้ดูแลระบบ แล้วนำเข้าพนักงานของบริษัทเองได้ ไม่เห็นข้อมูลบริษัทอื่น</p>
@@ -119,7 +130,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
           </button>
         </p>
       </form>
-      <form ref={loginForm} onSubmit={submit} noValidate style={{ '--enter': '120ms' }} inert={mode !== 'login'} className={`login-enter flex flex-col [grid-area:1/1] ${mode === 'login' ? '' : 'invisible max-lg:hidden'} space-y-4 rounded-xl border border-line bg-card p-6`}>
+      <form ref={loginForm} onSubmit={submit} noValidate style={{ '--enter': '120ms' }} inert={mode !== 'login'} className={`login-enter flex flex-col [grid-area:1/1] lg:[grid-area:1/2] ${mode === 'login' ? '' : 'max-lg:hidden'} space-y-4 rounded-xl border border-line bg-card p-6 ${formHalf}`}>
       <div>
         <h1 className="text-xl font-semibold text-fg">เข้าสู่ระบบ</h1>
         <p className="text-sm text-muted-fg">ข้อมูลพนักงานเป็นข้อมูลส่วนบุคคล ต้องเข้าสู่ระบบก่อนใช้งาน</p>
@@ -183,42 +194,82 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
       </form>
     </div>
   )
-  // แบ่งครึ่งจอ: ซ้าย = ผืนสีหลักของระบบ (โหมดมืดเป็นกรมท่า) ชื่อระบบ + ประโยคเดียว + ผู้ช่วยทั้งสี่ยืนบนแถบพื้น / ขวา = ฟอร์มบนพื้นขาว
-  // มือถือ: ผืนสีเป็นแถบบน ผู้ช่วยทั้งสี่ตัวเล็กยืนบนแถบพื้น ฟอร์มอยู่ล่าง (การ์ดสูงพอดีฟอร์มที่ใช้อยู่) เว้นที่ล่างให้ปุ่มบัญชีทดลองไม่ทับลิงก์
+  const title = (
+    <div className="text-2xl font-semibold tracking-tight lg:text-5xl" translate="no">
+      Attrition Predictor
+    </div>
+  )
+  const tagline = (
+    <>
+      รู้ก่อนว่าพนักงานคนไหน<span className="whitespace-nowrap">เสี่ยงลาออก</span> และเพราะอะไร
+    </>
+  )
+  const onBlade = mode === 'register' // จอใหญ่: ปุ่มธีมมุมขวาบนอยู่บนใบมีดตอนสร้างบริษัท
+
+  // จอใหญ่ (แบบ VERSO ใน frontend/ref/Login.mp4): ใบมีดสีหลักตัดเฉียงกว้าง 150% ของจอ เข้าสู่ระบบ = ใบมีดอยู่ซ้าย / สร้างบริษัท = อยู่ขวา
+  // กดสลับแล้วใบมีดกวาดข้ามด้วย transform อย่างเดียว (index.css .auth-blade) กลางทางบังจอทั้งหมด
+  // ข้างในใบมีดเลื่อนสวนทางเท่ากัน ข้อความ/ผู้ช่วยจึงอยู่นิ่ง ใบมีดเป็นเหมือนหน้าต่างที่เลื่อนผ่าน
+  // มือถือ: ผืนสีเป็นแถบบน ผู้ช่วยทั้งสี่ตัวเล็กยืนบนแถบพื้น ฟอร์มอยู่ล่าง เว้นที่ล่างให้ปุ่มบัญชีทดลองไม่ทับลิงก์
   return (
-    <main className="relative isolate grid min-h-dvh bg-card lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      {/* มือถือ: ปุ่มอยู่บนแถบสี ใช้สีตัวหนังสือของแถบ */}
-      <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="absolute right-4 top-4 z-20 max-lg:border-current/30! max-lg:text-on-action! dark:max-lg:text-fg!" />
-      <section className="relative flex flex-col overflow-hidden bg-action pl-6 pr-16 pt-8 text-on-action lg:px-14 lg:pt-14 dark:bg-primary-soft dark:text-fg">
-        <div className="login-enter flex items-center gap-4 lg:flex-col lg:items-start">
-          <Logo className="size-20 shrink-0 lg:size-28" />
+    <main data-mode={mode} className="auth relative isolate min-h-dvh overflow-hidden bg-card lg:bg-canvas">
+      <ThemeToggle
+        mode={themeMode}
+        onToggle={onToggleTheme}
+        className={`absolute right-4 top-4 z-20 max-lg:border-current/30! max-lg:text-on-action! dark:max-lg:text-fg! ${onBlade ? 'lg:border-current/30! lg:text-on-action! dark:lg:text-fg!' : ''}`}
+      />
+      <section className="relative flex flex-col overflow-hidden bg-action pl-6 pr-16 pt-8 text-on-action lg:hidden dark:bg-primary-soft dark:text-fg">
+        <div className="login-enter flex items-center gap-4">
+          <Logo className="size-20 shrink-0" />
           <div>
-            <div className="text-2xl font-semibold tracking-tight lg:mt-4 lg:text-5xl" translate="no">
-              Attrition Predictor
-            </div>
-            <p className="mt-1 max-w-md text-base opacity-90 lg:mt-4 lg:text-xl">
-              รู้ก่อนว่าพนักงานคนไหน<span className="whitespace-nowrap">เสี่ยงลาออก</span> และเพราะอะไร
-            </p>
+            {title}
+            <p className="mt-1 max-w-md text-base opacity-90">{tagline}</p>
           </div>
         </div>
-        {/* พื้นที่ผู้ช่วยยืน: แถบสีเข้มกว่าผืนหนึ่งขั้นที่ขอบล่าง (-mr-10 บนมือถือชดเชย pr-16 ที่เว้นให้ปุ่มธีม ผู้ช่วยจะได้อยู่กลาง) ตัวที่ออกไปชี้ช่องในฟอร์มจางหายจากตรงนี้ (away) */}
-        <div className="relative -mr-10 mt-auto pt-6 lg:mr-0 lg:pt-10">
+        {/* แถบพื้นให้ผู้ช่วยยืน (-mr-10 ชดเชย pr-16 ที่เว้นให้ปุ่มธีม ผู้ช่วยจะได้อยู่กลาง) ตัวที่ออกไปชี้ช่องในฟอร์มจางหายจากตรงนี้ (away) */}
+        <div className="relative -mr-10 mt-auto pt-6">
           <div className="absolute inset-x-[-3.5rem] bottom-0 h-10 bg-[color-mix(in_oklab,var(--color-action)_82%,var(--color-ink))] dark:bg-secondary" aria-hidden="true" />
-          <WelcomeMascots keys={['dog', 'joy', 'kit', 'cat']} enter="left" away={away} className="relative justify-center gap-2 pb-4 lg:gap-3 lg:pb-6 xl:gap-6 [&_svg]:h-24 [&_[data-kind=pet]_svg]:h-16 lg:[&_svg]:h-44 lg:[&_[data-kind=pet]_svg]:h-28 xl:[&_svg]:h-56 xl:[&_[data-kind=pet]_svg]:h-32" />
+          <WelcomeMascots key={`${mode}-${entries[mode]}`} keys={['dog', 'joy', 'kit', 'cat']} enter={mode === 'login' ? loginHop : 'left'} away={away} mood={reaction} className="relative justify-center gap-2 pb-4 [&_svg]:h-24 [&_[data-kind=pet]_svg]:h-16" />
         </div>
       </section>
-      <section className="grid place-items-center px-4 pb-24 pt-8 lg:pb-8">
-        <div className="w-full max-w-md">{forms}</div>
+
+      <section className="px-4 pb-24 pt-8 lg:p-0">
+        <div className="mx-auto w-full max-w-md lg:max-w-none">{forms}</div>
       </section>
 
-      {/* บัญชีทดลอง: พับเก็บไว้มุมซ้ายล่างของฝั่งฟอร์ม กดเพื่อเปิด แล้วกดบัญชีเพื่อกรอกให้ */}
-      <details ref={demo} className={`group fixed bottom-4 z-10 left-4 lg:left-[calc(50%+1rem)] max-w-[calc(100vw-2rem)] text-sm`}>
+      <div className="auth-blade hidden bg-action text-on-action lg:block dark:bg-primary-soft dark:text-fg" aria-hidden="true">
+        <div className="auth-blade-page">
+          <div className="absolute inset-x-0 bottom-0 h-10 bg-[color-mix(in_oklab,var(--color-action)_82%,var(--color-ink))] dark:bg-secondary" />
+          {/* ครึ่งซ้าย: เห็นตอนเข้าสู่ระบบ */}
+          <div className="absolute inset-y-0 left-0 flex w-1/2 flex-col pl-14 pr-24 pt-14">
+            <div className="login-enter">
+              <Logo className="size-28" />
+              <div className="mt-4">{title}</div>
+              <p className="mt-4 max-w-md text-xl opacity-90">{tagline}</p>
+            </div>
+            <WelcomeMascots key={entries.login} keys={['dog', 'joy', 'kit', 'cat']} enter={loginHop} away={away} mood={reaction} className={`relative mt-auto ${mode === 'login' ? '' : 'invisible'} justify-center gap-3 pb-6 xl:gap-6 [&_svg]:h-44 [&_[data-kind=pet]_svg]:h-28 xl:[&_svg]:h-56 xl:[&_[data-kind=pet]_svg]:h-32`} />
+          </div>
+          {/* ครึ่งขวา: เห็นตอนสร้างบริษัท (เว้นซ้ายให้พ้นขอบเฉียงของใบมีด) */}
+          <div className="absolute inset-y-0 right-0 flex w-1/2 flex-col pl-32 pr-14 pt-14">
+            <div>
+              <Logo className="size-28" />
+              <div className="mt-4 text-5xl font-semibold tracking-tight">เริ่มบริษัทของคุณ</div>
+              <p className="mt-4 max-w-md text-xl opacity-90">นำเข้ารายชื่อพนักงาน แล้วรู้ได้เลยว่าควรคุยกับใครก่อน</p>
+            </div>
+            {/* แถวนี้แคบกว่าฝั่งซ้าย (เว้นที่ให้ขอบเฉียง) ผู้ช่วยเล็กลงหนึ่งขั้นและชิดขวา ไม่ล้นไปโผล่ที่ขอบใบมีด */}
+            <WelcomeMascots key={entries.register} keys={['dog', 'joy', 'kit', 'cat']} enter="left" away={away} mood={reaction} className={`relative mt-auto ${mode === 'register' ? '' : 'invisible'} justify-end gap-3 pb-6 [&_svg]:h-36 [&_[data-kind=pet]_svg]:h-24 xl:[&_svg]:h-44 xl:[&_[data-kind=pet]_svg]:h-28`} />
+          </div>
+        </div>
+      </div>
+
+      {/* บัญชีทดลอง: พับเก็บไว้มุมล่าง (มือถือซ้าย จอใหญ่ขวา พ้นขอบเฉียงของใบมีด) กดเพื่อเปิด แล้วกดบัญชีเพื่อกรอกให้ (เฉพาะตอนเข้าสู่ระบบ) */}
+      {mode === 'login' && (
+      <details ref={demo} className="group fixed bottom-4 left-4 z-10 max-w-[calc(100vw-2rem)] text-sm lg:left-auto lg:right-4">
         <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-risk-mid/25 bg-risk-mid-soft px-4 font-medium text-risk-mid shadow-sm transition-colors duration-150 hover:bg-risk-mid-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
           <Icon name="info" className="size-4" />
           บัญชีทดลอง
           <Icon name="chevron" className="size-3.5 rotate-180 transition-transform duration-150 group-open:rotate-0" />
         </summary>
-        <div className="absolute bottom-12 left-0 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-card p-3 shadow-lg">
+        <div className="absolute bottom-12 left-0 w-80 max-w-[calc(100vw-2rem)] lg:left-auto lg:right-0 rounded-xl border border-line bg-card p-3 shadow-lg">
           <p className="mb-2 px-1 text-xs text-muted-fg">ชั่วคราว ใช้กับข้อมูลตัวอย่างเท่านั้น · กดเพื่อกรอกให้</p>
           <ul className="space-y-2">
             {DEMO_ACCOUNTS.map((a) => (
@@ -241,6 +292,7 @@ export default function Login({ onLogin, themeMode, onToggleTheme, expired }) {
           </ul>
         </div>
       </details>
+      )}
     </main>
   )
 }

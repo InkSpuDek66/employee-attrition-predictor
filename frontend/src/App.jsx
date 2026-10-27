@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Logo from '../logo/Logo'
 import Login from './Login'
 import { mascotLine } from './mascot/line'
-import { MascotLoader, MascotSwitch, SpeakingMascot } from './mascot/Mascot'
+import { Bubble, MascotLoader, MascotSwitch, SpeakingMascot } from './mascot/Mascot'
 import Overview from './Overview'
 import { api, BAND, employeeLabel, inputClass, loadMascot, loadRecent, loadSession, pushRecent, saveMascot, saveRecent, saveSession, THEME_NEXT } from './theme'
 import { Field, Icon, PrimaryButton, Skeleton, ThemeToggle } from './ui'
@@ -42,6 +42,7 @@ function fromUrl() {
 export default function App() {
   const [session, setSession] = useState(loadSession)
   const [expired, setExpired] = useState(false)
+  const [welcome, setWelcome] = useState(false) // เพิ่งสร้างบริษัทใหม่: ผู้ช่วยต้อนรับในแอป (ไม่หน่วงหน้า login)
   // ธีมอยู่ระดับบนสุด หน้า login กับหน้าหลักใช้ค่าเดียวกัน (index.html ตั้ง class ไว้ก่อน render แล้ว)
   // mode: system = ตามเบราว์เซอร์ (ค่าเริ่มต้น เปลี่ยนตามทันทีเมื่อเครื่องสลับธีม) | light | dark
   const [mode, setMode] = useState(() => {
@@ -77,8 +78,8 @@ export default function App() {
     return () => removeEventListener('session-expired', expire)
   }, [])
   const theme = { dark, themeMode: mode, onToggleTheme: toggleTheme }
-  if (!session) return <Login onLogin={(s) => (saveSession(s), setSession(s), setExpired(false))} expired={expired} {...theme} />
-  return <Workspace user={session.user} onLogout={() => (saveSession(null), setSession(null), setExpired(false), history.replaceState(null, '', location.pathname))} {...theme} />
+  if (!session) return <Login onLogin={(s, fresh) => (saveSession(s), setSession(s), setExpired(false), setWelcome(!!fresh))} expired={expired} {...theme} />
+  return <Workspace user={session.user} welcome={welcome} onLogout={() => (saveSession(null), setSession(null), setExpired(false), setWelcome(false), history.replaceState(null, '', location.pathname))} {...theme} />
 }
 
 // ผู้ช่วยใน sidebar ตอนยังไม่มีอะไรให้ดู: หน้าที่ไม่ใช่รายคนพูดเรื่องของหน้านั้น (ไม่ชวนเลือกพนักงาน)
@@ -88,7 +89,7 @@ const IDLE = {
   users: { text: 'ชวนเพื่อนในทีมมาใช้ได้นะ', sub: 'เพิ่มบัญชีแล้วส่งชื่อผู้ใช้กับรหัสผ่านให้' },
 }
 
-function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
+function Workspace({ user, welcome, onLogout, dark, themeMode, onToggleTheme }) {
   const tenant = user.tenant_id
   const tabs = TABS.filter((t) => !t.admin || user.role === 'admin') // แท็บ admin ไม่โชว์ให้ HR
   const [initial] = useState(fromUrl) // อ่าน URL ครั้งเดียวตอนเปิดหน้า
@@ -97,14 +98,25 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
   // ข้อมูลเปลี่ยน (ปรับเทียบ/นำเข้าพนักงาน) = เพิ่มเลขนี้ หน้าภาพรวม/SHAP/What-if โหลดใหม่ด้วยคะแนนล่าสุด
   const [dataVersion, setDataVersion] = useState(0)
   const refreshData = () => setDataVersion((v) => v + 1)
-  // ผู้ช่วยใน sidebar พูดหลังทำอะไรสำเร็จ แล้วกลับเป็นปกติเองใน 4.5 วินาที
+  // ผู้ช่วยพูดหลังทำอะไรสำเร็จ: จอใหญ่ = กล่องคำพูดออกจากผู้ช่วยในแท่งเมนู (ท่าดีใจ) / มือถือ = กล่องลอยมุมล่าง
+  // หายเองใน 4.5 วินาที ms = null ค้างไว้จนกดปิดหรือกดที่ผู้ช่วย (คำต้อนรับบริษัทใหม่)
   const [say, setSay] = useState(null)
   const sayTimer = useRef(null)
-  function speak(text, sub) {
+  function speak(text, sub, ms = 4500) {
     clearTimeout(sayTimer.current)
-    setSay((s) => ({ n: (s?.n ?? 0) + 1, text, sub }))
-    sayTimer.current = setTimeout(() => setSay(null), 4500)
+    setSay((s) => ({ n: (s?.n ?? 0) + 1, text, sub, sticky: ms == null }))
+    if (ms != null) sayTimer.current = setTimeout(() => setSay(null), ms)
   }
+  const hush = () => (clearTimeout(sayTimer.current), setSay(null))
+  // เพิ่งสร้างบริษัทใหม่: ต้อนรับครั้งเดียวตอนเข้าแอป และชวนไปนำเข้าข้อมูล (บริษัทใหม่ยังไม่มีพนักงาน) เข้าสู่ระบบปกติไม่มี
+  const welcomed = useRef(false)
+  useEffect(() => {
+    if (!welcome || welcomed.current) return
+    welcomed.current = true
+    // จอใหญ่ผู้ช่วยอยู่ในแท่งเมนูข้างกล่องคำพูด / มือถือแท่งหุบอยู่ บอกให้หาในเมนู
+    const where = matchMedia('(min-width: 1024px)').matches ? 'กดที่ตัวเราเพื่อเลือกผู้ช่วย' : 'เลือกผู้ช่วยได้ในเมนู'
+    speak('ยินดีต้อนรับ บริษัทของคุณพร้อมแล้ว!', `${where} แล้วเริ่มจากนำเข้ารายชื่อพนักงาน`, null)
+  })
   const [employeeId, setEmployeeId] = useState(initial.id || '1') // ช่องรหัสแบบย่อที่ลอยมุมขวาบน
   // ช่องหาพนักงานด้านบน: ค้างรหัสของคนที่โหลดล่าสุดไว้จนออกจากระบบ (กดที่ช่อง = เลือกทั้งข้อความ พิมพ์ชื่อใหม่ทับได้เลย)
   const [findText, setFindText] = useState(initial.id)
@@ -144,7 +156,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
   )
   const onDone = useMemo(() => Object.fromEntries(PER_EMPLOYEE.map((t) => [t, () => setPending((p) => ({ ...p, [t]: false }))])), [])
   const current = TABS.find((t) => t.id === tab)
-  const line = mascotLine({ risk: risk[tab], say, idle: IDLE[tab] })
+  const line = mascotLine({ risk: risk[tab], idle: IDLE[tab] }) // หัวเพจไม่พูดซ้ำกับผู้ช่วยในแท่งเมนู
 
   // มือถือ: เลื่อนลงไปไกลแล้วมีปุ่มกลับขึ้นด้านบน (หน้าภาพรวมบนมือถือยาวกว่า 3,000 px) จอใหญ่ซ่อนไว้
   // มือถือ/แท็บเล็ต: แท่งเมนูหุบเหลือโลโก้ กดโลโก้ = กาง
@@ -280,7 +292,14 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
             ))}
           </nav>
           <div className="mt-auto flex flex-col items-center gap-2 pt-4">
-            <MascotSwitch who={who} onChoose={(v) => (setWho(v), saveMascot(v))} />
+            <div className="relative">
+              <MascotSwitch who={who} onChoose={(v) => (setWho(v), saveMascot(v))} mood={say ? 'Low' : 'none'} nudge={!!say} onOpen={() => say?.sticky && hush()} />
+              {say && (
+                <div key={say.n} className="fade-up absolute bottom-0 left-full z-40 ml-6 hidden w-72 lg:block">
+                  <SayText say={say} onClose={hush} tail="left" />
+                </div>
+              )}
+            </div>
             <ThemeToggle mode={themeMode} onToggle={onToggleTheme} className="size-11! rounded-full! border-0!" />
             <LogoutButton user={user} onLogout={onLogout} className="size-11! rounded-full! border-0!" />
           </div>
@@ -288,10 +307,12 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
       </aside>
 
       {/* ภาพรวมไม่มีหัวเพจของ App: ข้อความผู้ช่วยหลังทำอะไรสำเร็จ (ดาวน์โหลด CSV) ขึ้นเป็นกล่องลอยมุมล่าง */}
-      {tab === 'overview' && say && (
-        <div key={say.n} role="status" className="fade-up fixed bottom-5 left-4 z-30 max-w-xs rounded-2xl bg-card px-4 py-3 shadow-lg ring-1 ring-line lg:left-28 print:hidden">
-          <div className="text-sm font-semibold text-fg">{say.text}</div>
-          <div className="text-xs text-muted-fg">{say.sub}</div>
+      {/* มือถือ: แท่งเมนูหุบอยู่ ผู้ช่วยพูดในกล่องลอยมุมล่างแทน ทำท่าดีใจข้างข้อความ */}
+      {say && (
+        <div key={say.n} className="fade-up fixed bottom-5 left-4 right-4 z-30 rounded-2xl bg-card py-2 pl-2 pr-3 shadow-lg ring-1 ring-line lg:hidden print:hidden">
+          <SpeakingMascot who={who} mood="Low" replay={say.n} size="plain">
+            <SayText say={say} onClose={hush} />
+          </SpeakingMascot>
         </div>
       )}
 
@@ -305,22 +326,22 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
         >
           {PER_EMPLOYEE.includes(tab) ? (
             // หน้ารายคน: หัวเตี้ย หัวข้อ + คำพูดสั้นของผู้ช่วยในบรรทัดเดียว
-            <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="plain">
+            <SpeakingMascot who={who} mood={line.mood} size="plain">
               <h1 className="text-balance text-2xl font-semibold leading-snug tracking-tight text-fg sm:text-[2rem]">{current.hint}</h1>
               <p className="mt-1 text-sm text-muted-fg" aria-live="polite">
                 <span className="font-medium">{line.text}</span>
                 <span className="hidden sm:inline"> {line.sub}</span>
-                {risk[tab]?.band && !say && (
+                {risk[tab]?.band && (
                   <span className="tabular-nums text-muted-fg"> (#{risk[tab].id} {risk[tab].label} {Math.round(risk[tab].score * 100)})</span>
                 )}
               </p>
             </SpeakingMascot>
           ) : (
-            <SpeakingMascot who={who} mood={line.mood} replay={say?.n} size="plain">
+            <SpeakingMascot who={who} mood={line.mood} size="plain">
               <h1 className="text-balance text-[1.75rem] font-semibold leading-[1.3] tracking-tight text-fg sm:text-[2.5rem]">{current.label}</h1>
               <p className="mt-1.5 text-sm text-muted-fg" aria-live="polite">
-                {/* ปกติ = คำอธิบายหน้า + คำแนะนำของผู้ช่วย (ไม่พูดเรื่องเดียวกันซ้ำ) หลังทำอะไรสำเร็จ = ข้อความของผู้ช่วยแทน */}
-                {say ? <span className="font-medium">{line.text}</span> : current.hint} {line.sub}
+                {/* คำอธิบายหน้า + คำแนะนำของผู้ช่วย (ไม่พูดเรื่องเดียวกันซ้ำ) */}
+                {current.hint} {line.sub}
               </p>
             </SpeakingMascot>
           )}
@@ -411,6 +432,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
           <div hidden={tab !== 'import'} className="fade-up">
             <Upload
               who={who}
+              onSay={speak}
               ibmDemo={tenant === 'ibm_demo'}
               canSave={user.role === 'admin'}
               onSaved={() => (refreshData(), speak('บันทึกพนักงานเรียบร้อย!', 'กดชื่อด้านล่างเพื่อดูความเสี่ยงได้เลย'))}
@@ -421,6 +443,7 @@ function Workspace({ user, onLogout, dark, themeMode, onToggleTheme }) {
             <div hidden={tab !== 'calibrate'} className="fade-up">
               <Calibrate
                 who={who}
+                onSay={speak}
                 onChanged={(reset) => (
                   refreshData(),
                   reset
@@ -485,6 +508,36 @@ function RailItem({ label, active, onClick, children }) {
         {label}
       </span>
     </button>
+  )
+}
+
+// ข้อความของผู้ช่วย: tail = มีกล่องคำพูดหางชี้ไปหาผู้ช่วย (จอใหญ่ ข้างแท่งเมนู) ไม่มี = ข้อความเปล่าในกล่องลอย (มือถือ)
+// sticky = ค้างไว้ มีปุ่มปิด
+function SayText({ say, onClose, tail }) {
+  const body = (
+    <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1" role="status">
+        <div className="text-sm font-semibold text-fg">{say.text}</div>
+        <div className="text-xs text-muted-fg">{say.sub}</div>
+      </div>
+      {say.sticky && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="ปิดข้อความของผู้ช่วย"
+          className="-my-1 -mr-1 grid size-8 shrink-0 cursor-pointer place-items-center rounded-full text-muted-fg hover:bg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <Icon name="error" className="size-4" />
+        </button>
+      )}
+    </div>
+  )
+  return tail ? (
+    <Bubble tail={tail} className="px-4 py-3 shadow-lg">
+      {body}
+    </Bubble>
+  ) : (
+    body
   )
 }
 

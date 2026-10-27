@@ -203,6 +203,19 @@ function Pose({ mood, kind }) {
       </>
     )
   }
+  if (mood === 'Wrong') {
+    // ผิด: ไขว้อุ้งเท้าเป็นกากบาทหน้าอก + ป้าย ✕ สีแดง (หน้าใช้แบบเม้มปาก)
+    return (
+      <>
+        <Paw kind={kind} d="M54 120 Q66 116 84 106" end={[86, 104]} />
+        <Paw kind={kind} d="M88 120 Q76 116 56 106" end={[54, 104]} />
+        <g className="mascot-float">
+          <circle cx="122" cy="28" r="11" className="fill-card" {...o} strokeWidth="1.4" />
+          <path d="M117 23 l10 10 M127 23 l-10 10" className="stroke-risk-high" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      </>
+    )
+  }
   if (mood === 'Point') {
     // ชี้ขึ้น: ชูอุ้งเท้าขึ้นไปที่ช่อง/จุดที่อยู่ด้านบน (ใช้ใน PointHint)
     return (
@@ -264,7 +277,7 @@ export default function PetCharacter({ mood, kind = 'cat', mini = false }) {
         <path d="M46 110 Q70 122 94 110" fill="none" className={COLLAR[mood]} strokeWidth="5" strokeLinecap="round" />
         <circle cx="70" cy="119" r="4.2" fill="#f2c14e" {...o} strokeWidth="1.4" />
         <path d="M67 119.5 H73" stroke={LINE} strokeWidth="1" />
-        <Face mood={mood === 'Point' ? 'none' : mood} kind={kind} />
+        <Face mood={mood === 'Point' ? 'none' : mood === 'Wrong' ? 'Medium' : mood} kind={kind} />
         </g>
         {/* ขาหน้าวาดทับหัว (หัวโต อุ้งเท้าจะได้ไม่หายไปหลังหัว) */}
         {!mini && <Pose mood={mood} kind={kind} />}

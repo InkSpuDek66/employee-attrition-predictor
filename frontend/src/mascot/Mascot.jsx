@@ -21,7 +21,7 @@ const CHARACTERS = {
 const LABELS = { joy: 'HR จอย', kit: 'HR กิต', cat: 'น้องส้มฉุน', dog: 'น้องปุกปุย' }
 
 // กล่องคำพูด หางชี้ไปหาตัวการ์ตูน (tail = ทิศที่ตัวการ์ตูนอยู่)
-function Bubble({ tail = 'top', className = '', live = false, children }) {
+export function Bubble({ tail = 'top', className = '', live = false, children }) {
   const pos = {
     top: '-top-[7px] left-1/2 -translate-x-1/2 border-l border-t',
     left: 'top-1/2 -left-[7px] -translate-y-1/2 border-l border-b',
@@ -55,11 +55,13 @@ export function MascotLoader() {
 // วางไว้ใต้สิ่งที่ชี้ align = 'left' (ตัวการ์ตูนซ้าย) | 'right' (ตัวการ์ตูนขวา ชี้ของที่อยู่ชิดขวา)
 // ข้อความอยู่ในกล่องคำพูด (role alert/status) โปรแกรมอ่านหน้าจออ่านได้ ตัวการ์ตูนเป็นของตกแต่ง
 // ตัวที่ชี้ + สัตว์เลี้ยงตัวจิ๋วยืนข้างๆ (ด้านนอก) ซ้ายหรือขวาของกล่องคำพูด
+// สัตว์ไม่มีนิ้ว ท่าชี้/โบกดูเหมือนโบกมือเฉยๆ จึงไขว้อุ้งเท้าเป็นกากบาท ✕ บอกว่าช่องนี้ผิด (คนยังชี้นิ้ว)
+const PETS = ['cat', 'dog']
 function Pointer({ who, pet, right }) {
   return (
     <div className={`flex shrink-0 items-end ${right ? 'flex-row-reverse' : ''}`} aria-hidden="true">
-      {pet && <div className={`${right ? '-ml-2' : '-mr-2'} [&_svg]:h-12 [&_svg]:w-auto`}>{CHARACTERS[pet]({ mood: 'none' })}</div>}
-      <div className="-mt-2 [&_svg]:h-24 [&_svg]:w-auto">{CHARACTERS[who]({ mood: 'Point' })}</div>
+      {pet && <div className={`${right ? '-ml-2' : '-mr-2'} [&_svg]:h-12 [&_svg]:w-auto`}>{CHARACTERS[pet]({ mood: 'Wrong' })}</div>}
+      <div className="-mt-2 [&_svg]:h-24 [&_svg]:w-auto">{CHARACTERS[who]({ mood: PETS.includes(who) ? 'Wrong' : 'Point' })}</div>
     </div>
   )
 }
@@ -145,28 +147,33 @@ export function SorryState({ message }) {
 // enter = 'left' | 'right' กระโดดเข้ามาจากขอบจอฝั่งนั้น ตัวที่อยู่ด้านนอกมาก่อน
 // โบก/ขยับไม่พร้อมกัน ดูมีชีวิต เป็นของตกแต่ง ซ่อนจากโปรแกรมอ่านหน้าจอ
 // away = ตัวที่ออกไปชี้ช่องในฟอร์มอยู่ (PointHint) ค่อยๆ จางหายจากข้างฟอร์ม แล้วกลับมาเมื่อแก้แล้ว (ที่ว่างคงไว้ หน้าไม่ขยับ)
-export function WelcomeMascots({ keys = MASCOTS, enter, away = [], className = '' }) {
+// mood = ท่าของตัวที่ยังยืนอยู่ (เช่น กรอกผิด = ไขว้แขน) เปลี่ยนท่าแล้วเด้งเข้าใหม่ให้สังเกตเห็น
+export function WelcomeMascots({ keys = MASCOTS, enter, away = [], mood = 'none', className = '' }) {
   return (
     <div className={`flex items-end ${className}`} aria-hidden="true">
-      {keys.map((k, i) => (
-        <div
-          key={k}
-          data-kind={k === 'cat' || k === 'dog' ? 'pet' : 'person'} // ให้หน้าที่ใช้ปรับขนาดสัตว์แยกได้
-          style={{
-            '--delay': `${MASCOTS.indexOf(k) * 220}ms`,
-            '--hop': `${200 + (enter === 'right' ? keys.length - 1 - i : i) * 220}ms`,
-          }}
-          className={`flex flex-col items-center [&_.mascot-body]:[animation-delay:var(--delay)] [&_.mascot-wave]:[animation-delay:var(--delay)] ${
-            enter ? `hop-in-${enter}` : ''
-          }`}
-        >
-          {/* ห่ออีกชั้น: ตัวนอกมีแอนิเมชันกระโดดเข้า (ค้าง opacity) จางที่ชั้นในแทน */}
-          <div className={`flex flex-col items-center transition duration-300 ${away.includes(k) ? 'translate-y-2 scale-90 opacity-0' : ''}`}>
-            {CHARACTERS[k]({ mood: 'none' })}
-            <span className="-mt-1 rounded-full border border-line bg-card/80 px-2.5 py-0.5 text-xs font-medium text-fg">{LABELS[k]}</span>
+      {keys.map((k, i) => {
+        const Character = CHARACTERS[k]
+        return (
+          <div
+            key={k}
+            data-kind={k === 'cat' || k === 'dog' ? 'pet' : 'person'} // ให้หน้าที่ใช้ปรับขนาดสัตว์แยกได้
+            style={{
+              '--delay': `${MASCOTS.indexOf(k) * 220}ms`,
+              // กระโดดเข้าทั้งชุดใช้ 0.9 วินาทีเท่ากับใบมีดหน้า login (ตัวละ 0.6 วินาที ห่างกัน 0.1 วินาที)
+              '--hop': `${(enter === 'right' ? keys.length - 1 - i : i) * 100}ms`,
+            }}
+            className={`flex flex-col items-center [&_.mascot-body]:[animation-delay:var(--delay)] [&_.mascot-wave]:[animation-delay:var(--delay)] ${
+              enter ? `hop-in-${enter}` : ''
+            }`}
+          >
+            {/* ห่ออีกชั้น: ตัวนอกมีแอนิเมชันกระโดดเข้า (ค้าง opacity) จางที่ชั้นในแทน */}
+            <div className={`flex flex-col items-center transition duration-300 ${away.includes(k) ? 'translate-y-2 scale-90 opacity-0' : ''}`}>
+              <Character key={mood} mood={mood} />
+              <span className="-mt-1 rounded-full border border-line bg-card/80 px-2.5 py-0.5 text-xs font-medium text-fg">{LABELS[k]}</span>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -192,7 +199,8 @@ export function NotFoundState({ who, message }) {
 // อยู่ชั้นบนสุด ไม่โดนแท่งเมนูตัด) ตำแหน่งคำนวณจากปุ่มตอนเปิด และคำนวณใหม่ถ้าขนาดจอเปลี่ยนระหว่างเปิด
 // คีย์บอร์ดแบบ radio group เหมือน Segmented: เปิดแล้วโฟกัสอยู่ที่ตัวที่เลือก ลูกศรซ้าย/ขวา = เปลี่ยนตัว (เห็นหน้าใหม่ในแท่งทันที)
 // Enter / Space / คลิก = เลือกแล้วปิด
-export function MascotSwitch({ who, onChoose }) {
+// mood = ท่าตอนผู้ช่วยพูด (ดีใจ) nudge = เด้งเรียกสายตา onOpen = เปิดกล่องเลือกแล้ว (ปิดคำทักทายที่ค้างอยู่)
+export function MascotSwitch({ who, onChoose, mood = 'none', nudge = false, onOpen }) {
   const Avatar = CHARACTERS[who]
   const trigger = useRef(null)
   const panel = useRef(null)
@@ -203,6 +211,7 @@ export function MascotSwitch({ who, onChoose }) {
   }
   function onToggle(e) {
     if (e.newState !== 'open') return removeEventListener('resize', place)
+    onOpen?.()
     place()
     addEventListener('resize', place)
     panel.current.querySelector('[aria-checked="true"]')?.focus()
@@ -226,9 +235,9 @@ export function MascotSwitch({ who, onChoose }) {
         aria-label={`ผู้ช่วย: ${LABELS[who]} (กดเพื่อเลือกผู้ช่วย)`}
         title={`ผู้ช่วย: ${LABELS[who]}`}
         // ตัวเต็มขนาดเล็ก ไม่มีกรอบ (รูปหน้าในวงกลมดูอึดอัดในแท่ง) key = เปลี่ยนตัวแล้วเล่นท่าเข้าใหม่
-        className="w-12 cursor-pointer rounded-2xl px-0.5 pt-1 transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:w-14 [&_svg]:h-auto [&_svg]:w-full"
+        className={`w-12 cursor-pointer rounded-2xl px-0.5 pt-1 transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:w-14 [&_svg]:h-auto [&_svg]:w-full ${nudge ? 'nudge' : ''}`}
       >
-        <Avatar key={who} mood="none" />
+        <Avatar key={`${who}-${mood}`} mood={mood} />
       </button>
       <div
         ref={panel}

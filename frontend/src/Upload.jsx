@@ -6,11 +6,12 @@ import { AssistantHint, MascotLoader, PointHint } from './mascot/Mascot'
 import { download, employeeLabel, friendly, postFile } from './theme'
 import { Alert, Card, Icon } from './ui'
 
-export function DownloadButton({ path, filename, children, onError }) {
+// onDone = ดาวน์โหลดสำเร็จ (ให้ผู้ช่วยบอกว่าไฟล์นี้ใช้ยังไงต่อ)
+export function DownloadButton({ path, filename, children, onError, onDone }) {
   return (
     <button
       type="button"
-      onClick={() => download(path, filename).catch((err) => onError(friendly(err)))}
+      onClick={() => download(path, filename).then(onDone, (err) => onError(friendly(err)))}
       className="lift inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-card px-4 py-2 text-left font-medium text-fg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <Icon name="download" className="size-5 shrink-0" />
@@ -262,7 +263,7 @@ function ChangesToCheck({ result }) {
 }
 
 // ibmDemo = บริษัททดลอง IBM (มีพนักงานรหัส 1–1,470 อยู่แล้ว นำเข้าไฟล์ทดลองจะทับคนเดิม)
-export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
+export default function Upload({ who, ibmDemo, canSave, onSaved, onPick, onSay = () => {} }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
@@ -329,7 +330,12 @@ export default function Upload({ who, ibmDemo, canSave, onSaved, onPick }) {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Card icon="list" title="1. ดาวน์โหลดไฟล์ตัวอย่าง" subtitle="Excel ที่มีหัวคอลัมน์ครบ + แถวตัวอย่าง + ชีตคำอธิบายค่าที่รับ">
           <div className="flex flex-wrap gap-2">
-            <DownloadButton path="/employees/template" filename="employee_template.xlsx" onError={setError}>
+            <DownloadButton
+              path="/employees/template"
+              filename="employee_template.xlsx"
+              onError={setError}
+              onDone={() => onSay('ดาวน์โหลดไฟล์ตัวอย่างให้แล้ว', 'กรอกพนักงานหนึ่งคนต่อหนึ่งแถว แล้วอัปโหลดในช่องที่ 2')}
+            >
               ไฟล์ตัวอย่าง (.xlsx)
             </DownloadButton>
             <DownloadButton path="/employees/template?demo=true" filename="employee_demo.xlsx" onError={setError}>
